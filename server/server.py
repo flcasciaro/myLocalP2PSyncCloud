@@ -1,9 +1,16 @@
+"""Server of myLocalP2PSyncCLoud"""
+
+"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+
 import argparse
 import select
 import socket
 from threading import Thread
 
+"""main data structure for groups list"""
 groupList = list()
+"""additional data structure useful for a fast access operation
+key = Group Name, value = group Token"""
 groupDict = dict()
 
 def get_args():
@@ -192,8 +199,6 @@ def main():
     """main function, starts the server"""
 
     #args = get_args()
-
-    serverInit()
 
     serverInit()
 

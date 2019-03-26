@@ -1,3 +1,8 @@
+"""Client of myLocalP2PSyncCLoud"""
+
+"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+
+
 import argparse
 import hashlib
 import socket
