@@ -195,8 +195,6 @@ def main():
 
     serverInit()
 
-    print(groupList)
-
     serverInit()
 
     server = SocketServer()
