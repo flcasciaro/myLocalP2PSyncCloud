@@ -188,13 +188,11 @@ def manageRequest(self, message):
         message = "hello client"
         self.client_sock.send(message.encode('ascii'))
 
-def main():
+if __name__ == '__main__':
     """main function, starts the server"""
 
     initServer()
     stop = False
     startServer()
 
-
-main()
 

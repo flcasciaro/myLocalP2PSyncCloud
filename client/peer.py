@@ -3,30 +3,9 @@
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 
-import argparse
 import hashlib
 import socket
 import time
-
-
-def get_args():
-    """
-    Get command line args from the user.
-    """
-    parser = argparse.ArgumentParser(
-        description='Standard Arguments for talking to Central Index Server')
-    parser.add_argument('-a', '--address',
-                        default="127.0.0.1",
-                        action='store',
-                        help='Server IP address')
-    parser.add_argument('-p', '--port',
-                        type=int,
-                        default=2010,
-                        # required=True,
-                        action='store',
-                        help='Server Port Number')
-    args = parser.parse_args()
-    return args
 
 
 def createSocket(host, port):
@@ -39,30 +18,62 @@ def createSocket(host, port):
     return s
 
 
+def closeSocket(sock):
+    # close the connection sock
+    message = "BYE"
+    sock.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+    # sleep one seconds
+    time.sleep(1)
+    sock.close()
+
+
+def retrieveGroups(serverAddress, serverPort, previous):
+
+    s = createSocket(serverAddress, serverPort)
+
+    if previous:
+        tmp = "PREVIOUS"
+    else:
+        tmp = "NEW"
+
+    message = "SEND {} GROUPS LIST".format(tmp)
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    groupList = eval(str(data.decode('ascii')))
+    print('Groups List :', groupList)
+
+    closeSocket(s)
+
+    return groupList
+
+
+def restoreGroup():
+    closeSocket(s)
+
+
 def retrieveGroupList(serverAddress, serverPort):
 
     s = createSocket(serverAddress, serverPort)
 
-    """"message you send to server
-    message = "hello server"
-
-    # message sent to server
-    s.send(message.encode('ascii'))
-
-    # message received from server
-    data = s.recv(1024)
-
-    # print the received message
-    print('Received from the server :', str(data.decode('ascii')))"""
-
-    message = "SEND GROUPS LIST"
-
+    message = "SEND NEW GROUPS LIST"
     s.send(message.encode('ascii'))
 
     data = s.recv(1024)
-
     groupList = eval(str(data.decode('ascii')))
     print('Groups List :', groupList)
+
+    closeSocket(s)
+
+    return newGroupList
+
+
+def joinGroup(serverAddress, serverPort, newGroupsList):
+
+    s = createSocket(serverAddress, serverPort)
 
     groupName = input("Write the name of the group you want to access: ")
     groupToken = input("Write the token of the group you want to access: ")
@@ -76,58 +87,36 @@ def retrieveGroupList(serverAddress, serverPort):
     data = s.recv(1024)
     print('Received from the server :', str(data.decode('ascii')))
 
-    # close the connection
-
-    message = "BYE"
-
-    s.send(message.encode('ascii'))
-    data = s.recv(1024)
-    print('Received from the server :', str(data.decode('ascii')))
-    # sleep one seconds
-    time.sleep(1)
-    s.close()
+    closeSocket(s)
 
 
-def joinGroup():
-    pass
-
-
-def restoreGroup():
-    pass
-
-
-def main():
+if __name__ == '__main__':
     """main function, handles the menu"""
 
-    args = get_args()
-    serverIP = args.address
-    serverPort = args.port
-
-    print(serverIP)
-
     print("Welcome to myLocalP2PCloud")
-    print()
 
-    while True:
+    print("Retrieving configuration..")
+    try:
+        file = open('conf.txt', 'r')
+        configuration = file.readline().split()
+        serverIP = configuration[0]
+        serverPort = int(configuration[1])
+    except FileNotFoundError:
+        print("No configuration found")
+        serverIP = input("Insert server IP:")
+        serverPort = input("Insert server port:")
+        """"save configuration on the file"""
+        file = open('conf.txt', 'w')
+        file.write("{} {}".format(serverIP, serverPort))
+    file.close()
 
-        print("Press 1 to rejoin a previous group")
-        print("Press 2 to join a new group")
-        choice = input("Choice: ")
+    print("Retrieving information about previous session..")
+    previousGroupsList = retrieveGroups(serverAddress, serverPort, previous=True)
 
-        if choice == "1":
-            print()
-            restoreGroup()
-            break
+    restoreGroup(previousGroupsList)
 
-        elif choice == "2":
-            print("Retrieving the groups list..")
-            retrieveGroupList(serverIP, serverPort)
-            joinGroup()
-            break
+    print("Retrieving other groups list..")
+    newGroupsList = retrieveGroups(serverIP, serverPort, previous=False)
 
-        else:
-            print("Wrong Input")
-            # go back to the input phase
+    joinGroup(serverIP, serverPort, newGroupsList)
 
-
-main()
