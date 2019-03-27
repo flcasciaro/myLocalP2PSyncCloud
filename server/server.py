@@ -192,9 +192,7 @@ def main():
     """main function, starts the server"""
 
     initServer()
-
     stop = False
-
     startServer()
 
 
