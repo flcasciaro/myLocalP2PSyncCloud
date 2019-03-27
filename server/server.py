@@ -2,9 +2,9 @@
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
-import argparse
 import select
 import socket
+import sqlite3
 from threading import Thread
 
 """main data structure for groups list"""
@@ -13,26 +13,12 @@ groupList = list()
 key = Group Name, value = group Token"""
 groupDict = dict()
 
-def get_args():
-    """
-    Get command line args from the user.
-    """
-    parser = argparse.ArgumentParser(
-        description='Standard Arguments for talking to Central Index Server')
-    parser.add_argument('-p', '--port',
-                        type=int,
-                        required=True,
-                        action='store',
-                        help='Server Port Number')
-    parser.add_argument('-r', '--replica',
-                        type=int,
-                        default=1,
-                        action='store',
-                        help='Data Replication Factor')
-    args = parser.parse_args()
-    return args
+stop = None
 
-def serverInit():
+# database for an initial load of the data about bins/waste containers
+db_path = 'init.db'
+
+def initServer():
     """Initialize server configuration and data structures
     Data structures are filled with data read from configuration files / local database"""
 
@@ -49,58 +35,67 @@ def serverInit():
             groupList.append(groupInfoDict)
             groupDict[groupInfoDict["name"]]= groupInfoDict["token"]
 
+        # open a connection
+        conn = sqlite3.connect(db_path)
+        # define a cursor
+        curs = conn.cursor()
+        # execute a query which select all the information about the peers
+        curs.execute("SELECT * FROM peers")
+        # save data in a temporary list
+        tmp = curs.fetchall()
+        # close cursor and connection
+        curs.close()
+        conn.close()
+
+        print(tmp[0])
 
 
-class SocketServer(Thread):
-    def __init__(self, host = '0.0.0.0', port = 2010, max_clients = 10):
-        """ Initialize the server with a host and port to listen to.
-        Provide a list of functions that will be used when receiving specific data """
-        Thread.__init__(self)
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.host = host
-        self.port = port
-        self.sock.bind((host, port))
-        self.sock.listen(max_clients)
-        self.sock_threads = []
-        self.counter = 0 # Will be used to give a number to each thread
-        self.__stop = False
+def startServer(host = '0.0.0.0', port = 2010, max_clients = 10):
 
-    def close(self):
-        """ Close the client socket threads and server socket if they exists. """
-        print('Closing server socket (host {}, port {})'.format(self.host, self.port))
+    """ Initialize the server with a host and port to listen to.
+    Provide a list of functions that will be used when receiving specific data """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind((host, port))
+    sock.listen(max_clients)
+    sock_threads = []
+    counter = 0 # Will be used to give a number to each thread
 
-        for thr in self.sock_threads:
-            thr.stop()
-            thr.join()
 
-        if self.sock:
-            self.sock.close()
-            self.sock = None
+    """ Accept an incoming connection.
+    Start a new SocketServerThread that will handle the communication. """
+    print('Starting socket server (host {}, port {})'.format(host, port))
 
-    def run(self):
-        """ Accept an incoming connection.
-        Start a new SocketServerThread that will handle the communication. """
-        print('Starting socket server (host {}, port {})'.format(self.host, self.port))
+    while not stop:
+        sock.settimeout(1)
+        try:
+            client_sock, client_addr = sock.accept()
+        except socket.timeout:
+            client_sock = None
 
-        while not self.__stop:
-            self.sock.settimeout(1)
-            try:
-                client_sock, client_addr = self.sock.accept()
-            except socket.timeout:
-                client_sock = None
+        if client_sock:
+            client_thr = SocketServerThread(client_sock, client_addr, counter)
+            counter += 1
+            sock_threads.append(client_thr)
+            client_thr.start()
 
-            if client_sock:
-                client_thr = SocketServerThread(client_sock, client_addr, self.counter)
-                self.counter += 1
-                self.sock_threads.append(client_thr)
-                client_thr.start()
-        self.close()
+    closeServer(host, port, sock, sock_threads)
 
-    def stop(self):
-        """To be called in order to stop the server (press X in the GUI or in order to manage error)
-        If called self.__stop is set to True and self.close() is called"""
-        self.__stop = True
+def closeServer(host, port, sock, sock_threads):
+    """ Close the client socket threads and server socket if they exists. """
+    print('Closing server socket (host {}, port {})'.format(host, port))
+
+    for thr in sock_threads:
+        thr.stop()
+        thr.join()
+
+    if sock:
+        sock.close()
+
+def stopServer():
+    """This function will be called in order to stop the server (example using the X on the GUI or a signal)"""
+    stop = True
+
 
 class SocketServerThread(Thread):
     def __init__(self, client_sock, client_addr, number):
@@ -185,8 +180,6 @@ def manageRequest(self, message):
 
         self.client_sock.send(message.encode('ascii'))
 
-
-
     elif message == "BYE":
         message = "bye client"
         self.client_sock.send(message.encode('ascii'))
@@ -198,12 +191,11 @@ def manageRequest(self, message):
 def main():
     """main function, starts the server"""
 
-    #args = get_args()
+    initServer()
 
-    serverInit()
+    stop = False
 
-    server = SocketServer()
-    server.start()
+    startServer()
 
 
 main()
