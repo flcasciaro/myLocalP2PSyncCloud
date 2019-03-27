@@ -11,10 +11,7 @@ import time
 def createSocket(host, port):
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    # connect to server on local computer
     s.connect((host, port))
-
     return s
 
 
@@ -23,75 +20,93 @@ def closeSocket(sock):
     message = "BYE"
     sock.send(message.encode('ascii'))
 
-    data = s.recv(1024)
+    data = sock.recv(1024)
     print('Received from the server :', str(data.decode('ascii')))
     # sleep one seconds
     time.sleep(1)
     sock.close()
 
 
-def retrieveGroups(serverAddress, serverPort, previous):
-
-    s = createSocket(serverAddress, serverPort)
+def retrieveGroupsList(s, previous):
 
     if previous:
         tmp = "PREVIOUS"
     else:
-        tmp = "NEW"
+        tmp = "OTHER"
 
     message = "SEND {} GROUPS LIST".format(tmp)
     s.send(message.encode('ascii'))
 
     data = s.recv(1024)
-    groupList = eval(str(data.decode('ascii')))
-    print('Groups List :', groupList)
+    groupsList = eval(str(data.decode('ascii')))
+
+    return groupsList
+
+
+def restoreGroups(serverIP, serverPort):
+
+    s = createSocket(serverIP, serverPort)
+
+    print("Retrieving information about previous session..")
+    previousGroupsList = retrieveGroupsList(s, previous=True)
+
+    print("List of synchronization groups that you have already joined:")
+    for group in previousGroupsList:
+        print(group)
+
+    while True:
+        groupName = input("Write the name of the group you want to restore: ")
+
+        message = "RESTORE Group: {}".format(groupName)
+        print(message)
+        s.send(message.encode('ascii'))
+
+        data = s.recv(1024)
+        print('Received from the server :', str(data.decode('ascii')))
+
+        choice = input("Do you want to restore another group? (y/n)")
+
+        if choice.upper() != "Y":
+            break
 
     closeSocket(s)
 
-    return groupList
 
+def joinGroups(serverIP, serverPort):
 
-def restoreGroup():
-    closeSocket(s)
+    s = createSocket(serverIP, serverPort)
 
+    print("Retrieving other groups list..")
+    newGroupsList = retrieveGroupsList(s, previous=False)
 
-def retrieveGroupList(serverAddress, serverPort):
+    print("List of synchronization groups available:")
+    for group in newGroupsList:
+        print(group)
 
-    s = createSocket(serverAddress, serverPort)
+    while True:
 
-    message = "SEND NEW GROUPS LIST"
-    s.send(message.encode('ascii'))
+        groupName = input("Write the name of the group you want to join: ")
+        groupToken = input("Write the token of the group you want to access: ")
 
-    data = s.recv(1024)
-    groupList = eval(str(data.decode('ascii')))
-    print('Groups List :', groupList)
+        encryptedToken = hashlib.md5(groupToken.encode())
 
-    closeSocket(s)
+        message = "JOIN Group: {} Token: {}".format(groupName, encryptedToken.hexdigest())
+        print(message)
+        s.send(message.encode('ascii'))
 
-    return newGroupList
+        data = s.recv(1024)
+        print('Received from the server :', str(data.decode('ascii')))
 
+        choice = input("Do you want to join another group? (y/n)")
 
-def joinGroup(serverAddress, serverPort, newGroupsList):
-
-    s = createSocket(serverAddress, serverPort)
-
-    groupName = input("Write the name of the group you want to access: ")
-    groupToken = input("Write the token of the group you want to access: ")
-
-    encryptedToken = hashlib.md5(groupToken.encode())
-
-    message = "Group: {} Token: {}".format(groupName, encryptedToken.hexdigest())
-    print(message)
-    s.send(message.encode('ascii'))
-
-    data = s.recv(1024)
-    print('Received from the server :', str(data.decode('ascii')))
+        if choice.upper() != "Y":
+            break
 
     closeSocket(s)
 
 
 if __name__ == '__main__':
-    """main function, handles the menu"""
+    """main function, handles the configuration and the access to different groups"""
 
     print("Welcome to myLocalP2PCloud")
 
@@ -110,13 +125,9 @@ if __name__ == '__main__':
         file.write("{} {}".format(serverIP, serverPort))
     file.close()
 
-    print("Retrieving information about previous session..")
-    previousGroupsList = retrieveGroups(serverAddress, serverPort, previous=True)
+    """"Let the user restores previous synchronization groups"""
+    restoreGroups(serverIP, serverPort)
 
-    restoreGroup(previousGroupsList)
-
-    print("Retrieving other groups list..")
-    newGroupsList = retrieveGroups(serverIP, serverPort, previous=False)
-
-    joinGroup(serverIP, serverPort, newGroupsList)
+    """Let the user joins new synchronization groups"""
+    joinGroups(serverIP, serverPort)
 

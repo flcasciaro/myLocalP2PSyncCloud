@@ -158,7 +158,7 @@ def manageRequest(self, message):
     """Serves the client request"""
     print('[Thr {}] Received {}'.format(self.number, message))
 
-    if message == "SEND GROUPS LIST":
+    if message == "SEND PREVIOUS GROUPS LIST":
         gl = list()
         for group in groupList:
             gl.append(removeToken(group))
@@ -172,20 +172,25 @@ def manageRequest(self, message):
 
         if groupName in groupDict:
             if groupDict[groupName] == groupToken:
-                message = "Access Conceded"
+                message = "GROUP JOINED"
             else:
-                message = "Access Denied"
+                message = "ACCESS DENIED"
         else:
-            message = "Access Denied"
+            message = "ACCESS DENIED"
 
         self.client_sock.send(message.encode('ascii'))
-
+    elif message == "SEND OTHER GROUPS LIST":
+        pass
+    elif message.split()[0] == "RESTORE":
+        pass
+    elif message.split()[0] == "JOIN":
+        pass
     elif message == "BYE":
-        message = "bye client"
+        message = "BYE CLIENT"
         self.client_sock.send(message.encode('ascii'))
         self.stop()
     else:
-        message = "hello client"
+        message = "WTF_U_WANT"
         self.client_sock.send(message.encode('ascii'))
 
 if __name__ == '__main__':
