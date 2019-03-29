@@ -27,9 +27,9 @@ def initServer():
     """Initialize server data structures
     Data structures are filled with data read from local text files if they exist"""
 
-
-    with open('groups.txt', 'r') as f:
-
+    previous = True
+    try:
+        f = open('groups.txt', 'r')
         for line in f:
             groupInfo = line.split()
             groupInfoDict = dict()
@@ -40,25 +40,35 @@ def initServer():
             groupInfoDict["active"] = 0
             groupInfoDict["peers"] = list()
             groups[groupInfo[0]] = groupInfoDict
+        f.close()
+    except FileNotFoundError:
+        print("No previous session session information found")
+        previous = False
 
-    with open('peers.txt', 'r') as f:
 
-        for line in f:
-            peerInfo = line.split()
-            """peerInfo[0]+":"+peerInfo[1] is something like 192.168.0.1:5200 (IP:Port)
-            If this string is not present in the dictionary this is the first time I find
-            this peer in the file, I need to initialize the list of groups"""
-            peerID = peerInfo[0]+":"+peerInfo[1]
-            if peerID not in peers:
-                peers[peerID] = dict()
-                peers[peerID]["peerIP"] = peerInfo[0]
-                peers[peerID]["peerPort"] = peerInfo[1]
-                peers[peerID]["groups"] = list()
-            peerGroup = dict()
-            peerGroup["groupName"] = peerInfo[2]
-            peerGroup["role"] = peerInfo[3]
-            peerGroup["active"] = False
-            peers[peerID]["groups"].append(peerGroup)
+    if previous:
+        try:
+            f = open('peers.txt', 'r')
+            for line in f:
+                peerInfo = line.split()
+                """peerInfo[0]+":"+peerInfo[1] is something like 192.168.0.1:5200 (IP:Port)
+                If this string is not present in the dictionary this is the first time I find
+                this peer in the file, I need to initialize the list of groups"""
+                peerID = peerInfo[0]+":"+peerInfo[1]
+                if peerID not in peers:
+                    peers[peerID] = dict()
+                    peers[peerID]["peerIP"] = peerInfo[0]
+                    peers[peerID]["peerPort"] = peerInfo[1]
+                    peers[peerID]["groups"] = list()
+                peerGroup = dict()
+                peerGroup["groupName"] = peerInfo[2]
+                peerGroup["role"] = peerInfo[3]
+                peerGroup["active"] = False
+                peers[peerID]["groups"].append(peerGroup)
+            f.close()
+        except FileNotFoundError:
+            pass
+
 
 def saveState():
     """Save the state of groups and peers in order to allow to restore the session in future"""
@@ -186,7 +196,14 @@ def manageRequest(self, message):
     """Serves the client request"""
     print('[Thr {}] Received {}'.format(self.number, message))
 
-    if message == "SEND PREVIOUS GROUPS LIST":
+    if message.split()[0] == "CREATE":
+        newGroupName = message.split()[2]
+        newGroupTokenRW = message.split()[4]
+        newGroupTokenRO = message.split()[6]
+        message = "GROUP CREATED"
+        self.client_sock.send(message.encode('ascii'))
+
+    elif message == "SEND PREVIOUS GROUPS LIST":
         gl = list()
         for group in groupList:
             gl.append(removeToken(group))
@@ -225,8 +242,9 @@ if __name__ == '__main__':
     """main function, starts the server"""
 
     initServer()
+
     stop = False
-    #startServer()
+    startServer()
 
     #server stopped
     saveState()
