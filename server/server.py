@@ -12,7 +12,6 @@ groupList = list()
 """additional data structure useful for a fast access operation
 key = Group Name, value = group Token"""
 groupDict = dict()
-
 stop = None
 
 # database for an initial load of the data about bins/waste containers
@@ -47,7 +46,6 @@ def initServer():
         curs.close()
         conn.close()
 
-        print(tmp[0])
 
 
 def startServer(host = '0.0.0.0', port = 2010, max_clients = 10):
