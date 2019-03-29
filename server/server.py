@@ -4,48 +4,78 @@
 
 import select
 import socket
-import sqlite3
 from threading import Thread
 
-"""main data structure for groups list"""
-groupList = list()
-"""additional data structure useful for a fast access operation
-key = Group Name, value = group Token"""
-groupDict = dict()
+"""Main data structure for groups management
+It's a dictionary where the key is the GroupName and the value is
+another dictionary containing information about the group e.g. tokens, peers"""
+groups = dict()
+
+"""Main data structure for peers management
+It's a dictionary where the key is the combination peerIP+peerPort and the value is
+another dictionary containing information about the peer e.g. list of groups,
+where for each group we have a dictionary with the information about role and status"""
+peers = dict()
+
+
 stop = None
 
 # database for an initial load of the data about bins/waste containers
 db_path = 'init.db'
 
 def initServer():
-    """Initialize server configuration and data structures
-    Data structures are filled with data read from configuration files / local database"""
+    """Initialize server data structures
+    Data structures are filled with data read from local text files if they exist"""
 
-    with open('grouplist.txt', 'r') as f:
+
+    with open('groups.txt', 'r') as f:
 
         for line in f:
             groupInfo = line.split()
             groupInfoDict = dict()
-            groupInfoDict["id"] = groupInfo[0]
-            groupInfoDict["name"] = groupInfo[1]
-            groupInfoDict["token"] = groupInfo[2]
-            groupInfoDict["active"] = groupInfo[3]
-            groupInfoDict["total"] = groupInfo[4]
-            groupList.append(groupInfoDict)
-            groupDict[groupInfoDict["name"]]= groupInfoDict["token"]
+            groupInfoDict["name"] = groupInfo[0]
+            groupInfoDict["tokenRW"] = groupInfo[1]
+            groupInfoDict["tokenRO"] = groupInfo[2]
+            groupInfoDict["total"] = groupInfo[3]
+            groupInfoDict["active"] = 0
+            groupInfoDict["peers"] = list()
+            groups[groupInfo[0]] = groupInfoDict
 
-        # open a connection
-        conn = sqlite3.connect(db_path)
-        # define a cursor
-        curs = conn.cursor()
-        # execute a query which select all the information about the peers
-        curs.execute("SELECT * FROM peers")
-        # save data in a temporary list
-        tmp = curs.fetchall()
-        # close cursor and connection
-        curs.close()
-        conn.close()
+    with open('peers.txt', 'r') as f:
 
+        for line in f:
+            peerInfo = line.split()
+            """peerInfo[0]+":"+peerInfo[1] is something like 192.168.0.1:5200 (IP:Port)
+            If this string is not present in the dictionary this is the first time I find
+            this peer in the file, I need to initialize the list of groups"""
+            peerID = peerInfo[0]+":"+peerInfo[1]
+            if peerID not in peers:
+                peers[peerID] = dict()
+                peers[peerID]["peerIP"] = peerInfo[0]
+                peers[peerID]["peerPort"] = peerInfo[1]
+                peers[peerID]["groups"] = list()
+            peerGroup = dict()
+            peerGroup["groupName"] = peerInfo[2]
+            peerGroup["role"] = peerInfo[3]
+            peerGroup["active"] = False
+            peers[peerID]["groups"].append(peerGroup)
+
+def saveState():
+    """Save the state of groups and peers in order to allow to restore the session in future"""
+    with open('groups.txt', 'w') as f:
+        for group in groups.values():
+            f.write(group["name"]+" "+
+                    group["tokenRW"]+" "+
+                    group["tokenRO"]+" "+
+                    group["total"]+"\n")
+
+    with open('peers.txt', 'w') as f:
+        for peer in peers.values():
+            for group in peer["groups"]:
+                f.write(peer["peerIP"]+" "+
+                        peer["peerPort"]+" "+
+                        group["groupName"]+" "+
+                        group["role"]+"\n")
 
 
 def startServer(host = '0.0.0.0', port = 2010, max_clients = 10):
@@ -196,6 +226,8 @@ if __name__ == '__main__':
 
     initServer()
     stop = False
-    startServer()
+    #startServer()
 
+    #server stopped
+    saveState()
 
