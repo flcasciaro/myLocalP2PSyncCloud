@@ -39,8 +39,14 @@ def sendList(self, groups, previous):
 
     self.client_sock.send(str(groupList).encode('ascii'))
 
+def restoreGroup(message, self, groups):
+    """"make the user active in one of its group"""
 
-def joinGroup(message, sock, groups, peers):
+    groupName = message.split()[1]
+    #if groupName in groups and groupName in peers[self.peerID][groups]:
+
+
+def joinGroup(message, self, groups, peers):
     request = message.rstrip().split()
     print(request)
     groupName = request[1]
@@ -55,3 +61,6 @@ def joinGroup(message, sock, groups, peers):
         message = "ACCESS DENIED"
 
     sock.send(message.encode('ascii'))
+
+def createGroup(message, self, group, peers):
+    pass

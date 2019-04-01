@@ -203,10 +203,10 @@ def manageRequest(self, message):
         sendList(self, groups, previous=True)
 
     elif message == "SEND OTHER GROUPS LIST":
-        sendList(self, groups, previous=True)
+        sendList(self, groups, previous=False)
 
     elif message.split()[0] == "RESTORE":
-        pass
+        restoreGroup(message, self, groups)
 
     elif message.split()[0] == "JOIN":
         requestHandlers.joinGroup(message, self.client_sock)
