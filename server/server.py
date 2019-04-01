@@ -4,18 +4,23 @@
 
 import select
 import socket
-from threading import Thread
+from threading import Thread, Lock
+
+from requestHandlers import *
 
 """Main data structure for groups management
 It's a dictionary where the key is the GroupName and the value is
 another dictionary containing information about the group e.g. tokens, peers"""
 groups = dict()
+groupsLock = Lock()
+
 
 """Main data structure for peers management
 It's a dictionary where the key is the combination peerIP+peerPort and the value is
 another dictionary containing information about the peer e.g. list of groups,
 where for each group we have a dictionary with the information about role and status"""
 peers = dict()
+peersLock = Lock()
 
 
 stop = None
@@ -51,20 +56,21 @@ def initServer():
             f = open('peers.txt', 'r')
             for line in f:
                 peerInfo = line.split()
-                """peerInfo[0]+":"+peerInfo[1] is something like 192.168.0.1:5200 (IP:Port)
+                """peerID is simply the MAC address of the machine
                 If this string is not present in the dictionary this is the first time I find
                 this peer in the file, I need to initialize the list of groups"""
-                peerID = peerInfo[0]+":"+peerInfo[1]
+                peerID = peerInfo[0]
                 if peerID not in peers:
                     peers[peerID] = dict()
-                    peers[peerID]["peerIP"] = peerInfo[0]
-                    peers[peerID]["peerPort"] = peerInfo[1]
+                    peers[peerID]["peerIP"] = None
+                    peers[peerID]["peerPort"] = None
                     peers[peerID]["groups"] = list()
                 peerGroup = dict()
-                peerGroup["groupName"] = peerInfo[2]
-                peerGroup["role"] = peerInfo[3]
+                peerGroup["groupName"] = peerInfo[1]
+                peerGroup["role"] = peerInfo[2]
                 peerGroup["active"] = False
                 peers[peerID]["groups"].append(peerGroup)
+                groups[peerInfo[1]]["peers"].append(peerID)
             f.close()
         except FileNotFoundError:
             pass
@@ -82,8 +88,7 @@ def saveState():
     with open('peers.txt', 'w') as f:
         for peer in peers.values():
             for group in peer["groups"]:
-                f.write(peer["peerIP"]+" "+
-                        peer["peerPort"]+" "+
+                f.write(peer["peerID"]+" "+
                         group["groupName"]+" "+
                         group["role"]+"\n")
 
@@ -142,6 +147,7 @@ class SocketServerThread(Thread):
         self.client_sock = client_sock
         self.client_addr = client_addr
         self.number = number
+        self.peerID = None  #it will be set during the handshake
         self.__stop = False
 
     def run(self):
@@ -168,7 +174,6 @@ class SocketServerThread(Thread):
                         # Strip newlines just for output clarity
                         message = read_data.decode('ascii').rstrip()
                         manageRequest(self, message)
-
             else:
                 print("[Thr {}] No client is connected, SocketServer can't receive data".format(self.number))
                 self.stop()
@@ -184,56 +189,40 @@ class SocketServerThread(Thread):
             self.client_sock.close()
 
 
-def removeToken(group):
-    """"This function return a group dictionary without the token field"""
-    modGroup = group
-    del modGroup["token"]
-    return modGroup
-
-
 def manageRequest(self, message):
 
     """Serves the client request"""
     print('[Thr {}] Received {}'.format(self.number, message))
 
-    if message.split()[0] == "CREATE":
+    if message.split()[0] == "I'M":
+        handshake(message, self, peers)
+        """DEBUG PRINT"""
+        #print (peers)
+
+    elif message == "SEND PREVIOUS GROUPS LIST":
+        sendList(self, groups, previous=True)
+
+    elif message == "SEND OTHER GROUPS LIST":
+        sendList(self, groups, previous=True)
+
+    elif message.split()[0] == "RESTORE":
+        pass
+
+    elif message.split()[0] == "JOIN":
+        requestHandlers.joinGroup(message, self.client_sock)
+
+    elif message.split()[0] == "CREATE":
         newGroupName = message.split()[2]
         newGroupTokenRW = message.split()[4]
         newGroupTokenRO = message.split()[6]
         message = "GROUP CREATED"
         self.client_sock.send(message.encode('ascii'))
 
-    elif message == "SEND PREVIOUS GROUPS LIST":
-        gl = list()
-        for group in groupList:
-            gl.append(removeToken(group))
-        self.client_sock.send(str(gl).encode('ascii'))
-
-        read_data = self.client_sock.recv(255)
-        request = read_data.decode('ascii').rstrip().split()
-        print(request)
-        groupName = request[1]
-        groupToken = request[3]
-
-        if groupName in groupDict:
-            if groupDict[groupName] == groupToken:
-                message = "GROUP JOINED"
-            else:
-                message = "ACCESS DENIED"
-        else:
-            message = "ACCESS DENIED"
-
-        self.client_sock.send(message.encode('ascii'))
-    elif message == "SEND OTHER GROUPS LIST":
-        pass
-    elif message.split()[0] == "RESTORE":
-        pass
-    elif message.split()[0] == "JOIN":
-        pass
     elif message == "BYE":
         message = "BYE CLIENT"
         self.client_sock.send(message.encode('ascii'))
         self.stop()
+
     else:
         message = "WTF_U_WANT"
         self.client_sock.send(message.encode('ascii'))
