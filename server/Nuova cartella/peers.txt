@@ -1,0 +1,4 @@
+10.0.0.10 15 ITDepartment Master
+10.0.0.15 15 ITDepartment RW
+192.168.0.1 5000 Telecom Master
+172.0.0.10 14 ShazList Master
