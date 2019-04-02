@@ -15,10 +15,9 @@ groups = dict()
 groupsLock = Lock()
 
 
-"""Main data structure for peers management
-It's a dictionary where the key is the combination peerIP+peerPort and the value is
-another dictionary containing information about the peer e.g. list of groups,
-where for each group we have a dictionary with the information about role and status"""
+"""Secondary data structures for peers information.
+It's a dictionary where the key is the peerID and the value is
+another dictionary containing information about the peer e.g. peerIP and peerPort"""
 peers = dict()
 peersLock = Lock()
 
@@ -34,7 +33,7 @@ def initServer():
 
     previous = True
     try:
-        f = open('groups.txt', 'r')
+        f = open('groupsInfo.txt', 'r')
         for line in f:
             groupInfo = line.split()
             groupInfoDict = dict()
@@ -43,7 +42,7 @@ def initServer():
             groupInfoDict["tokenRO"] = groupInfo[2]
             groupInfoDict["total"] = groupInfo[3]
             groupInfoDict["active"] = 0
-            groupInfoDict["peers"] = list()
+            groupInfoDict["peers"] = dict()
             groups[groupInfo[0]] = groupInfoDict
         f.close()
     except FileNotFoundError:
@@ -53,7 +52,7 @@ def initServer():
 
     if previous:
         try:
-            f = open('peers.txt', 'r')
+            f = open('groupsJoin.txt', 'r')
             for line in f:
                 peerInfo = line.split()
                 """peerID is simply the MAC address of the machine
@@ -64,13 +63,11 @@ def initServer():
                     peers[peerID] = dict()
                     peers[peerID]["peerIP"] = None
                     peers[peerID]["peerPort"] = None
-                    peers[peerID]["groups"] = list()
-                peerGroup = dict()
-                peerGroup["groupName"] = peerInfo[1]
-                peerGroup["role"] = peerInfo[2]
-                peerGroup["active"] = False
-                peers[peerID]["groups"].append(peerGroup)
-                groups[peerInfo[1]]["peers"].append(peerID)
+                peerInGroup = dict()
+                peerInGroup["peerID"] = peerID
+                peerInGroup["role"] = peerInfo[2]
+                peerInGroup["active"] = False
+                groups[peerInfo[1]]["peers"][peerID] = peerInGroup
             f.close()
         except FileNotFoundError:
             pass
@@ -78,19 +75,19 @@ def initServer():
 
 def saveState():
     """Save the state of groups and peers in order to allow to restore the session in future"""
-    with open('groups.txt', 'w') as f:
+    with open('groupsInfo.txt', 'w') as f:
         for group in groups.values():
             f.write(group["name"]+" "+
                     group["tokenRW"]+" "+
                     group["tokenRO"]+" "+
                     group["total"]+"\n")
 
-    with open('peers.txt', 'w') as f:
-        for peer in peers.values():
-            for group in peer["groups"]:
+    with open('groupsJoin.txt', 'w') as f:
+        for group in groups.values():
+            for peer in group["peers"].values():
                 f.write(peer["peerID"]+" "+
-                        group["groupName"]+" "+
-                        group["role"]+"\n")
+                        group["name"]+" "+
+                        peer["role"]+"\n")
 
 
 def startServer(host = '0.0.0.0', port = 2010, max_clients = 10):
@@ -196,7 +193,6 @@ def manageRequest(self, message):
 
     if message.split()[0] == "I'M":
         handshake(message, self, peers)
-        """DEBUG PRINT"""
         #print (peers)
 
     elif message == "SEND PREVIOUS GROUPS LIST":
@@ -231,6 +227,8 @@ if __name__ == '__main__':
     """main function, starts the server"""
 
     initServer()
+    #print(groups)
+    #print(peers)
 
     stop = False
     startServer()
