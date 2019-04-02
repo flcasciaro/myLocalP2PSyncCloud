@@ -6,7 +6,8 @@ import select
 import socket
 from threading import Thread, Lock
 
-from requestHandlers import *
+import reqhand
+import utilities
 
 """Main data structure for groups management
 It's a dictionary where the key is the GroupName and the value is
@@ -36,14 +37,8 @@ def initServer():
         f = open('groupsInfo.txt', 'r')
         for line in f:
             groupInfo = line.split()
-            groupInfoDict = dict()
-            groupInfoDict["name"] = groupInfo[0]
-            groupInfoDict["tokenRW"] = groupInfo[1]
-            groupInfoDict["tokenRO"] = groupInfo[2]
-            groupInfoDict["total"] = groupInfo[3]
-            groupInfoDict["active"] = 0
-            groupInfoDict["peers"] = dict()
-            groups[groupInfo[0]] = groupInfoDict
+            groupInfo.append("0")     #add the number of active users to the initialization parameters
+            groups[groupInfo[0]] = utilities.createGroupDict(groupInfo)
         f.close()
     except FileNotFoundError:
         print("No previous session session information found")
@@ -192,28 +187,23 @@ def manageRequest(self, message):
     print('[Thr {}] Received {}'.format(self.number, message))
 
     if message.split()[0] == "I'M":
-        handshake(message, self, peers)
-        #print (peers)
+        reqhand.handshake(message, self, peers)
 
     elif message == "SEND PREVIOUS GROUPS LIST":
-        sendList(self, groups, previous=True)
+        reqhand.sendList(self, groups, previous=True)
 
     elif message == "SEND OTHER GROUPS LIST":
-        sendList(self, groups, previous=False)
+        reqhand.sendList(self, groups, previous=False)
 
     elif message.split()[0] == "RESTORE":
-        restoreGroup(message, self, groups)
-
+        reqhand.restoreGroup(message, self, groups)
+        print(groups)
     elif message.split()[0] == "JOIN":
-        requestHandlers.joinGroup(message, self.client_sock)
-
+        reqhand.joinGroup(message, self, groups)
+        print(groups)
     elif message.split()[0] == "CREATE":
-        newGroupName = message.split()[2]
-        newGroupTokenRW = message.split()[4]
-        newGroupTokenRO = message.split()[6]
-        message = "GROUP CREATED"
-        self.client_sock.send(message.encode('ascii'))
-
+        reqhand.createGroup(message, self, groups)
+        print(groups)
     elif message == "BYE":
         message = "BYE CLIENT"
         self.client_sock.send(message.encode('ascii'))
