@@ -11,3 +11,11 @@ def createGroupDict(groupInfo):
     groupDict["active"] = int(groupInfo[4])
     groupDict["peers"] = dict()
     return groupDict
+
+def hideGroupInfo(group):
+    """"This function return a group dictionary without the token fields and without the list of peers"""
+    modGroup = dict()
+    modGroup["name"] = group["name"]
+    modGroup["total"] = group["total"]
+    modGroup["active"] = group["active"]
+    return modGroup

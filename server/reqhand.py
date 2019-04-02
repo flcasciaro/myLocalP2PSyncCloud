@@ -4,31 +4,14 @@ to serve clients request"""
 import utilities
 
 def handshake(message, thread, peers):
-    """no peersLock, should be thread safe because only a thread is in charge of a peer"""
+    """add or update information (IP, Port) about a peer
+    no peersLock, should be thread safe because only a thread is in charge of a peer"""
 
     peerID = message.split()[1]
     thread.peerID = peerID
 
-    if peerID in peers:
-        """"peers already discovered in a previous session"""
-        peers[peerID]["peerIP"] = thread.client_addr[0]
-        peers[peerID]["peerPort"] = thread.client_addr[1]
-    else:
-        """unknown peer"""
-        peers[peerID] = dict()
-        peers[peerID]["peerIP"] = thread.client_addr[0]
-        peers[peerID]["peerPort"] = thread.client_addr[1]
-
     message = "HELLO {}".format(peerID)
     thread.client_sock.send(message.encode('ascii'))
-
-def hideGroupInfo(group):
-    """"This function return a group dictionary without the token fields and without the list of peers"""
-    modGroup = dict()
-    modGroup["name"] = group["name"]
-    modGroup["total"] = group["total"]
-    modGroup["active"] = group["active"]
-    return modGroup
 
 
 def sendList(thread, groups, previous):
@@ -38,10 +21,10 @@ def sendList(thread, groups, previous):
 
     for g in groups.values():
         if thread.peerID in g["peers"] and previous:
-            groupList.append(hideGroupInfo(g))
+            groupList.append(utilities.hideGroupInfo(g))
             continue
         if thread.peerID not in g["peers"] and not previous:
-            groupList.append(hideGroupInfo(g))
+            groupList.append(utilities.hideGroupInfo(g))
 
     thread.client_sock.send(str(groupList).encode('ascii'))
 
@@ -51,7 +34,7 @@ def restoreGroup(message, thread, groups):
     groupName = message.split()[2]
     if groupName in groups:
             if thread.peerID in groups[groupName]["peers"]:
-                if groups[groupName]["peers"][thread.peerID]["active"] == False:
+                if not groups[groupName]["peers"][thread.peerID]["active"]: #if not already active
                     groups[groupName]["peers"][thread.peerID]["active"] = True
                     answer = "GROUP {} RESTORED".format(groupName)
                     groups[groupName]["active"] += 1
@@ -121,5 +104,24 @@ def createGroup(message, thread, groups):
 
     thread.client_sock.send(answer.encode('ascii'))
 
-def peerDisconnection():
+def imHere(message, thread, peers):
+
+    """store IP address and Port Number on which the peer can be contacted by other peers"""
+
+    if thread.peerID not in peers:
+        """unknown peer"""
+        peers[thread.peerID] = dict()
+
+    """unknown peer"""
+    peers[thread.peerID]["peerIP"] = message.split()[1]
+    peers[thread.peerID]["peerPort"] = message.split()[2]
+
+def peerDisconnection(thread, groups, peers):
     """Disconnect the peer from all the synchronization groups setting the active value to False"""
+
+    for group in groups:
+        if thread.peerID in group["peers"]:
+            group["peers"][thread.peerID]["active"] = False
+
+    del peers[thread.peerID]
+

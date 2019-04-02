@@ -25,8 +25,9 @@ peersLock = Lock()
 
 stop = None
 
-# database for an initial load of the data about bins/waste containers
-db_path = 'init.db'
+groupsInfoFile = "./sessionFiles/groupsInfo.txt"
+groupsJoinFile = "./sessionFiles/groupsJoin.txt"
+
 
 def initServer():
     """Initialize server data structures
@@ -34,7 +35,7 @@ def initServer():
 
     previous = True
     try:
-        f = open('groupsInfo.txt', 'r')
+        f = open(groupsInfoFile, 'r')
         for line in f:
             groupInfo = line.split()
             groupInfo.append("0")     #add the number of active users to the initialization parameters
@@ -47,7 +48,7 @@ def initServer():
 
     if previous:
         try:
-            f = open('groupsJoin.txt', 'r')
+            f = open(groupsJoinFile, 'r')
             for line in f:
                 peerInfo = line.split()
                 """peerID is simply the MAC address of the machine
@@ -70,14 +71,14 @@ def initServer():
 
 def saveState():
     """Save the state of groups and peers in order to allow to restore the session in future"""
-    with open('groupsInfo.txt', 'w') as f:
+    with open(groupsInfoFile, 'w') as f:
         for group in groups.values():
             f.write(group["name"]+" "+
                     group["tokenRW"]+" "+
                     group["tokenRO"]+" "+
                     group["total"]+"\n")
 
-    with open('groupsJoin.txt', 'w') as f:
+    with open(groupsJoinFile, 'w') as f:
         for group in groups.values():
             for peer in group["peers"].values():
                 f.write(peer["peerID"]+" "+
@@ -94,8 +95,7 @@ def startServer(host = '0.0.0.0', port = 2010, max_clients = 10):
     sock.bind((host, port))
     sock.listen(max_clients)
     sock_threads = []
-    counter = 0 # Will be used to give a number to each thread
-
+    counter = 0 # Will be used to give a number to each thread, can be improved (re-assigning free number)
 
     """ Accept an incoming connection.
     Start a new SocketServerThread that will handle the communication. """
@@ -139,7 +139,7 @@ class SocketServerThread(Thread):
         self.client_sock = client_sock
         self.client_addr = client_addr
         self.number = number
-        self.peerID = None  #it will be set during the handshake
+        self.peerID = None  #it will be set after the connection establishment (socket creation)
         self.__stop = False
 
     def run(self):
@@ -156,7 +156,7 @@ class SocketServerThread(Thread):
                     return
 
                 if len(rdy_read) > 0:
-                    read_data = self.client_sock.recv(255)
+                    read_data = self.client_sock.recv(1024)
 
                     # Check if socket has been closed
                     if len(read_data) == 0:
@@ -187,7 +187,7 @@ def manageRequest(self, message):
     print('[Thr {}] Received {}'.format(self.number, message))
 
     if message.split()[0] == "I'M":
-        reqhand.handshake(message, self, peers)
+        reqhand.handshake(message, self)
 
     elif message == "SEND PREVIOUS GROUPS LIST":
         reqhand.sendList(self, groups, previous=True)
@@ -204,14 +204,18 @@ def manageRequest(self, message):
     elif message.split()[0] == "CREATE":
         reqhand.createGroup(message, self, groups)
         print(groups)
+    elif message.split()[0] == "HERE":
+        reqhand.imHere(message, self, peers)
+        print(peers)
+    elif message == "DISCONNECT":
+        reqhand.peerDisconnection(thread, groups, peers)
     elif message == "BYE":
-        message = "BYE CLIENT"
-        self.client_sock.send(message.encode('ascii'))
+        answer = "BYE CLIENT"
+        self.client_sock.send(answer.encode('ascii'))
         self.stop()
-
     else:
-        message = "WTF_U_WANT"
-        self.client_sock.send(message.encode('ascii'))
+        answer = "WTF_U_WANT"
+        self.client_sock.send(answer.encode('ascii'))
 
 if __name__ == '__main__':
     """main function, starts the server"""
