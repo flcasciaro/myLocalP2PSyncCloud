@@ -98,7 +98,7 @@ def joinGroups(s):
     for group in newGroupsList:
         print(group)
 
-    choice = input("Do you want to restore a synchronization session with one of these groups? (y/n): ")
+    choice = input("Do you want to join one of these groups? (y/n): ")
 
     if choice.upper() == 'Y':
         while True:
