@@ -44,11 +44,15 @@ def restoreGroup(message, self, groups):
     """"make the user active in one of its group"""
 
     groupName = message.split()[2]
-    if groupName in groups and self.peerID in groups[groupName]["peers"]:
-        groups[groupName]["peers"][self.peerID]["active"] = True
-        answer = "GROUP {} RESTORED".format(groupName)
+    if groupName in groups:
+            if self.peerID in groups[groupName]["peers"]:
+                groups[groupName]["peers"][self.peerID]["active"] = True
+                answer = "GROUP {} RESTORED".format(groupName)
+            else:
+                answer = "IT'S NOT POSSIBLE TO RESTORE GROUP {}, PEER DOESN'T BELONG TO IT".format(groupName)
     else:
-        answer = "IT'S NOT POSSIBLE TO RESTORE GROUP {}, GROUP DOESN'T EXIST OR PEER DOESN'T BELONG TO IT".format(groupName)
+        answer = "IT'S NOT POSSIBLE TO RESTORE GROUP {}, GROUP DOESN'T EXIST".format(groupName)
+
     self.client_sock.send(answer.encode('ascii'))
 
 def joinGroup(message, self, groups, peers):
@@ -74,6 +78,7 @@ def joinGroup(message, self, groups, peers):
             answer = "IMPOSSIBLE TO JOIN GROUP {} - WRONG TOKEN".format(groupName)
     else:
         answer = "IMPOSSIBLE TO JOIN GROUP {} - GROUP DOESN'T EXIST".format(groupName)
+
     self.client_sock.send(answer.encode('ascii'))
 
 def createGroup(message, self, group, peers):
