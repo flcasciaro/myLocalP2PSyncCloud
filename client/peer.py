@@ -251,9 +251,6 @@ def startSync():
 
     s = handshake()
 
-    #retrieve external IP address
-    #myIP = urllib.request.urlopen('https://ident.me').read().decode('utf8')
-
     #retrieve internal IP address
     myIP = socket.gethostbyname(socket.gethostname())
     print(myIP)
@@ -310,10 +307,11 @@ if __name__ == '__main__':
     """here the peer has to communicate to the server on which port number its server function will run"""
     startSync()
 
+"""TEST retrievePeers
     retrievePeers("ITDepartment", all=True)
     retrievePeers("ITDepartment", all=False)
     restoreGroup("ITDepartment")
     retrievePeers("ITDepartment", all=False)
-
+"""
 
 
