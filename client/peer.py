@@ -25,10 +25,16 @@ def closeSocket(sock):
     sock.send(message.encode('ascii'))
 
     data = sock.recv(1024)
-    #print('Received from the server :', str(data.decode('ascii')))
-    # sleep one seconds
-    time.sleep(0.1)
-    sock.close()
+    print('Received from the server :', str(data.decode('ascii')))
+    if data.decode('ascii').rstrip() == "BYE PEER":
+        time.sleep(0.1)
+        sock.close()
+    else:
+        serverError()
+
+def serverError():
+    print("UNEXPECTED ANSWER OF THE SERVER")
+    exit(-1)
 
 def serverUnreachable():
     print("UNABLE TO REACH THE SERVER")
@@ -190,9 +196,33 @@ def createGroupWrapper():
             if choice.upper() != "Y":
                 break
 
+
+def roleManagement():
+    """this function addresses the management of the master and the management of roles by the master"""
+    s = handshake()
+
+    while True:
+        action = input("Select an action: CHANGE_MASTER - ADD_MASTER - TO_RW - TO_RO: ")
+        if action.upper() == "CHANGE_MASTER" or action.upper() == "ADD_MASTER"\
+        or action.upper() == "TO_RW" or action.upper() == "TO_RO":
+            break
+        else:
+            print("Invalid action")
+
+    newMasterID = input("Enter the peerID of the peer to which you want to change role: ")
+    groupName = input("Enter the name of the group: ")
+
+    message = "ROLE {} {} GROUP {}".format(action.upper(), newMasterID, groupName)
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+
+    closeSocket(s)
+
 def startSync():
 
-    """create a server thread that listens on the port X"""
+    """create a server thread that listens on the port X
     #createServer
 
     s = handshake()
@@ -203,7 +233,7 @@ def startSync():
     data = s.recv(1024)
     print('Received from the server :', str(data.decode('ascii')))
 
-    closeSocket(s)
+    closeSocket(s)"""
 
 
 if __name__ == '__main__':
@@ -219,8 +249,8 @@ if __name__ == '__main__':
         serverPort = int(configuration[1])
     except FileNotFoundError:
         print("No configuration found")
-        serverIP = input("Insert server IP:")
-        serverPort = input("Insert server port:")
+        serverIP = input("Enter server IP:")
+        serverPort = input("Enter server port:")
         """"save configuration on the file"""
         file = open(configurationFile, 'w')
         file.write("{} {}".format(serverIP, serverPort))
@@ -230,6 +260,8 @@ if __name__ == '__main__':
     macAddress = uuid.getnode()
     #peerID = int(time.ctime(os.path.getctime(configurationFile))) & macAddress
     peerID = macAddress
+
+    roleManagement()
 
     """"Let the user restores previous synchronization groups"""
     restoreGroupWrapper()
@@ -243,4 +275,6 @@ if __name__ == '__main__':
 
     """choose a port number available"""
     """here the peer has to communicate to the server on which port number its server function will run"""
-    startSync()
+    #startSync()
+
+
