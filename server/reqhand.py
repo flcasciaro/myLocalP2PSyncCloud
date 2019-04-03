@@ -3,15 +3,13 @@ to serve clients request"""
 
 import utilities
 
-def handshake(message, thread, peers):
+def handshake(request, thread):
     """add or update information (IP, Port) about a peer
     no peersLock, should be thread safe because only a thread is in charge of a peer"""
 
-    peerID = message.split()[1]
-    thread.peerID = peerID
-
-    message = "HELLO {}".format(peerID)
-    thread.client_sock.send(message.encode('ascii'))
+    thread.peerID = request.split()[1]
+    request = "HELLO {}".format(thread.peerID)
+    thread.client_sock.send(request.encode('ascii'))
 
 
 def sendList(thread, groups, previous):
@@ -28,10 +26,10 @@ def sendList(thread, groups, previous):
 
     thread.client_sock.send(str(groupList).encode('ascii'))
 
-def restoreGroup(message, thread, groups):
+def restoreGroup(request, thread, groups):
     """"make the user active in one of its group"""
 
-    groupName = message.split()[2]
+    groupName = request.split()[2]
     if groupName in groups:
             if thread.peerID in groups[groupName]["peers"]:
                 if not groups[groupName]["peers"][thread.peerID]["active"]: #if not already active
@@ -47,12 +45,12 @@ def restoreGroup(message, thread, groups):
 
     thread.client_sock.send(answer.encode('ascii'))
 
-def joinGroup(message, thread, groups):
+def joinGroup(request, thread, groups):
     """"make the user active in a new group group
     choosing also the role as function of the token provided"""
 
-    groupName = message.split()[2]
-    tokenProvided = message.split()[4]
+    groupName = request.split()[2]
+    tokenProvided = request.split()[4]
 
     if groupName in groups:
         if tokenProvided == groups[groupName]["tokenRW"] or tokenProvided == groups[groupName]["tokenRO"]:
@@ -74,14 +72,14 @@ def joinGroup(message, thread, groups):
 
     thread.client_sock.send(answer.encode('ascii'))
 
-def createGroup(message, thread, groups):
+def createGroup(request, thread, groups):
     """This function allows a peer to create a new synchronization group
     specifying the groupName and the tokens. The creator peer become also the master
     of the new group."""
 
-    newGroupName = message.split()[2]
-    newGroupTokenRW = message.split()[4]
-    newGroupTokenRO = message.split()[6]
+    newGroupName = request.split()[2]
+    newGroupTokenRW = request.split()[4]
+    newGroupTokenRO = request.split()[6]
 
     if newGroupName not in groups:
         """create the new group and insert in the group dictionary"""
@@ -104,7 +102,45 @@ def createGroup(message, thread, groups):
 
     thread.client_sock.send(answer.encode('ascii'))
 
-def imHere(message, thread, peers):
+def manageRole(request, thread, groups, groupsLock):
+
+    action = request.split()[1]
+    modPeerID = request.split()[2]
+    groupName = request.split()[4]
+
+    if action == "CHANGE_MASTER":
+        newRole = "Master"
+    elif action == "ADD_MASTER":
+        newRole = "Master"
+    elif action == "TO_RW":
+        newRole = "RW"
+    elif action == "TO_RO":
+        newRole = "RO"
+
+    if groupName in groups:
+        if thread.peerID in groups[groupName]["peers"] and modPeerID in groups[groupName]["peers"]:
+            if groups[groupName]["peers"][thread.peerID]["role"].upper() == "MASTER":
+
+                groupsLock.acquire()
+                groups[groupName]["peers"][modPeerID]["role"] = newRole
+
+                if action.upper() == "CHANGE_MASTER":
+                    groups[groupName]["peers"][thread.peerID]["role"] = "RW"
+
+                groupsLock.release()
+                answer = "OPERATION ALLOWED"
+
+            else:
+                answer = "ERROR - OPERATION NOT ALLOWED"
+        else:
+            answer = "ERROR - OPERATION NOT ALLOWED"
+    else:
+        answer = "ERROR - GROUP {} DOESN'T EXIST".format(groupName)
+
+    thread.client_sock.send(answer.encode('ascii'))
+
+
+def imHere(request, thread, peers):
 
     """store IP address and Port Number on which the peer can be contacted by other peers"""
 
@@ -113,8 +149,8 @@ def imHere(message, thread, peers):
         peers[thread.peerID] = dict()
 
     """unknown peer"""
-    peers[thread.peerID]["peerIP"] = message.split()[1]
-    peers[thread.peerID]["peerPort"] = message.split()[2]
+    peers[thread.peerID]["peerIP"] = request.split()[1]
+    peers[thread.peerID]["peerPort"] = request.split()[2]
 
 def peerDisconnection(thread, groups, peers):
     """Disconnect the peer from all the synchronization groups setting the active value to False"""

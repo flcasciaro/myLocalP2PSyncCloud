@@ -25,8 +25,8 @@ peersLock = Lock()
 
 stop = None
 
-groupsInfoFile = "./sessionFiles/groupsInfo.txt"
-groupsJoinFile = "./sessionFiles/groupsJoin.txt"
+groupsInfoFile = "sessionFiles/groupsInfo.txt"
+groupsJoinFile = "sessionFiles/groupsJoin.txt"
 
 
 def initServer():
@@ -197,20 +197,29 @@ def manageRequest(self, message):
 
     elif message.split()[0] == "RESTORE":
         reqhand.restoreGroup(message, self, groups)
-        print(groups)
+        #print(groups)
+
     elif message.split()[0] == "JOIN":
         reqhand.joinGroup(message, self, groups)
-        print(groups)
+        #print(groups)
+
     elif message.split()[0] == "CREATE":
         reqhand.createGroup(message, self, groups)
+        #print(groups)
+
+    elif message.split()[0] == "ROLE":
+        reqhand.manageRole(message, self, groups, groupsLock)
         print(groups)
+
     elif message.split()[0] == "HERE":
         reqhand.imHere(message, self, peers)
         print(peers)
+
     elif message == "DISCONNECT":
-        reqhand.peerDisconnection(thread, groups, peers)
+        reqhand.peerDisconnection(self, groups, peers)
+
     elif message == "BYE":
-        answer = "BYE CLIENT"
+        answer = "BYE PEER"
         self.client_sock.send(answer.encode('ascii'))
         self.stop()
     else:
