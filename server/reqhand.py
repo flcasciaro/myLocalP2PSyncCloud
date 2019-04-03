@@ -139,6 +139,24 @@ def manageRole(request, thread, groups, groupsLock):
 
     thread.client_sock.send(answer.encode('ascii'))
 
+def retrievePeers(request, thread, groups, peers):
+    """"retrieve a list of peers (only active or all) for a specific group
+    request format: "PEERS <GROUPNAME> <ACTIVE/ALL>"   """
+
+    groupName = request.split()[1]
+    selectAll = True if request.split()[2].upper() == "ALL" else False
+
+    if groupName in groups:
+        peersList = list()
+        for peer in groups[groupName]["peers"]:
+            if not groups[groupName]["peers"][peer]["active"] and not selectAll:
+                continue
+            peersList.append(peers[peer])
+        answer = str(peersList)
+    else:
+        answer = "ERROR - GROUP {} DOESN'T EXIST".format(groupName)
+    thread.client_sock.send(answer.encode('ascii'))
+
 
 def imHere(request, thread, peers):
 
@@ -152,12 +170,16 @@ def imHere(request, thread, peers):
     peers[thread.peerID]["peerIP"] = request.split()[1]
     peers[thread.peerID]["peerPort"] = request.split()[2]
 
+    answer = "PEER INFO UPDATED"
+    thread.client_sock.send(answer.encode('ascii'))
+
 def peerDisconnection(thread, groups, peers):
     """Disconnect the peer from all the synchronization groups setting the active value to False"""
 
     for group in groups:
         if thread.peerID in group["peers"]:
             group["peers"][thread.peerID]["active"] = False
+            group["active"] -= 1
 
     del peers[thread.peerID]
 

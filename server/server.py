@@ -211,6 +211,9 @@ def manageRequest(self, message):
         reqhand.manageRole(message, self, groups, groupsLock)
         print(groups)
 
+    elif message.split()[0] == "PEERS":
+        reqhand.retrievePeers(message, self, groups, peers)
+
     elif message.split()[0] == "HERE":
         reqhand.imHere(message, self, peers)
         print(peers)

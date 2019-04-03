@@ -6,6 +6,7 @@ import hashlib
 import socket
 import time
 import uuid
+
 #import os
 
 configurationFile = "conf.txt"
@@ -220,20 +221,52 @@ def roleManagement():
 
     closeSocket(s)
 
+def retrievePeers(groupName, all):
+
+    s = handshake()
+
+    if all:
+        tmp = "ALL"
+    else:
+        tmp = "ACTIVE"
+
+    message = "PEERS {} {} ".format(groupName, tmp)
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    if data.decode('ascii').split()[0] == "ERROR":
+        print('Received from the server :', str(data.decode('ascii')))
+        peersList = None
+    else:
+        peersList = eval(str(data.decode('ascii')))
+        print(peersList)
+
+    closeSocket(s)
+    return peersList
+
 def startSync():
 
-    """create a server thread that listens on the port X
+    """create a server thread that listens on the port X"""
     #createServer
 
     s = handshake()
 
-    message = "HERE {} {}".format(ipAddress, portNumber)
+    #retrieve external IP address
+    #myIP = urllib.request.urlopen('https://ident.me').read().decode('utf8')
+
+    #retrieve internal IP address
+    myIP = socket.gethostbyname(socket.gethostname())
+    print(myIP)
+
+    portNumber = 10000
+
+    message = "HERE {} {}".format(myIP, portNumber)
     s.send(message.encode('ascii'))
 
     data = s.recv(1024)
     print('Received from the server :', str(data.decode('ascii')))
 
-    closeSocket(s)"""
+    closeSocket(s)
 
 
 if __name__ == '__main__':
@@ -261,20 +294,26 @@ if __name__ == '__main__':
     #peerID = int(time.ctime(os.path.getctime(configurationFile))) & macAddress
     peerID = macAddress
 
-    roleManagement()
+    #roleManagement()
 
     """"Let the user restores previous synchronization groups"""
-    restoreGroupWrapper()
+    #restoreGroupWrapper()
 
     """Let the user joins new synchronization groups"""
-    joinGroupWrapper()
+    #joinGroupWrapper()
 
-    createGroupWrapper()
+    #createGroupWrapper()
 
     print("Sync happens here...")
 
     """choose a port number available"""
     """here the peer has to communicate to the server on which port number its server function will run"""
-    #startSync()
+    startSync()
+
+    retrievePeers("ITDepartment", all=True)
+    retrievePeers("ITDepartment", all=False)
+    restoreGroup("ITDepartment")
+    retrievePeers("ITDepartment", all=False)
+
 
 
