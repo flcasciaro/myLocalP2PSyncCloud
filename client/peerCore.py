@@ -6,19 +6,41 @@ import hashlib
 import socket
 import time
 import uuid
-
 #import os
 
 configurationFile = "conf.txt"
 peerID = None
-serverIP =None
+serverIP = None
 serverPort = None
+
+def setPeerID():
+    global peerID
+    """peer unique Identifier obtained from the MAC address of the machine"""
+    macAddress = uuid.getnode()
+    # peerID = int(time.ctime(os.path.getctime(configurationFile))) & macAddress
+    peerID = macAddress
+
+def findServer():
+    global serverIP, serverPort
+    try:
+        file = open(configurationFile, 'r')
+        configuration = file.readline().split()
+        serverIP = configuration[0]
+        serverPort = int(configuration[1])
+    except FileNotFoundError:
+        return False
+    file.close()
+    return True
+
+def setServerCoordinates(coordinates):
+    global serverIP, serverPort
+    serverIP = coordinates.split(":")[0]
+    serverPort = coordinates.split(":")[1]
 
 def createSocket(host, port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((host, port))
     return s
-
 
 def closeSocket(sock):
     # close the connection sock
@@ -265,53 +287,5 @@ def startSync():
 
     closeSocket(s)
 
-
-if __name__ == '__main__':
-    """main function, handles the configuration and the access to different groups"""
-
-    print("Welcome to myLocalP2PCloud")
-
-    print("Retrieving configuration..")
-    try:
-        file = open(configurationFile, 'r')
-        configuration = file.readline().split()
-        serverIP = configuration[0]
-        serverPort = int(configuration[1])
-    except FileNotFoundError:
-        print("No configuration found")
-        serverIP = input("Enter server IP:")
-        serverPort = input("Enter server port:")
-        """"save configuration on the file"""
-        file = open(configurationFile, 'w')
-        file.write("{} {}".format(serverIP, serverPort))
-    file.close()
-
-    """peer unique Identifier obtained from the MAC address of the machine"""
-    macAddress = uuid.getnode()
-    #peerID = int(time.ctime(os.path.getctime(configurationFile))) & macAddress
-    peerID = macAddress
-
-    #roleManagement()
-
-    """"Let the user restores previous synchronization groups"""
-    #restoreGroupWrapper()
-
-    """Let the user joins new synchronization groups"""
-    #joinGroupWrapper()
-
-    #createGroupWrapper()
-
-    print("Sync happens here...")
-
-    """choose a port number available"""
-    """here the peer has to communicate to the server on which port number its server function will run"""
-    startSync()
-
-"""TEST retrievePeers
-    retrievePeers("ITDepartment", all=True)
-    retrievePeers("ITDepartment", all=False)
-    restoreGroup("ITDepartment")
-    retrievePeers("ITDepartment", all=False)
-"""
 
 
