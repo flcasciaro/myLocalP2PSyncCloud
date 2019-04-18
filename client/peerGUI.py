@@ -28,20 +28,11 @@ class myP2PSyncCloud(QMainWindow):
         """Declaration of UI object in the groupManager frame"""
         self.peerLabel = QLabel()
         self.serverLabel = QLabel()
-        """self.serverButton = QPushButton("CHANGE SERVER")
-        self.groupNameCreate = QTextEdit("Enter group name")
-        self.tokenRWCreate = QTextEdit("Enter token")
-        self.tokenROCreate = QTextEdit("Enter token")
-        self.createButton = QPushButton("CREATE")
-        self.groupNameRestore = QTextEdit("Enter group name")
-        self.restoreButton = QPushButton("RESTORE")
-        self.groupNameJoin = QTextEdit("Enter group name")
-        self.tokenJoin = QTextEdit("Enter token")
-        self.joinButton = QPushButton("RESTORE")"""
         self.activeGroupLabel = QLabel("List of ACTIVE groups")
         self.activeGroupList = QListWidget()
-        self.otherGroupLabel = QLabel("List of ACTIVE groups")
+        self.otherGroupLabel = QLabel("List of OTHER groups")
         self.otherGroupList = QListWidget()
+        self.restoreAllButton = QPushButton("RESTORE ALL GROUPS")
 
         """Declaration of UI object in the fileManager frame"""
         self.fileLabel = QLabel("FILE MANAGER")
@@ -75,6 +66,7 @@ class myP2PSyncCloud(QMainWindow):
         self.groupManagerLayout.addSpacing(30)
         self.groupManagerLayout.addWidget(self.otherGroupLabel)
         self.groupManagerLayout.addWidget(self.otherGroupList)
+        self.groupManagerLayout.addWidget(self.restoreAllButton)
 
         self.fileManagerLayout.addWidget(self.fileLabel)
         self.fileManagerLayout.addWidget(self.fileButton)
@@ -86,11 +78,6 @@ class myP2PSyncCloud(QMainWindow):
 
         self.activeGroupList.setToolTip("Double click on a group in order to see files")
         self.otherGroupList.setToolTip("Double click on a group in order to join or restore it")
-
-        groupList = ["ciao", "sono", "pablo"]
-        for group in groupList:
-            self.activeGroupList.addItem(group)
-        # self.activeGroupList.addScrollBarWidget()
 
         self.show()
 
@@ -105,6 +92,24 @@ class myP2PSyncCloud(QMainWindow):
             self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverIP, peerCore.serverPort))
 
         # try to reach the server
+
+        """dialog box allows to restore all the previous groups"""
+
+        groupList = peerCore.retrieveGroupsList(action="active")
+        for group in groupList:
+            self.activeGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
+                                         + str(group["total"]) + "\t" + group["role"])
+            # self.activeGroupList.addScrollBarWidget()
+
+        groupList = peerCore.retrieveGroupsList(action="previous")
+        for group in groupList:
+            self.otherGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
+                                        + str(group["total"]) + "\t" + "PREVIOUS" + "\t" + group["role"])
+
+        groupList = peerCore.retrieveGroupsList(action="other")
+        for group in groupList:
+            self.otherGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
+                                        + str(group["total"]) + "\t" + "NOT JOINED")
 
 
 def peerInitialization():

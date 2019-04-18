@@ -81,15 +81,11 @@ def handshake():
     return s
 
 
-def retrieveGroupsList(previous):
-    if previous:
-        tmp = "PREVIOUS"
-    else:
-        tmp = "OTHER"
+def retrieveGroupsList(action):
 
     s = handshake()
 
-    message = "SEND {} GROUPS LIST".format(tmp)
+    message = "SEND {} GROUPS LIST".format(action.upper())
     s.send(message.encode('ascii'))
 
     data = s.recv(1024)
@@ -113,7 +109,7 @@ def restoreGroup(groupName):
     closeSocket(s)
 
 
-def restoreGroupWrapper():
+def restoreAll():
 
     print("Retrieving information about previous sessions..")
     previousGroupsList = retrieveGroupsList(previous=True)
@@ -286,6 +282,3 @@ def startSync():
     print('Received from the server :', str(data.decode('ascii')))
 
     closeSocket(s)
-
-
-
