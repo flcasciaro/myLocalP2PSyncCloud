@@ -22,7 +22,6 @@ another dictionary containing information about the peer e.g. peerIP and peerPor
 peers = dict()
 peersLock = Lock()
 
-
 stop = None
 
 groupsInfoFile = "sessionFiles/groupsInfo.txt"
@@ -189,11 +188,14 @@ def manageRequest(self, message):
     if message.split()[0] == "I'M":
         reqhand.handshake(message, self)
 
+    elif message == "SEND ACTIVE GROUPS LIST":
+        reqhand.sendList(self, groups, action = "Active")
+
     elif message == "SEND PREVIOUS GROUPS LIST":
-        reqhand.sendList(self, groups, previous=True)
+        reqhand.sendList(self, groups, action = "Previous")
 
     elif message == "SEND OTHER GROUPS LIST":
-        reqhand.sendList(self, groups, previous=False)
+        reqhand.sendList(self, groups, action = "Other")
 
     elif message.split()[0] == "RESTORE":
         reqhand.restoreGroup(message, self, groups)

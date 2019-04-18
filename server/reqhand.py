@@ -12,17 +12,27 @@ def handshake(request, thread):
     thread.client_sock.send(request.encode('ascii'))
 
 
-def sendList(thread, groups, previous):
-    """This function can retrieve the list of previous (already joined, previous=True) groups
-    or the list of not-joined groups (previous = False) for a certain peerID"""
+def sendList(thread, groups, action):
+    """This function can retrieve the list of active, previous or other groups for a certain peerID"""
     groupList = list()
+    action = action.upper()
 
-    for g in groups.values():
-        if thread.peerID in g["peers"] and previous:
-            groupList.append(utilities.hideGroupInfo(g))
-            continue
-        if thread.peerID not in g["peers"] and not previous:
-            groupList.append(utilities.hideGroupInfo(g))
+    if action == "ACTIVE":
+        for g in groups.values():
+            if thread.peerID in g["peers"]:
+                if g["peers"][thread.peerID]["active"]:
+                    groupList.append(utilities.changeGroupInfo(g, g["peers"][thread.peerID]["role"]))
+
+    elif action == "PREVIOUS":
+        for g in groups.values():
+            if thread.peerID in g["peers"]:
+                if not g["peers"][thread.peerID]["active"]:
+                    groupList.append(utilities.changeGroupInfo(g, g["peers"][thread.peerID]["role"]))
+
+    elif action == "OTHER":
+        for g in groups.values():
+            if thread.peerID not in g["peers"]:
+                groupList.append(utilities.changeGroupInfo(g, ""))
 
     thread.client_sock.send(str(groupList).encode('ascii'))
 

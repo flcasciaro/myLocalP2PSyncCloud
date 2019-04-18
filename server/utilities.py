@@ -12,10 +12,12 @@ def createGroupDict(groupInfo):
     groupDict["peers"] = dict()
     return groupDict
 
-def hideGroupInfo(group):
-    """"This function return a group dictionary without the token fields and without the list of peers"""
+def changeGroupInfo(group, role):
+    """"This function return a group dictionary without the token fields and without the list of peers,
+    but eventually adding the role of the peer in the group (if any)"""
     modGroup = dict()
     modGroup["name"] = group["name"]
     modGroup["total"] = group["total"]
     modGroup["active"] = group["active"]
+    modGroup["role"] = role
     return modGroup
