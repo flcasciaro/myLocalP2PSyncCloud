@@ -12,9 +12,11 @@ configurationFile = "conf.txt"
 peerID = None
 serverIP = None
 serverPort = None
-activeGroups = {}
-restoreGroups = {}
-otherGroups = {}
+
+"""main data structures for the groups handling"""
+activeGroupsList = {}
+restoreGroupsList = {}
+otherGroupsList = {}
 
 def setPeerID():
     global peerID
@@ -84,11 +86,11 @@ def handshake():
     return s
 
 
-def retrieveGroupsList(action):
+def retrieveGroups(action):
 
     s = handshake()
 
-    message = "SEND {} GROUPS LIST".format(action.upper())
+    message = "SEND {} GROUPS".format(action.upper())
     s.send(message.encode('ascii'))
 
     data = s.recv(1024)
@@ -98,11 +100,11 @@ def retrieveGroupsList(action):
 
     return groupsList
 
-def restoreGroup(groupName):
+def restoreGroup(group):
 
     s = handshake()
 
-    message = "RESTORE Group: {}".format(groupName)
+    message = "RESTORE Group: {}".format(group["name"])
     print(message)
     s.send(message.encode('ascii'))
 
@@ -114,9 +116,9 @@ def restoreGroup(groupName):
 
 def restoreAll():
 
-    for group in restoreGroups:
-        restoreGroup(group["name"])
-        activeGroups.append(group)
+    for group in restoreGroupsList.values():
+        restoreGroup(group)
+
 
 
 
@@ -133,36 +135,13 @@ def joinGroup(groupName, encryptedToken):
 
     closeSocket(s)
 
-def joinGroupWrapper():
 
-    print("Retrieving other groups list..")
-    newGroupsList = retrieveGroupsList(previous=False)
-
-    print("List of synchronization groups available (never joined):")
-    for group in newGroupsList:
-        print("GroupName: {} \tActive members: {} \tTotal members: {}"
-              .format(group["name"], group["active"], group["total"]))
-
-    choice = input("Do you want to join one of these groups? (y/n): ")
-
-    if choice.upper() == 'Y':
-        while True:
-
-            groupName = input("Write the name of the group you want to join: ")
-            groupToken = input("Write the token of the group you want to access: ")
-
-            encryptedToken = hashlib.md5(groupToken.encode())
-
-            joinGroup(groupName, encryptedToken)
-
-            choice = input("Do you want to join another group? (y/n): ")
-
-            if choice.upper() != "Y":
-                break
-
-def createGroup(groupName, encryptedTokenRW, encryptedTokenRO):
+def createGroup(groupName, groupTokenRW, groupTokenRO):
 
     s = handshake()
+
+    encryptedTokenRW = hashlib.md5(groupTokenRW.encode())
+    encryptedTokenRO = hashlib.md5(groupTokenRO.encode())
 
     message = "CREATE Group: {} TokenRW: {} TokenRO: {}".format(groupName,
                                                                 encryptedTokenRW.hexdigest(),
@@ -173,28 +152,10 @@ def createGroup(groupName, encryptedTokenRW, encryptedTokenRO):
     print('Received from the server :', str(data.decode('ascii')))
 
     closeSocket(s)
-
-def createGroupWrapper():
-
-    choice = input("Do you want to create a new synchronization group? (y/n): ")
-
-    if choice.upper() == 'Y':
-
-        while True:
-
-            groupName = input("Write the name of the group you want to create: ")
-            groupTokenRW = input("Write the token for Reader&Writer of the group you want to create: ")
-            groupTokenRO = input("Write the token for ReadOnly of the group you want to create: ")
-
-            encryptedTokenRW = hashlib.md5(groupTokenRW.encode())
-            encryptedTokenRO = hashlib.md5(groupTokenRO.encode())
-
-            createGroup(groupName, encryptedTokenRW, encryptedTokenRO)
-
-            choice = input("Do you want to create another group? (y/n): ")
-
-            if choice.upper() != "Y":
-                break
+    if str(data.decode('ascii')).split()[0] == "ERROR:":
+        return False
+    else:
+        return True
 
 
 def roleManagement():
@@ -242,6 +203,19 @@ def retrievePeers(groupName, all):
 
     closeSocket(s)
     return peersList
+
+def disconnectPeer():
+
+    s = handshake()
+
+    message = "DISCONNECT"
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+
+    closeSocket(s)
+
 
 def startSync():
 

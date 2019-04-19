@@ -28,11 +28,26 @@ class myP2PSyncCloud(QMainWindow):
         """Declaration of UI object in the groupManager frame"""
         self.peerLabel = QLabel()
         self.serverLabel = QLabel()
+
         self.activeGroupLabel = QLabel("List of ACTIVE groups")
         self.activeGroupList = QListWidget()
         self.otherGroupLabel = QLabel("List of OTHER groups")
         self.otherGroupList = QListWidget()
         self.restoreAllButton = QPushButton("RESTORE ALL GROUPS")
+
+        self.createGroupLayout = QFormLayout()
+        self.createGroupLabel = QLabel("Create a group: ")
+        self.createGroupName = QLineEdit("Enter Group Name (single word name)")
+        self.tokenRWLabel = QLabel("Enter token for RW")
+        self.createTokenRW = QLineEdit("")
+        self.tokenRWLabelConfirm = QLabel("Confirm token for RW")
+        self.createTokenRWConfirm = QLineEdit("")
+        self.tokenROLabel = QLabel("Enter token for RO")
+        self.createTokenRO = QLineEdit("")
+        self.tokenROLabelConfirm = QLabel("Confirm token for RO")
+        self.createTokenROConfirm = QLineEdit("")
+        self.createGroupButton = QPushButton("CREATE GROUP")
+        self.resetCreateButton = QPushButton("RESET")
 
         """Declaration of UI object in the fileManager frame"""
         self.fileLabel = QLabel("FILE MANAGER")
@@ -61,18 +76,36 @@ class myP2PSyncCloud(QMainWindow):
         self.groupManagerLayout.addWidget(self.peerLabel)
         self.groupManagerLayout.addWidget(self.serverLabel)
         self.groupManagerLayout.addSpacing(30)
+
         self.groupManagerLayout.addWidget(self.activeGroupLabel)
         self.groupManagerLayout.addWidget(self.activeGroupList)
         self.groupManagerLayout.addSpacing(30)
         self.groupManagerLayout.addWidget(self.otherGroupLabel)
         self.groupManagerLayout.addWidget(self.otherGroupList)
         self.groupManagerLayout.addWidget(self.restoreAllButton)
+        self.groupManagerLayout.addSpacing(30)
+
+        self.createTokenRW.setEchoMode(QLineEdit.Password)
+        self.createTokenRWConfirm.setEchoMode(QLineEdit.Password)
+        self.createTokenRO.setEchoMode(QLineEdit.Password)
+        self.createTokenROConfirm.setEchoMode(QLineEdit.Password)
+
+        self.createGroupLayout.addRow(self.createGroupLabel, self.createGroupName)
+        self.createGroupLayout.addRow(self.tokenRWLabel, self.createTokenRW)
+        self.createGroupLayout.addRow(self.tokenRWLabelConfirm, self.createTokenRWConfirm)
+        self.createGroupLayout.addRow(self.tokenROLabel, self.createTokenRO)
+        self.createGroupLayout.addRow(self.tokenROLabelConfirm, self.createTokenROConfirm)
+        self.groupManagerLayout.addLayout(self.createGroupLayout)
+        self.groupManagerLayout.addWidget(self.createGroupButton)
+        self.groupManagerLayout.addWidget(self.resetCreateButton)
+        self.groupManagerLayout.addSpacing(30)
 
         self.fileManagerLayout.addWidget(self.fileLabel)
         self.fileManagerLayout.addWidget(self.fileButton)
 
-        self.restoreAllButton.clicked.connect(peerCore.restoreAll)
-
+        self.restoreAllButton.clicked.connect(self.restoreAllHandler)
+        self.createGroupButton.clicked.connect(self.createGroupHandler)
+        self.resetCreateButton.clicked.connect(self.resetCreateHandler)
 
         success = peerInitialization()
 
@@ -94,25 +127,83 @@ class myP2PSyncCloud(QMainWindow):
             peerCore.setServerCoordinates(coordinates)
             self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverIP, peerCore.serverPort))
 
-        # try to reach the server
+        peerCore.startSync()
 
-        """dialog box allows to restore all the previous groups"""
+        reply = QMessageBox.question(self, 'Message', "Do you want to restore last session groups?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
-        peerCore.activeGroups = peerCore.retrieveGroupsList(action="active")
-        for group in peerCore.activeGroups:
+        if reply == QMessageBox.Yes:
+            self.restoreAllHandler()
+        else:
+            self.updateGroupsUI()
+
+    def restoreAllHandler(self):
+        if len(peerCore.restoreGroupsList) != 0:
+            peerCore.restoreAll()
+            self.updateGroupsUI()
+        else:
+            QMessageBox.about(self, "Alert", "You don't have restorable groups")
+
+    def createGroupHandler(self):
+        groupName = self.createGroupName.text()
+        groupTokenRW = self.createTokenRW.text()
+        groupTokenRWConfirm = self.createTokenRWConfirm.text()
+        groupTokenRO = self.createTokenRO.text()
+        groupTokenROConfirm = self.createTokenROConfirm.text()
+
+        if len(groupName) == 0 or  len(groupName.split()) != 1:
+            QMessageBox.about(self, "Error", "Invalid group name!")
+        elif len(groupTokenRW) == 0 or len(groupTokenRO) == 0 or groupTokenRW != groupTokenRWConfirm or groupTokenRO != groupTokenROConfirm:
+            QMessageBox.about(self, "Error", "Invalid tokens!")
+        else:
+            if peerCore.createGroup(groupName, groupTokenRW, groupTokenRO):
+                self.updateGroupsUI()
+                self.resetCreateHandler()
+                QMessageBox.about(self, "OK", "Groups successfully created!")
+            else:
+                QMessageBox.about(self, "Error", "Group creation failed!")
+
+    def resetCreateHandler(self):
+
+        self.createGroupName.setText("Enter Group Name (single word name)")
+        self.createTokenRW.clear()
+        self.createTokenRWConfirm.clear()
+        self.createTokenRO.clear()
+        self.createTokenROConfirm.clear()
+
+
+    """This function update groups list for the peer, retrieving information from the server"""
+    def updateGroupsUI(self):
+
+        self.activeGroupList.clear()
+        self.otherGroupList.clear()
+
+        peerCore.activeGroupsList = peerCore.retrieveGroups(action="active")
+        peerCore.restoreGroupsList = peerCore.retrieveGroups(action="previous")
+        peerCore.otherGroupsList = peerCore.retrieveGroups(action="other")
+
+        for group in peerCore.activeGroupsList.values():
             self.activeGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
                                          + str(group["total"]) + "\t" + group["role"])
-            # self.activeGroupList.addScrollBarWidget()
 
-        peerCore.restoreGroups = peerCore.retrieveGroupsList(action="previous")
-        for group in peerCore.restoreGroups:
+        for group in peerCore.restoreGroupsList.values():
             self.otherGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
                                         + str(group["total"]) + "\t" + "PREVIOUS" + "\t" + group["role"])
 
-        peerCore.otherGroups = peerCore.retrieveGroupsList(action="other")
-        for group in peerCore.otherGroups:
+        for group in peerCore.otherGroupsList.values():
             self.otherGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
                                         + str(group["total"]) + "\t" + "NOT JOINED")
+
+    def closeEvent(self, event):
+
+        reply = QMessageBox.question(self, 'Message', "Are you sure to quit?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+
+        if reply == QMessageBox.Yes:
+            peerCore.disconnectPeer()
+            event.accept()
+        else:
+            event.ignore()
 
 
 def peerInitialization():
@@ -122,6 +213,7 @@ def peerInitialization():
         return True
     else:
         return False
+
 
 
 if __name__ == '__main__':
