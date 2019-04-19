@@ -12,6 +12,9 @@ configurationFile = "conf.txt"
 peerID = None
 serverIP = None
 serverPort = None
+activeGroups = {}
+restoreGroups = {}
+otherGroups = {}
 
 def setPeerID():
     global peerID
@@ -111,33 +114,11 @@ def restoreGroup(groupName):
 
 def restoreAll():
 
-    print("Retrieving information about previous sessions..")
-    previousGroupsList = retrieveGroupsList(previous=True)
+    for group in restoreGroups:
+        restoreGroup(group["name"])
+        activeGroups.append(group)
 
-    print("List of synchronization groups that you have already joined:")
-    for group in previousGroupsList:
-        print("GroupName: {} \tActive members: {} \tTotal members: {}"
-              .format(group["name"], group["active"], group["total"]))
 
-    choice = input("Do you want to restore all the synchronization groups? (y/n): ")
-
-    if choice.upper() == 'Y':
-        for group in previousGroupsList:
-            restoreGroup(group["name"])
-
-    else:
-        choice = input("Do you want to restore a synchronization session with one of these groups? (y/n): ")
-
-        if choice.upper() == 'Y':
-            while True:
-                groupName = input("Write the name of the group you want to restore: ")
-
-                restoreGroup(groupName)
-
-                choice = input("Do you want to restore another group? (y/n): ")
-
-                if choice.upper() != "Y":
-                    break
 
 def joinGroup(groupName, encryptedToken):
 

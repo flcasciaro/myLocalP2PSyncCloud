@@ -71,6 +71,9 @@ class myP2PSyncCloud(QMainWindow):
         self.fileManagerLayout.addWidget(self.fileLabel)
         self.fileManagerLayout.addWidget(self.fileButton)
 
+        self.restoreAllButton.clicked.connect(peerCore.restoreAll)
+
+
         success = peerInitialization()
 
         self.peerLabel.setText("Personal peerID is {}".format(peerCore.peerID))
@@ -95,19 +98,19 @@ class myP2PSyncCloud(QMainWindow):
 
         """dialog box allows to restore all the previous groups"""
 
-        groupList = peerCore.retrieveGroupsList(action="active")
-        for group in groupList:
+        peerCore.activeGroups = peerCore.retrieveGroupsList(action="active")
+        for group in peerCore.activeGroups:
             self.activeGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
                                          + str(group["total"]) + "\t" + group["role"])
             # self.activeGroupList.addScrollBarWidget()
 
-        groupList = peerCore.retrieveGroupsList(action="previous")
-        for group in groupList:
+        peerCore.restoreGroups = peerCore.retrieveGroupsList(action="previous")
+        for group in peerCore.restoreGroups:
             self.otherGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
                                         + str(group["total"]) + "\t" + "PREVIOUS" + "\t" + group["role"])
 
-        groupList = peerCore.retrieveGroupsList(action="other")
-        for group in groupList:
+        peerCore.otherGroups = peerCore.retrieveGroupsList(action="other")
+        for group in peerCore.otherGroups:
             self.otherGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
                                         + str(group["total"]) + "\t" + "NOT JOINED")
 
