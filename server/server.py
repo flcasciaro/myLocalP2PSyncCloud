@@ -188,14 +188,14 @@ def manageRequest(self, message):
     if message.split()[0] == "I'M":
         reqhand.handshake(message, self)
 
-    elif message == "SEND ACTIVE GROUPS LIST":
-        reqhand.sendList(self, groups, action = "Active")
+    elif message == "SEND ACTIVE GROUPS":
+        reqhand.sendGroups(self, groups, action = "Active")
 
-    elif message == "SEND PREVIOUS GROUPS LIST":
-        reqhand.sendList(self, groups, action = "Previous")
+    elif message == "SEND PREVIOUS GROUPS":
+        reqhand.sendGroups(self, groups, action = "Previous")
 
-    elif message == "SEND OTHER GROUPS LIST":
-        reqhand.sendList(self, groups, action = "Other")
+    elif message == "SEND OTHER GROUPS":
+        reqhand.sendGroups(self, groups, action = "Other")
 
     elif message.split()[0] == "RESTORE":
         reqhand.restoreGroup(message, self, groups)

@@ -12,29 +12,30 @@ def handshake(request, thread):
     thread.client_sock.send(request.encode('ascii'))
 
 
-def sendList(thread, groups, action):
+def sendGroups(thread, groups, action):
     """This function can retrieve the list of active, previous or other groups for a certain peerID"""
-    groupList = list()
+    groupsList = dict()
     action = action.upper()
 
     if action == "ACTIVE":
         for g in groups.values():
             if thread.peerID in g["peers"]:
                 if g["peers"][thread.peerID]["active"]:
-                    groupList.append(utilities.changeGroupInfo(g, g["peers"][thread.peerID]["role"]))
+                    groupsList[g["name"]] = utilities.changeGroupInfo(g, g["peers"][thread.peerID]["role"])
 
     elif action == "PREVIOUS":
         for g in groups.values():
             if thread.peerID in g["peers"]:
                 if not g["peers"][thread.peerID]["active"]:
-                    groupList.append(utilities.changeGroupInfo(g, g["peers"][thread.peerID]["role"]))
+                    groupsList[g["name"]]= utilities.changeGroupInfo(g, g["peers"][thread.peerID]["role"])
 
     elif action == "OTHER":
         for g in groups.values():
             if thread.peerID not in g["peers"]:
-                groupList.append(utilities.changeGroupInfo(g, ""))
+                groupsList[g["name"]]= utilities.changeGroupInfo(g, "")
 
-    thread.client_sock.send(str(groupList).encode('ascii'))
+    thread.client_sock.send(str(groupsList).encode('ascii'))
+
 
 def restoreGroup(request, thread, groups):
     """"make the user active in one of its group"""
@@ -106,9 +107,9 @@ def createGroup(request, thread, groups):
         newGroup["peers"][thread.peerID]["role"] = "Master"
         newGroup["peers"][thread.peerID]["active"] = True
         groups[newGroupName] = newGroup
-        answer =  "GROUP {} SUCCESSFULLY CREATED".format(newGroupName)
+        answer =  "OK: GROUP {} SUCCESSFULLY CREATED".format(newGroupName)
     else:
-        answer =  "IMPOSSIBLE TO CREATE GROUP {} - GROUP ALREADY EXIST".format(newGroupName)
+        answer =  "ERROR: IMPOSSIBLE TO CREATE GROUP {} - GROUP ALREADY EXIST".format(newGroupName)
 
     thread.client_sock.send(answer.encode('ascii'))
 
@@ -186,7 +187,7 @@ def imHere(request, thread, peers):
 def peerDisconnection(thread, groups, peers):
     """Disconnect the peer from all the synchronization groups setting the active value to False"""
 
-    for group in groups:
+    for group in groups.values():
         if thread.peerID in group["peers"]:
             group["peers"][thread.peerID]["active"] = False
             group["active"] -= 1
