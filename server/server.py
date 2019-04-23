@@ -220,7 +220,13 @@ def manageRequest(self, message):
         reqhand.imHere(message, self, peers)
         print(peers)
 
-    elif message == "DISCONNECT":
+    elif message.split()[0] == "LEAVE":
+        reqhand.leaveGroup(self, groups, groupsLock, message.split()[2])
+
+    elif message.split()[0] == "DISCONNECT":
+        reqhand.disconnectGroup(self, groups, groupsLock, message.split()[2])
+
+    elif message == "PEER DISCONNECT":
         reqhand.peerDisconnection(self, groups, peers)
 
     elif message == "BYE":
