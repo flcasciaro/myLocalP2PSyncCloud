@@ -86,19 +86,28 @@ def handshake():
     return s
 
 
-def retrieveGroups(action):
+def retrieveGroups():
+
+    global activeGroupsList, restoreGroupsList, otherGroupsList
 
     s = handshake()
 
-    message = "SEND {} GROUPS".format(action.upper())
+    message = "SEND ACTIVE GROUPS"
     s.send(message.encode('ascii'))
-
     data = s.recv(1024)
-    groupsList = eval(str(data.decode('ascii')))
+    activeGroupsList = eval(str(data.decode('ascii')))
+
+    message = "SEND PREVIOUS GROUPS"
+    s.send(message.encode('ascii'))
+    data = s.recv(1024)
+    restoreGroupsList = eval(str(data.decode('ascii')))
+
+    message = "SEND OTHER GROUPS"
+    s.send(message.encode('ascii'))
+    data = s.recv(1024)
+    otherGroupsList = eval(str(data.decode('ascii')))
 
     closeSocket(s)
-
-    return groupsList
 
 def restoreGroup(groupName):
 
@@ -210,13 +219,47 @@ def disconnectPeer():
 
     s = handshake()
 
-    message = "DISCONNECT"
+    message = "PEER DISCONNECT"
     s.send(message.encode('ascii'))
 
     data = s.recv(1024)
     print('Received from the server :', str(data.decode('ascii')))
 
     closeSocket(s)
+
+def leaveGroup(groupName):
+
+    s = handshake()
+
+    message = "LEAVE Group: {}".format(groupName)
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+
+    closeSocket(s)
+
+    if str(data.decode('ascii')).split()[0] == "ERROR:":
+        return False
+    else:
+        return True
+
+def disconnectGroup(groupName):
+    s = handshake()
+
+    message = "DISCONNECT Group: {}".format(groupName)
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+
+    closeSocket(s)
+
+    if str(data.decode('ascii')).split()[0] == "ERROR:":
+        return False
+    else:
+        return True
+
 
 
 def startSync():
