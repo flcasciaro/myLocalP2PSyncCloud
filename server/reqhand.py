@@ -1,6 +1,8 @@
 """"This script contains function that will be invoked by the server's thread in order
 to serve clients request"""
 
+"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+
 import utilities
 
 def handshake(request, thread):
@@ -193,4 +195,7 @@ def peerDisconnection(thread, groups, peers):
             group["active"] -= 1
 
     del peers[thread.peerID]
+
+    answer = "OK - PEER DISCONNECTED"
+    thread.client_sock.send(answer.encode('ascii'))
 

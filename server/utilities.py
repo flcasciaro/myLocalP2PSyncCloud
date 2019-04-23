@@ -1,5 +1,7 @@
 """utilities functions script"""
 
+"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+
 def createGroupDict(groupInfo):
     """"Initialize a dictionary used to store group information.
     Initial value are passed through a list"""
