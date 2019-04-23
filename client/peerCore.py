@@ -1,4 +1,4 @@
-"""Client of myLocalP2PSyncCLoud"""
+"""Peer core code of myLocalP2PSyncCLoud"""
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
@@ -100,11 +100,11 @@ def retrieveGroups(action):
 
     return groupsList
 
-def restoreGroup(group):
+def restoreGroup(groupName):
 
     s = handshake()
 
-    message = "RESTORE Group: {}".format(group["name"])
+    message = "RESTORE Group: {}".format(groupName)
     print(message)
     s.send(message.encode('ascii'))
 
@@ -117,14 +117,16 @@ def restoreGroup(group):
 def restoreAll():
 
     for group in restoreGroupsList.values():
-        restoreGroup(group)
+        restoreGroup(group["name"])
 
 
 
 
-def joinGroup(groupName, encryptedToken):
+def joinGroup(groupName, token):
 
     s = handshake()
+
+    encryptedToken = hashlib.md5(token.encode())
 
     message = "JOIN Group: {} Token: {}".format(groupName, encryptedToken.hexdigest())
     # print(message)

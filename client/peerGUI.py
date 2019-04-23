@@ -1,3 +1,7 @@
+"""Peer GUI code of myLocalP2PSyncCLoud"""
+
+"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+
 import sys
 
 from PyQt5.QtWidgets import *
@@ -106,6 +110,8 @@ class myP2PSyncCloud(QMainWindow):
         self.restoreAllButton.clicked.connect(self.restoreAllHandler)
         self.createGroupButton.clicked.connect(self.createGroupHandler)
         self.resetCreateButton.clicked.connect(self.resetCreateHandler)
+        self.activeGroupList.itemDoubleClicked.connect(self.activeGroupsClicked)
+        self.otherGroupList.itemDoubleClicked.connect(self.otherGroupsClicked)
 
         success = peerInitialization()
 
@@ -129,13 +135,14 @@ class myP2PSyncCloud(QMainWindow):
 
         peerCore.startSync()
 
+        self.updateGroupsUI()
+
         reply = QMessageBox.question(self, 'Message', "Do you want to restore last session groups?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
             self.restoreAllHandler()
-        else:
-            self.updateGroupsUI()
+
 
     def restoreAllHandler(self):
         if len(peerCore.restoreGroupsList) != 0:
@@ -188,7 +195,7 @@ class myP2PSyncCloud(QMainWindow):
 
         for group in peerCore.restoreGroupsList.values():
             self.otherGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
-                                        + str(group["total"]) + "\t" + "PREVIOUS" + "\t" + group["role"])
+                                        + str(group["total"]) + "\t" + "JOINED" + "\t" + group["role"])
 
         for group in peerCore.otherGroupsList.values():
             self.otherGroupList.addItem(group["name"] + "\t" + str(group["active"]) + "\t"
@@ -204,6 +211,24 @@ class myP2PSyncCloud(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
+    def activeGroupsClicked(self, item):
+        pass
+
+    def otherGroupsClicked(self, item):
+        if item.text().split()[3] == "JOINED":
+            reply = QMessageBox.question(self, 'Message', "Are you sure you want to restore the group {} ?"
+                                         .format(item.text().split()[0]),
+                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+            if reply == QMessageBox.Yes:
+                """call the restoreGroup function passing the groupName as parameter"""
+                peerCore.restoreGroup(item.text().split()[0])
+                self.updateGroupsUI()
+        else:
+            token, okPressed = QInputDialog.getText(self, "Get token", "Your token:", QLineEdit.Password, "")
+            if okPressed and token != '':
+                peerCore.joinGroup(item.text().split()[0], token)
+                self.updateGroupsUI()
 
 
 def peerInitialization():
