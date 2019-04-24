@@ -11,7 +11,7 @@ from groupClass import Group
 
 """Main data structure for groups management
 It's a dictionary where the key is the GroupName and the value is
-another dictionary containing information about the group e.g. tokens, peers"""
+a Group object containing information about the group e.g. tokens, peers"""
 groups = dict()
 groupsLock = Lock()
 
@@ -237,8 +237,6 @@ if __name__ == '__main__':
     """main function, starts the server"""
 
     initServer()
-    #print(groups)
-    #print(peers)
 
     stop = False
     startServer()

@@ -6,8 +6,9 @@ to serve clients request"""
 from groupClass import Group
 
 def handshake(request, thread):
-    """add or update information (IP, Port) about a peer
-    no peersLock, should be thread safe because only a thread is in charge of a peer"""
+    """Add or update information (IP, Port) about a peer.
+    No need for peersLock, should be thread safe because only a single
+    thread is in charge of a specific peer"""
 
     thread.peerID = request.split()[1]
     request = "HELLO {}".format(thread.peerID)
@@ -42,7 +43,7 @@ def sendGroups(thread, groups, action):
 
 
 def restoreGroup(request, thread, groups):
-    """"make the user active in one of its group"""
+    """"make the user active in one of its group (already joined)"""
 
     groupName = request.split()[2]
     if groupName in groups:
@@ -124,14 +125,15 @@ def manageRole(request, thread, groups, groupsLock):
         newRole = "RO"
 
     if groupName in groups:
-        if thread.peerID in groups[groupName]["peers"] and modPeerID in groups[groupName]["peers"]:
-            if groups[groupName]["peers"][thread.peerID]["role"].upper() == "MASTER":
+        """check if both peerIDs actually belongs to the group"""
+        if thread.peerID in groups[groupName].peersInGroup and modPeerID in groups[groupName].peersInGroup:
+            if groups[groupName].peersInGroup[thread.peerID]["role"].upper() == "MASTER":
 
                 groupsLock.acquire()
-                groups[groupName]["peers"][modPeerID]["role"] = newRole
+                groups[groupName].peersInGroup[modPeerID].role = newRole
 
                 if action.upper() == "CHANGE_MASTER":
-                    groups[groupName]["peers"][thread.peerID]["role"] = "RW"
+                    groups[groupName].peersInGroup[thread.peerID].role = "RW"
 
                 groupsLock.release()
                 answer = "OPERATION ALLOWED"
@@ -157,7 +159,11 @@ def retrievePeers(request, thread, groups, peers):
         for peer in groups[groupName].peersInGroup:
             if not groups[groupName].peersInGroup[peer].active and not selectAll:
                 continue
-            peersList.append(peers[peer])
+            peerInfo = dict()
+            peerInfo["peerID"] = peer
+            peerInfo["peerIP"] = peers[peer]["peerIP"]
+            peerInfo["peerPort"] = peers[peer]["peerPort"]
+            peersList.append(peerInfo)
         answer = str(peersList)
     else:
         answer = "ERROR - GROUP {} DOESN'T EXIST".format(groupName)
