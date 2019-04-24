@@ -3,7 +3,7 @@ to serve clients request"""
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
-import utilities
+from groupClass import Group
 
 def handshake(request, thread):
     """add or update information (IP, Port) about a peer
@@ -21,20 +21,22 @@ def sendGroups(thread, groups, action):
 
     if action == "ACTIVE":
         for g in groups.values():
-            if thread.peerID in g["peers"]:
-                if g["peers"][thread.peerID]["active"]:
-                    groupsList[g["name"]] = utilities.changeGroupInfo(g, g["peers"][thread.peerID]["role"])
+            if thread.peerID in g.peersInGroup:
+                if g.peersInGroup[thread.peerID].active:
+                    role = g.peersInGroup[thread.peerID].role
+                    groupsList[g.name] = g.getPublicInfo(role)
 
     elif action == "PREVIOUS":
         for g in groups.values():
-            if thread.peerID in g["peers"]:
-                if not g["peers"][thread.peerID]["active"]:
-                    groupsList[g["name"]]= utilities.changeGroupInfo(g, g["peers"][thread.peerID]["role"])
+            if thread.peerID in g.peersInGroup:
+                if not g.peersInGroup[thread.peerID].active:
+                    role = g.peersInGroup[thread.peerID].role
+                    groupsList[g.name] = g.getPublicInfo(role)
 
     elif action == "OTHER":
         for g in groups.values():
-            if thread.peerID not in g["peers"]:
-                groupsList[g["name"]]= utilities.changeGroupInfo(g, "")
+            if thread.peerID not in g.peersInGroup:
+                groupsList[g.name]= g.getPublicInfo("")
 
     thread.client_sock.send(str(groupsList).encode('ascii'))
 
@@ -44,11 +46,11 @@ def restoreGroup(request, thread, groups):
 
     groupName = request.split()[2]
     if groupName in groups:
-            if thread.peerID in groups[groupName]["peers"]:
-                if not groups[groupName]["peers"][thread.peerID]["active"]: #if not already active
-                    groups[groupName]["peers"][thread.peerID]["active"] = True
+            if thread.peerID in groups[groupName].peersInGroup:
+                if not groups[groupName].peersInGroup[thread.peerID].active: #if not already active
+                    groups[groupName].peersInGroup[thread.peerID].active = True
                     answer = "GROUP {} RESTORED".format(groupName)
-                    groups[groupName]["active"] += 1
+                    groups[groupName].activeUsers += 1
                 else:
                     answer = "IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER ALREADY ACTIVE".format(groupName)
             else:
@@ -66,18 +68,17 @@ def joinGroup(request, thread, groups):
     tokenProvided = request.split()[4]
 
     if groupName in groups:
-        if tokenProvided == groups[groupName]["tokenRW"] or tokenProvided == groups[groupName]["tokenRO"]:
-            groups[groupName]["peers"][thread.peerID] = dict()
-            groups[groupName]["peers"][thread.peerID]["peerID"] = thread.peerID
-            groups[groupName]["peers"][thread.peerID]["active"] = True
-            groups[groupName]["active"] += 1
-            groups[groupName]["total"] += 1
-            if tokenProvided == groups[groupName]["tokenRW"]:
-                groups[groupName]["peers"][thread.peerID]["role"] = "RW"
+        if tokenProvided == groups[groupName].tokenRW or tokenProvided == groups[groupName].tokenRO:
+            if tokenProvided == groups[groupName].tokenRW:
+                role = "RW"
                 answer = "GROUP {} JOINED IN ReadWrite MODE".format(groupName)
-            elif tokenProvided == groups[groupName]["tokenRO"]:
-                groups[groupName]["peers"][thread.peerID]["role"] = "RO"
+            elif tokenProvided == groups[groupName].tokenRO:
+                role = "RO"
                 answer = "GROUP {} JOINED IN ReadOnly MODE".format(groupName)
+            groups[groupName].addPeer(thread.peerID, True, role)
+            groups[groupName].activeUsers += 1
+            groups[groupName].totalUsers += 1
+
         else:
             answer = "IMPOSSIBLE TO JOIN GROUP {} - WRONG TOKEN".format(groupName)
     else:
@@ -96,19 +97,11 @@ def createGroup(request, thread, groups):
 
     if newGroupName not in groups:
         """create the new group and insert in the group dictionary"""
-        groupInfo = list()
-        groupInfo.append(newGroupName)
-        groupInfo.append(newGroupTokenRW)
-        groupInfo.append(newGroupTokenRO)
-        groupInfo.append("1")     #initial total users value
-        groupInfo.append("1")     #initial active users value
 
-        newGroup = utilities.createGroupDict(groupInfo)
-        newGroup["peers"][thread.peerID] = dict()
-        newGroup["peers"][thread.peerID]["peerID"] = thread.peerID
-        newGroup["peers"][thread.peerID]["role"] = "Master"
-        newGroup["peers"][thread.peerID]["active"] = True
+        newGroup = Group(newGroupName, newGroupTokenRW, newGroupTokenRO, 1, 1)
+        newGroup.addPeer(thread.peerID, True, "Master")
         groups[newGroupName] = newGroup
+
         answer =  "OK: GROUP {} SUCCESSFULLY CREATED".format(newGroupName)
     else:
         answer =  "ERROR: IMPOSSIBLE TO CREATE GROUP {} - GROUP ALREADY EXIST".format(newGroupName)
@@ -161,8 +154,8 @@ def retrievePeers(request, thread, groups, peers):
 
     if groupName in groups:
         peersList = list()
-        for peer in groups[groupName]["peers"]:
-            if not groups[groupName]["peers"][peer]["active"] and not selectAll:
+        for peer in groups[groupName].peersInGroup:
+            if not groups[groupName].peersInGroup[peer].active and not selectAll:
                 continue
             peersList.append(peers[peer])
         answer = str(peersList)
@@ -190,9 +183,9 @@ def leaveGroup(thread, groups, groupsLock, groupName):
 
     groupsLock.acquire()
 
-    del groups[groupName]["peers"][thread.peerID]
-    groups[groupName]["active"] -= 1
-    groups[groupName]["total"] -= 1
+    del groups[groupName].peersInGroup[thread.peerID]
+    groups[groupName].activeUsers -= 1
+    groups[groupName].totalUsers -= 1
 
     groupsLock.release()
 
@@ -203,21 +196,25 @@ def disconnectGroup(thread, groups, groupsLock, groupName):
 
     groupsLock.acquire()
 
-    groups[groupName]["peers"][thread.peerID]["active"] = False
-    groups[groupName]["active"] -= 1
+    groups[groupName].peersInGroup[thread.peerID].active = False
+    groups[groupName].activeUsers -= 1
 
     groupsLock.release()
 
     answer = "OK - GROUP DISCONNECTED"
     thread.client_sock.send(answer.encode('ascii'))
 
-def peerDisconnection(thread, groups, peers):
+def peerDisconnection(thread, groups, groupsLock, peers):
     """Disconnect the peer from all the synchronization groups setting the active value to False"""
 
+    groupsLock.acquire()
+
     for group in groups.values():
-        if thread.peerID in group["peers"]:
-            group["peers"][thread.peerID]["active"] = False
-            group["active"] -= 1
+        if thread.peerID in group.peersInGroup:
+            group.peersInGroup[thread.peerID].active = False
+            group.activeUsers -= 1
+
+    groupsLock.release()
 
     del peers[thread.peerID]
 

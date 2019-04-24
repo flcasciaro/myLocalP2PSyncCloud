@@ -7,7 +7,7 @@ import socket
 from threading import Thread, Lock
 
 import reqhand
-import utilities
+from groupClass import Group
 
 """Main data structure for groups management
 It's a dictionary where the key is the GroupName and the value is
@@ -37,8 +37,8 @@ def initServer():
         f = open(groupsInfoFile, 'r')
         for line in f:
             groupInfo = line.split()
-            groupInfo.append("0")     #add the number of active users to the initialization parameters
-            groups[groupInfo[0]] = utilities.createGroupDict(groupInfo)
+            groups[groupInfo[0]] = Group(groupInfo[0],groupInfo[1],
+                                         groupInfo[2], 0, groupInfo[3])
         f.close()
     except FileNotFoundError:
         print("No previous session session information found")
@@ -58,11 +58,7 @@ def initServer():
                     peers[peerID] = dict()
                     peers[peerID]["peerIP"] = None
                     peers[peerID]["peerPort"] = None
-                peerInGroup = dict()
-                peerInGroup["peerID"] = peerID
-                peerInGroup["role"] = peerInfo[2]
-                peerInGroup["active"] = False
-                groups[peerInfo[1]]["peers"][peerID] = peerInGroup
+                groups[peerInfo[1]].addPeer(peerID, False, peerInfo[2])
             f.close()
         except FileNotFoundError:
             pass
@@ -72,17 +68,17 @@ def saveState():
     """Save the state of groups and peers in order to allow to restore the session in future"""
     with open(groupsInfoFile, 'w') as f:
         for group in groups.values():
-            f.write(group["name"]+" "+
-                    group["tokenRW"]+" "+
-                    group["tokenRO"]+" "+
-                    group["total"]+"\n")
+            f.write(group.name+" "+
+                    group.tokenRW+" "+
+                    group.tokenRO+" "+
+                    group.totalUsers+"\n")
 
     with open(groupsJoinFile, 'w') as f:
         for group in groups.values():
-            for peer in group["peers"].values():
-                f.write(peer["peerID"]+" "+
-                        group["name"]+" "+
-                        peer["role"]+"\n")
+            for peer in group.peersInGroup.values():
+                f.write(peer.peerID+" "+
+                        group.name+" "+
+                        peer.role+"\n")
 
 
 def startServer(host = '0.0.0.0', port = 2010, max_clients = 10):
@@ -227,7 +223,7 @@ def manageRequest(self, message):
         reqhand.disconnectGroup(self, groups, groupsLock, message.split()[2])
 
     elif message == "PEER DISCONNECT":
-        reqhand.peerDisconnection(self, groups, peers)
+        reqhand.peerDisconnection(self, groups, groupsLock, peers)
 
     elif message == "BYE":
         answer = "BYE PEER"
