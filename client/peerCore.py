@@ -169,20 +169,16 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
         return True
 
 
-def roleManagement():
+def changeRole():
     """this function addresses the management of the master and the management of roles by the master"""
     s = handshake()
 
     while True:
-        action = input("Select an action: CHANGE_MASTER - ADD_MASTER - TO_RW - TO_RO: ")
         if action.upper() == "CHANGE_MASTER" or action.upper() == "ADD_MASTER"\
         or action.upper() == "TO_RW" or action.upper() == "TO_RO":
             break
         else:
             print("Invalid action")
-
-    newMasterID = input("Enter the peerID of the peer to which you want to change role: ")
-    groupName = input("Enter the name of the group: ")
 
     message = "ROLE {} {} GROUP {}".format(action.upper(), newMasterID, groupName)
     s.send(message.encode('ascii'))
@@ -208,12 +204,15 @@ def retrievePeers(groupName, all):
     if data.decode('ascii').split()[0] == "ERROR":
         print('Received from the server :', str(data.decode('ascii')))
         peersList = None
+        success = False
     else:
         peersList = eval(str(data.decode('ascii')))
-        print(peersList)
+        success = True
 
     closeSocket(s)
-    return peersList
+
+    activeGroupsList[groupName]["peersList"] = peersList
+    return success
 
 def disconnectPeer():
 
