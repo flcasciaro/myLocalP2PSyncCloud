@@ -12,10 +12,10 @@ Example of hierarchy of roles: Master (usually the creator of the group, a privi
 
 Characteristics of the system
 
-- No real-time synchronization (it's really too difficult to implement)
+- No real-time synchronization 
 - Privilege management (by the master)
 - Managing of the synchronization issue (pull / push / merge approach like GitHub can be a solution)
 - Possibility to recover a previous version of a file (by the Master)
 - Torrent-like approach where the synchronization source works as a tracker (provide peers list)
 - In the synchronization (file sharing) phase the P2P protocol is similar to that of BitTorrent (chunks, elective)
-- Programming language: Python, PyQT, QT Designer
+- Programming language: Python
