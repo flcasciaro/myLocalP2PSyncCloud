@@ -119,15 +119,15 @@ def manageRole(request, thread, groups, groupsLock):
         newRole = "Master"
     elif action == "ADD_MASTER":
         newRole = "Master"
-    elif action == "TO_RW":
+    elif action == "MAKE_IT_RW":
         newRole = "RW"
-    elif action == "TO_RO":
+    elif action == "MAKE_IT_RO":
         newRole = "RO"
 
     if groupName in groups:
         """check if both peerIDs actually belongs to the group"""
         if thread.peerID in groups[groupName].peersInGroup and modPeerID in groups[groupName].peersInGroup:
-            if groups[groupName].peersInGroup[thread.peerID]["role"].upper() == "MASTER":
+            if groups[groupName].peersInGroup[thread.peerID].role.upper() == "MASTER":
 
                 groupsLock.acquire()
                 groups[groupName].peersInGroup[modPeerID].role = newRole
@@ -136,7 +136,7 @@ def manageRole(request, thread, groups, groupsLock):
                     groups[groupName].peersInGroup[thread.peerID].role = "RW"
 
                 groupsLock.release()
-                answer = "OPERATION ALLOWED"
+                answer = "OK - OPERATION ALLOWED"
 
             else:
                 answer = "ERROR - OPERATION NOT ALLOWED"
@@ -157,12 +157,18 @@ def retrievePeers(request, thread, groups, peers):
     if groupName in groups:
         peersList = list()
         for peer in groups[groupName].peersInGroup:
+            """skip inactive peers if selectAll is False"""
             if not groups[groupName].peersInGroup[peer].active and not selectAll:
+                continue
+            """skip the peer which made the request"""
+            if peer == thread.peerID:
                 continue
             peerInfo = dict()
             peerInfo["peerID"] = peer
             peerInfo["peerIP"] = peers[peer]["peerIP"]
             peerInfo["peerPort"] = peers[peer]["peerPort"]
+            peerInfo["active"] = groups[groupName].peersInGroup[peer].active
+            peerInfo["role"] = groups[groupName].peersInGroup[peer].role
             peersList.append(peerInfo)
         answer = str(peersList)
     else:
