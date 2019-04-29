@@ -239,8 +239,9 @@ if __name__ == '__main__':
     initServer()
 
     stop = False
-    startServer()
+    myIP = socket.gethostbyname(socket.gethostname())
+    port = 45154
+    startServer(myIP,port)
 
     #server stopped
     saveState()
-
