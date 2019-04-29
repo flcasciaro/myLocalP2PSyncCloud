@@ -2,7 +2,10 @@
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
+import datetime
 import sys
+import time
+from threading import Thread
 
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
@@ -17,14 +20,16 @@ class myP2PSyncCloud(QMainWindow):
         """Window properties definition"""
         self.title = "myP2PSyncCloud"
         self.left = 300
-        self.top = 50
+        self.top = 40
         self.width = 500
         self.height = 500
 
         """Window main structure definition"""
-        self.splitter = QSplitter()
+        self.verticalSplitter = QSplitter(Qt.Vertical)
+        self.horizontalSplitter = QSplitter()
         self.groupManager = QFrame()
         self.fileManager = QFrame()
+        self.actionsList = QListWidget()
 
         """Define a vertical box layout for the two main parts of the window"""
         self.groupManagerLayout = QVBoxLayout()
@@ -44,7 +49,7 @@ class myP2PSyncCloud(QMainWindow):
 
         self.createGroupLayout = QFormLayout()
         self.createGroupLabel = QLabel("Create a group: ")
-        self.createGroupName = QLineEdit("Enter Group Name (single word name)")
+        self.createGroupName = QLineEdit("Enter single word GroupName")
         self.tokenRWLabel = QLabel("Enter token for RW")
         self.createTokenRW = QLineEdit("")
         self.tokenRWLabelConfirm = QLabel("Confirm token for RW")
@@ -69,18 +74,23 @@ class myP2PSyncCloud(QMainWindow):
         self.leaveButton = QPushButton("LEAVE GROUP")
         self.disconnectButton = QPushButton("DISCONNECT")
 
+        self.queuePollingT = None
+
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
-        self.setCentralWidget(self.splitter)
+        self.setCentralWidget(self.verticalSplitter)
 
-        self.splitter.addWidget(self.groupManager)
-        self.splitter.addWidget(self.fileManager)
-        """self.splitter.setStretchFactor(0, 5)
-        self.splitter.setStretchFactor(1, 5)"""
+        self.horizontalSplitter.addWidget(self.groupManager)
+        self.horizontalSplitter.addWidget(self.fileManager)
 
+        self.verticalSplitter.addWidget(self.horizontalSplitter)
+        self.verticalSplitter.addWidget(self.actionsList)
+
+        self.verticalSplitter.setLineWidth(3)
+        self.verticalSplitter.setFrameStyle(QFrame.Box | QFrame.Raised)
         self.groupManager.setLineWidth(3)
         self.fileManager.setLineWidth(3)
         self.groupManager.setFrameStyle(QFrame.Box | QFrame.Raised)
@@ -170,7 +180,7 @@ class myP2PSyncCloud(QMainWindow):
             peerCore.setServerCoordinates(coordinates)
             self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverIP, peerCore.serverPort))
 
-        peerCore.startSync()
+        peerCore.startSync(self)
 
         self.updateGroupsUI()
 
@@ -179,6 +189,22 @@ class myP2PSyncCloud(QMainWindow):
 
         if reply == QMessageBox.Yes:
             self.restoreAllHandler()
+
+        self.queuePollingT = Thread(target=self.queuePolling, args=())
+        self.queuePollingT.start()
+
+
+    def queuePolling(self):
+        while True:
+            if not peerCore.queue.empty():
+                item = peerCore.queue.get(False)
+                if item == "END":
+                    print("Polling thread stopped.")
+                    sys.exit()
+                else:
+                    self.refreshGUI(item)
+            else:
+                time.sleep(1)
 
 
     def restoreAllHandler(self):
@@ -258,13 +284,16 @@ class myP2PSyncCloud(QMainWindow):
 
         if reply == QMessageBox.Yes:
             peerCore.disconnectPeer()
+            peerCore.queue.put_nowait("END")
+            self.queuePollingT.join()
+
             event.accept()
         else:
             event.ignore()
 
     def updatePeersList(self, groupName):
 
-        if peerCore.retrievePeers(groupName, all=True):
+        if peerCore.retrievePeers(groupName, selectAll=True):
             self.peersList.clear()
             for peer in peerCore.activeGroupsList[groupName]["peersList"]:
                 status = "Active" if peer["active"] else "NotActive"
@@ -317,6 +346,7 @@ class myP2PSyncCloud(QMainWindow):
         if self.peersList.currentItem() is not None:
             groupName = self.fileManagerLabel.text().split()[1]
             targetPeerID = self.peersList.currentItem().text().split()[0]
+            targetPeerStatus = self.peersList.currentItem().text().split()[1]
             action = self.selectRole.currentText()
             reply = QMessageBox.question(self, 'Message', "Are you sure you want to apply \"{}\" command to {}?"
                                          .format(action, targetPeerID),
@@ -336,7 +366,9 @@ class myP2PSyncCloud(QMainWindow):
                         self.updateGroupsUI()
                     else:
                         self.updatePeersList(groupName)
-
+                    #if the targetPeer is active send it a message in order to make it able to refresh the window
+                    if targetPeerStatus == "ACTIVE":
+                        pass
                 else:
                     QMessageBox.about(self, "Error", "Something went wrong!")
         else:
@@ -367,6 +399,12 @@ class myP2PSyncCloud(QMainWindow):
             else:
                 QMessageBox.about(self, "Error", "Something went wrong!")
 
+    def refreshGUI(self, item):
+        modItem = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " --> " + item
+        self.actionsList.addItem(modItem)
+        self.actionsList.sortItems(order=Qt.DescendingOrder)
+
+
 def peerInitialization():
     peerCore.setPeerID()
     found = peerCore.findServer()
@@ -376,9 +414,7 @@ def peerInitialization():
         return False
 
 
-
 if __name__ == '__main__':
     app = QApplication([])
-    #QApplication.setStyle(QStyleFactory.create('WindowsXP'))
     ex = myP2PSyncCloud()
     sys.exit(app.exec_())
