@@ -49,9 +49,8 @@ def restoreGroup(request, thread, groups):
     if groupName in groups:
             if thread.peerID in groups[groupName].peersInGroup:
                 if not groups[groupName].peersInGroup[thread.peerID].active: #if not already active
-                    groups[groupName].peersInGroup[thread.peerID].active = True
+                    groups[groupName].restorePeer(thread.peerID)
                     answer = "GROUP {} RESTORED".format(groupName)
-                    groups[groupName].activeUsers += 1
                 else:
                     answer = "IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER ALREADY ACTIVE".format(groupName)
             else:
@@ -77,8 +76,6 @@ def joinGroup(request, thread, groups):
                 role = "RO"
                 answer = "GROUP {} JOINED IN ReadOnly MODE".format(groupName)
             groups[groupName].addPeer(thread.peerID, True, role)
-            groups[groupName].activeUsers += 1
-            groups[groupName].totalUsers += 1
 
         else:
             answer = "IMPOSSIBLE TO JOIN GROUP {} - WRONG TOKEN".format(groupName)
@@ -195,9 +192,7 @@ def leaveGroup(thread, groups, groupsLock, groupName):
 
     groupsLock.acquire()
 
-    del groups[groupName].peersInGroup[thread.peerID]
-    groups[groupName].activeUsers -= 1
-    groups[groupName].totalUsers -= 1
+    groups[groupName].removePeer(thread.peerID)
 
     groupsLock.release()
 
@@ -208,8 +203,7 @@ def disconnectGroup(thread, groups, groupsLock, groupName):
 
     groupsLock.acquire()
 
-    groups[groupName].peersInGroup[thread.peerID].active = False
-    groups[groupName].activeUsers -= 1
+    groups[groupName].disconnectPeer(thread.peerID)
 
     groupsLock.release()
 
@@ -223,8 +217,7 @@ def peerDisconnection(thread, groups, groupsLock, peers):
 
     for group in groups.values():
         if thread.peerID in group.peersInGroup:
-            group.peersInGroup[thread.peerID].active = False
-            group.activeUsers -= 1
+            group.disconnectPeer(thread.peerID)
 
     groupsLock.release()
 

@@ -3,7 +3,6 @@
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import hashlib
-import queue
 import select
 import socket
 import time
@@ -21,8 +20,6 @@ signals = None
 activeGroupsList = {}
 restoreGroupsList = {}
 otherGroupsList = {}
-
-queue = queue.Queue()
 
 def setPeerID():
     global peerID
@@ -397,7 +394,7 @@ def manageRequest(self, message):
     print('[Thr {}] Received {}'.format(self.number, message))
 
     if message == "EHI":
-        signals.refreshEmit("peer 00000000001 changed your role in RO")
+        signals.refreshEmit("ueeeeeeeeeeeeee")
         answer = "OK"
         self.client_sock.send(answer.encode('ascii'))
     elif message == "BYE":

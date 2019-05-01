@@ -25,7 +25,8 @@ peersLock = Lock()
 stop = None
 
 groupsInfoFile = "sessionFiles/groupsInfo.txt"
-groupsJoinFile = "sessionFiles/groupsJoin.txt"
+groupsPeersFile = "sessionFiles/groupsPeers.txt"
+groupsFilesFile = "sessionFiles/groupsFiles.txt"
 
 
 def initServer():
@@ -37,8 +38,7 @@ def initServer():
         f = open(groupsInfoFile, 'r')
         for line in f:
             groupInfo = line.split()
-            groups[groupInfo[0]] = Group(groupInfo[0],groupInfo[1],
-                                         groupInfo[2], 0, groupInfo[3])
+            groups[groupInfo[0]] = Group(groupInfo[0],groupInfo[1],groupInfo[2])
         f.close()
     except FileNotFoundError:
         print("No previous session session information found")
@@ -47,7 +47,7 @@ def initServer():
 
     if previous:
         try:
-            f = open(groupsJoinFile, 'r')
+            f = open(groupsPeersFile, 'r')
             for line in f:
                 peerInfo = line.split()
                 """peerID is simply the MAC address of the machine
@@ -63,6 +63,18 @@ def initServer():
         except FileNotFoundError:
             pass
 
+        try:
+            f = open(groupsFilesFile, 'r')
+            for line in f:
+                fileInfo = line.split()
+                groupName = fileInfo[0]
+                filename = fileInfo[1]
+                groups[groupName].addFile(filename, fileInfo[2],
+                                          fileInfo[3], fileInfo[4])
+            f.close()
+        except FileNotFoundError:
+            pass
+
 
 def saveState():
     """Save the state of groups and peers in order to allow to restore the session in future"""
@@ -73,7 +85,7 @@ def saveState():
                     group.tokenRO+" "+
                     group.totalUsers+"\n")
 
-    with open(groupsJoinFile, 'w') as f:
+    with open(groupsPeersFile, 'w') as f:
         for group in groups.values():
             for peer in group.peersInGroup.values():
                 f.write(peer.peerID+" "+
@@ -81,7 +93,7 @@ def saveState():
                         peer.role+"\n")
 
 
-def startServer(host = '0.0.0.0', port = 2010, max_clients = 10):
+def startServer(host, port, max_clients = 10000):
 
     """ Initialize the server with a host and port to listen to.
     Provide a list of functions that will be used when receiving specific data """
@@ -124,6 +136,7 @@ def closeServer(host, port, sock, sock_threads):
 
 def stopServer():
     """This function will be called in order to stop the server (example using the X on the GUI or a signal)"""
+    global stop
     stop = True
 
 

@@ -291,6 +291,8 @@ class myP2PSyncCloud(QMainWindow):
         self.fileManagerLabel.setText("GROUP {} FILE MANAGER\tROLE: {}".format(groupName,
                                         peerCore.activeGroupsList[groupName]["role"].upper()))
         self.fileListLabel.show()
+
+        "Fill the files list"
         self.fileList.show()
 
         if peerCore.activeGroupsList[groupName]["role"].upper() == "RW":
