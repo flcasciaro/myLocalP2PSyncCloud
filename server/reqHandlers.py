@@ -233,4 +233,3 @@ def peerDisconnection(thread, groups, groupsLock, peers):
     answer = "OK - PEER DISCONNECTED"
     thread.client_sock.send(answer.encode('ascii'))
 
-

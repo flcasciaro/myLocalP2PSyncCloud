@@ -6,7 +6,7 @@ import select
 import socket
 from threading import Thread, Lock
 
-import reqhand
+import reqHandlers
 from groupClass import Group
 
 """Main data structure for groups management
@@ -182,48 +182,48 @@ def manageRequest(self, message):
     print('[Thr {}] Received {}'.format(self.number, message))
 
     if message.split()[0] == "I'M":
-        reqhand.handshake(message, self)
+        reqHandlers.handshake(message, self)
 
     elif message == "SEND ACTIVE GROUPS":
-        reqhand.sendGroups(self, groups, action = "Active")
+        reqHandlers.sendGroups(self, groups, action ="Active")
 
     elif message == "SEND PREVIOUS GROUPS":
-        reqhand.sendGroups(self, groups, action = "Previous")
+        reqHandlers.sendGroups(self, groups, action ="Previous")
 
     elif message == "SEND OTHER GROUPS":
-        reqhand.sendGroups(self, groups, action = "Other")
+        reqHandlers.sendGroups(self, groups, action ="Other")
 
     elif message.split()[0] == "RESTORE":
-        reqhand.restoreGroup(message, self, groups)
+        reqHandlers.restoreGroup(message, self, groups)
         #print(groups)
 
     elif message.split()[0] == "JOIN":
-        reqhand.joinGroup(message, self, groups)
+        reqHandlers.joinGroup(message, self, groups)
         #print(groups)
 
     elif message.split()[0] == "CREATE":
-        reqhand.createGroup(message, self, groups)
+        reqHandlers.createGroup(message, self, groups)
         #print(groups)
 
     elif message.split()[0] == "ROLE":
-        reqhand.manageRole(message, self, groups, groupsLock)
+        reqHandlers.manageRole(message, self, groups, groupsLock)
         print(groups)
 
     elif message.split()[0] == "PEERS":
-        reqhand.retrievePeers(message, self, groups, peers)
+        reqHandlers.retrievePeers(message, self, groups, peers)
 
     elif message.split()[0] == "HERE":
-        reqhand.imHere(message, self, peers)
+        reqHandlers.imHere(message, self, peers)
         print(peers)
 
     elif message.split()[0] == "LEAVE":
-        reqhand.leaveGroup(self, groups, groupsLock, message.split()[2])
+        reqHandlers.leaveGroup(self, groups, groupsLock, message.split()[2])
 
     elif message.split()[0] == "DISCONNECT":
-        reqhand.disconnectGroup(self, groups, groupsLock, message.split()[2])
+        reqHandlers.disconnectGroup(self, groups, groupsLock, message.split()[2])
 
     elif message == "PEER DISCONNECT":
-        reqhand.peerDisconnection(self, groups, groupsLock, peers)
+        reqHandlers.peerDisconnection(self, groups, groupsLock, peers)
 
     elif message == "BYE":
         answer = "BYE PEER"

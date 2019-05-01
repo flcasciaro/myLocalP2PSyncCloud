@@ -1,3 +1,4 @@
+
 class Group:
 
     def __init__(self, name, tokenRW, tokenRO, activeUsers, totalUsers):
