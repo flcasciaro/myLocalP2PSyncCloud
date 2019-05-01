@@ -10,10 +10,12 @@ import time
 import uuid
 from threading import Thread
 
+
 configurationFile = "conf.txt"
 peerID = None
 serverIP = None
 serverPort = None
+signals = None
 
 """main data structures for the groups handling"""
 activeGroupsList = {}
@@ -266,14 +268,17 @@ def disconnectGroup(groupName):
 
 
 
-def startSync(gui):
+def startSync(sig):
+
+    global signals
+    signals = sig
 
     """retrieve internal IP address"""
     myIP = socket.gethostbyname(socket.gethostname())
     portNumber = 12321
 
     """create a server thread that listens on the port X"""
-    server = Server(gui, myIP, portNumber)
+    server = Server(myIP, portNumber)
     server.start()
 
     s = handshake()
@@ -288,7 +293,7 @@ def startSync(gui):
 
 
 class Server(Thread):
-    def __init__(self, gui, host, port, max_clients = 10):
+    def __init__(self, host, port, max_clients = 10):
         Thread.__init__(self)
         """ Initialize the server with a host and port to listen to.
         Provide a list of functions that will be used when receiving specific data """
@@ -300,7 +305,6 @@ class Server(Thread):
         self.sock.listen(max_clients)
         self.sock_threads = []
         self.counter = 0 # Will be used to give a number to each thread, can be improved (re-assigning free number)
-        self.gui = gui
         self.__stop = False
 
     def run(self):
@@ -316,7 +320,7 @@ class Server(Thread):
                 client_sock = None
 
             if client_sock:
-                client_thr = SocketServerThread(client_sock, client_addr, self.counter, self.gui)
+                client_thr = SocketServerThread(client_sock, client_addr, self.counter)
                 self.counter += 1
                 self.sock_threads.append(client_thr)
                 client_thr.start()
@@ -340,14 +344,13 @@ class Server(Thread):
 
 
 class SocketServerThread(Thread):
-    def __init__(self, client_sock, client_addr, number, gui):
+    def __init__(self, client_sock, client_addr, number):
         """ Initialize the Thread with a client socket and address """
         Thread.__init__(self)
         self.client_sock = client_sock
         self.client_addr = client_addr
         self.number = number
         self.peerID = None  #it will be set after the connection establishment (socket creation)
-        self.gui = gui
         self.__stop = False
 
     def run(self):
@@ -373,7 +376,7 @@ class SocketServerThread(Thread):
                     else:
                         # Strip newlines just for output clarity
                         message = read_data.decode('ascii').rstrip()
-                        manageRequest(self, message, self.gui)
+                        manageRequest(self, message)
             else:
                 print("[Thr {}] No client is connected, SocketServer can't receive data".format(self.number))
                 self.stop()
@@ -388,13 +391,13 @@ class SocketServerThread(Thread):
             print('[Thr {}] Closing connection with {}'.format(self.number, self.client_addr))
             self.client_sock.close()
 
-def manageRequest(self, message, gui):
+def manageRequest(self, message):
 
     """Serves the client request"""
     print('[Thr {}] Received {}'.format(self.number, message))
 
     if message == "EHI":
-        queue.put_nowait("ciao")
+        signals.refreshEmit("peer 00000000001 changed your role in RO")
         answer = "OK"
         self.client_sock.send(answer.encode('ascii'))
     elif message == "BYE":
