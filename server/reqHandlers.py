@@ -189,7 +189,7 @@ def imHere(request, thread, peers):
     thread.client_sock.send(answer.encode('ascii'))
 
 def leaveGroup(thread, groups, groupsLock, groupName):
-
+    """remove the peer from the group"""
     groupsLock.acquire()
 
     groups[groupName].removePeer(thread.peerID)
@@ -200,7 +200,7 @@ def leaveGroup(thread, groups, groupsLock, groupName):
     thread.client_sock.send(answer.encode('ascii'))
 
 def disconnectGroup(thread, groups, groupsLock, groupName):
-
+    """disconnect the peer from the group (active=False)"""
     groupsLock.acquire()
 
     groups[groupName].disconnectPeer(thread.peerID)
@@ -211,13 +211,14 @@ def disconnectGroup(thread, groups, groupsLock, groupName):
     thread.client_sock.send(answer.encode('ascii'))
 
 def peerDisconnection(thread, groups, groupsLock, peers):
-    """Disconnect the peer from all the synchronization groups setting the active value to False"""
+    """Disconnect the peer from all the synchronization groups in which is active"""
 
     groupsLock.acquire()
 
     for group in groups.values():
         if thread.peerID in group.peersInGroup:
-            group.disconnectPeer(thread.peerID)
+            if group.peersInGroup[thread.peerID].active:
+                group.disconnectPeer(thread.peerID)
 
     groupsLock.release()
 
