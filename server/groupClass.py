@@ -1,3 +1,7 @@
+"""File containing classes for Group management of myLocalP2PSyncCLoud"""
+
+"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+
 
 class Group:
 
