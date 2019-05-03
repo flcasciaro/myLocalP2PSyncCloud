@@ -20,6 +20,7 @@ signals = None
 activeGroupsList = {}
 restoreGroupsList = {}
 otherGroupsList = {}
+activeGroupsFiles = {}
 
 def setPeerID():
     global peerID
@@ -88,7 +89,6 @@ def handshake():
     print("Connection with server established")
     return s
 
-
 def retrieveGroups():
 
     global activeGroupsList, restoreGroupsList, otherGroupsList
@@ -112,12 +112,12 @@ def retrieveGroups():
 
     closeSocket(s)
 
-def restoreGroup(groupName):
+def retrieveGroupInfo(groupName):
 
     s = handshake()
 
-    message = "RESTORE Group: {}".format(groupName)
-    print(message)
+    message = "INFO Group: {}".format(groupName)
+    #print(message)
     s.send(message.encode('ascii'))
 
     data = s.recv(1024)
@@ -125,13 +125,39 @@ def restoreGroup(groupName):
 
     closeSocket(s)
 
+    groupInfo = eval(str(data.decode('ascii')))
+
+    return groupInfo
+
+def restoreGroup(groupName, delete):
+
+    s = handshake()
+
+    message = "RESTORE Group: {}".format(groupName)
+    #print(message)
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+
+    closeSocket(s)
+
+    if str(data.decode('ascii')).split()[0] == "ERROR":
+        return False
+    else:
+        if delete:
+            activeGroupsList[groupName] = restoreGroupsList[groupName]
+            del restoreGroupsList[groupName]
+        return True
 
 def restoreAll():
-
+    delete = dict()
     for group in restoreGroupsList.values():
-        restoreGroup(group["name"])
-
-
+        delete[group["name"]] = restoreGroup(group["name"], False)
+    for groupName in delete:
+        if delete[groupName]:
+            activeGroupsList[groupName] = restoreGroupsList[groupName]
+            del restoreGroupsList[groupName]
 
 
 def joinGroup(groupName, token):
@@ -148,6 +174,13 @@ def joinGroup(groupName, token):
     print('Received from the server :', str(data.decode('ascii')))
 
     closeSocket(s)
+
+    if str(data.decode('ascii')).split()[0] == "ERROR":
+        return False
+    else:
+        activeGroupsList[groupName] = otherGroupsList[groupName]
+        del otherGroupsList[groupName]
+        return True
 
 
 def createGroup(groupName, groupTokenRW, groupTokenRO):
@@ -166,9 +199,14 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
     print('Received from the server :', str(data.decode('ascii')))
 
     closeSocket(s)
-    if str(data.decode('ascii')).split()[0] == "ERROR:":
+    if str(data.decode('ascii')).split()[0] == "ERROR":
         return False
     else:
+        activeGroupsList[groupName] = dict()
+        activeGroupsList[groupName]["name"] = groupName
+        activeGroupsList[groupName]["total"] = 1
+        activeGroupsList[groupName]["active"] = 1
+        activeGroupsList[groupName]["role"] = "MASTER"
         return True
 
 
@@ -186,9 +224,11 @@ def changeRole(groupName, targetPeerID, action):
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR:":
+    if str(data.decode('ascii')).split()[0] == "ERROR":
         return False
     else:
+        if action.upper() == "CHANGE_MASTER":
+            activeGroupsList[groupName]["role"] = "RW"
         return True
 
 def retrievePeers(groupName, selectAll):
@@ -218,17 +258,7 @@ def retrievePeers(groupName, selectAll):
     activeGroupsList[groupName]["peersList"] = peersList
     return success
 
-def disconnectPeer():
 
-    s = handshake()
-
-    message = "PEER DISCONNECT"
-    s.send(message.encode('ascii'))
-
-    data = s.recv(1024)
-    print('Received from the server :', str(data.decode('ascii')))
-
-    closeSocket(s)
 
 def leaveGroup(groupName):
 
@@ -242,9 +272,11 @@ def leaveGroup(groupName):
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR:":
+    if str(data.decode('ascii')).split()[0] == "ERROR":
         return False
     else:
+        otherGroupsList[groupName] = activeGroupsList[groupName]
+        del activeGroupsList[groupName]
         return True
 
 def disconnectGroup(groupName):
@@ -258,9 +290,11 @@ def disconnectGroup(groupName):
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR:":
+    if str(data.decode('ascii')).split()[0] == "ERROR":
         return False
     else:
+        restoreGroupsList[groupName] = activeGroupsList[groupName]
+        del activeGroupsList[groupName]
         return True
 
 
@@ -401,3 +435,20 @@ def manageRequest(self, message):
         answer = "BYE PEER"
         self.client_sock.send(answer.encode('ascii'))
         self.stop()
+
+def disconnectPeer():
+
+    s = handshake()
+
+    message = "PEER DISCONNECT"
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+
+    closeSocket(s)
+
+    if str(data.decode('ascii')).split()[0] == "ERROR":
+        return False
+    else:
+        return True
