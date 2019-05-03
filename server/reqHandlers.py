@@ -42,6 +42,13 @@ def sendGroups(thread, groups, action):
     thread.client_sock.send(str(groupsList).encode('ascii'))
 
 def sendGroupInfo(request, thread, groups):
+    """This function return the main information about the group into a dictionary
+    with keys:
+    - name = name of the group
+    - active = number of active peers
+    - total = number of total peers (active + not active)
+    - role=role of the requester peer
+    """
     groupName = request.split()[2]
 
     if thread.peerID in groups[groupName].peersInGroup:
