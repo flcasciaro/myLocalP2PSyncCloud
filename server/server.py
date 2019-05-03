@@ -191,7 +191,7 @@ class SocketServerThread(Thread):
 
 def manageRequest(self, message):
 
-    """Serves the client request"""
+    """Serves the different client requests"""
     print('[Thr {}] Received {}'.format(self.number, message))
 
     if message.split()[0] == "I'M":
