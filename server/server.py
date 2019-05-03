@@ -197,14 +197,12 @@ def manageRequest(self, message):
     if message.split()[0] == "I'M":
         reqHandlers.handshake(message, self)
 
-    elif message == "SEND ACTIVE GROUPS":
-        reqHandlers.sendGroups(self, groups, action ="Active")
+    elif message.split()[0] == "SEND":
+        action = message.split()[1]       #ACTIVE or PREVIOUS or OTHER
+        reqHandlers.sendGroups(self, groups, action)
 
-    elif message == "SEND PREVIOUS GROUPS":
-        reqHandlers.sendGroups(self, groups, action ="Previous")
-
-    elif message == "SEND OTHER GROUPS":
-        reqHandlers.sendGroups(self, groups, action ="Other")
+    elif message.split()[0] == "INFO":
+        reqHandlers.sendGroupInfo(message, self, groups)
 
     elif message.split()[0] == "RESTORE":
         reqHandlers.restoreGroup(message, self, groups)

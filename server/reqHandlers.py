@@ -41,6 +41,18 @@ def sendGroups(thread, groups, action):
 
     thread.client_sock.send(str(groupsList).encode('ascii'))
 
+def sendGroupInfo(request, thread, groups):
+    groupName = request.split()[2]
+
+    if thread.peerID in groups[groupName].peersInGroup:
+        role = groups[groupName].peersInGroup[thread.peerID].role
+    else:
+        role = ""
+    groupInfo = groups[groupName].getPublicInfo(role)
+
+    thread.client_sock.send(str(groupInfo).encode('ascii'))
+
+
 
 def restoreGroup(request, thread, groups):
     """"make the user active in one of its group (already joined)"""
@@ -50,13 +62,13 @@ def restoreGroup(request, thread, groups):
             if thread.peerID in groups[groupName].peersInGroup:
                 if not groups[groupName].peersInGroup[thread.peerID].active: #if not already active
                     groups[groupName].restorePeer(thread.peerID)
-                    answer = "GROUP {} RESTORED".format(groupName)
+                    answer = "OK - GROUP {} RESTORED".format(groupName)
                 else:
-                    answer = "IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER ALREADY ACTIVE".format(groupName)
+                    answer = "ERROR: - IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER ALREADY ACTIVE".format(groupName)
             else:
-                answer = "IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER DOESN'T BELONG TO IT".format(groupName)
+                answer = "ERROR - IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER DOESN'T BELONG TO IT".format(groupName)
     else:
-        answer = "IT'S NOT POSSIBLE TO RESTORE GROUP {} - GROUP DOESN'T EXIST".format(groupName)
+        answer = "ERROR - IT'S NOT POSSIBLE TO RESTORE GROUP {} - GROUP DOESN'T EXIST".format(groupName)
 
     thread.client_sock.send(answer.encode('ascii'))
 
@@ -71,16 +83,16 @@ def joinGroup(request, thread, groups):
         if tokenProvided == groups[groupName].tokenRW or tokenProvided == groups[groupName].tokenRO:
             if tokenProvided == groups[groupName].tokenRW:
                 role = "RW"
-                answer = "GROUP {} JOINED IN ReadWrite MODE".format(groupName)
+                answer = "OK - GROUP {} JOINED IN ReadWrite MODE".format(groupName)
             elif tokenProvided == groups[groupName].tokenRO:
                 role = "RO"
-                answer = "GROUP {} JOINED IN ReadOnly MODE".format(groupName)
+                answer = "OK - GROUP {} JOINED IN ReadOnly MODE".format(groupName)
             groups[groupName].addPeer(thread.peerID, True, role)
 
         else:
-            answer = "IMPOSSIBLE TO JOIN GROUP {} - WRONG TOKEN".format(groupName)
+            answer = "ERROR - IMPOSSIBLE TO JOIN GROUP {} - WRONG TOKEN".format(groupName)
     else:
-        answer = "IMPOSSIBLE TO JOIN GROUP {} - GROUP DOESN'T EXIST".format(groupName)
+        answer = "ERROR - IMPOSSIBLE TO JOIN GROUP {} - GROUP DOESN'T EXIST".format(groupName)
 
     thread.client_sock.send(answer.encode('ascii'))
 
@@ -96,13 +108,13 @@ def createGroup(request, thread, groups):
     if newGroupName not in groups:
         """create the new group and insert in the group dictionary"""
 
-        newGroup = Group(newGroupName, newGroupTokenRW, newGroupTokenRO, 1, 1)
+        newGroup = Group(newGroupName, newGroupTokenRW, newGroupTokenRO)
         newGroup.addPeer(thread.peerID, True, "Master")
         groups[newGroupName] = newGroup
 
-        answer =  "OK: GROUP {} SUCCESSFULLY CREATED".format(newGroupName)
+        answer =  "OK - GROUP {} SUCCESSFULLY CREATED".format(newGroupName)
     else:
-        answer =  "ERROR: IMPOSSIBLE TO CREATE GROUP {} - GROUP ALREADY EXIST".format(newGroupName)
+        answer =  "ERROR - IMPOSSIBLE TO CREATE GROUP {} - GROUP ALREADY EXIST".format(newGroupName)
 
     thread.client_sock.send(answer.encode('ascii'))
 
