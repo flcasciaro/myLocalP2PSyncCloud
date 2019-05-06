@@ -37,8 +37,8 @@ class Group:
         self.peersInGroup[peerID].active = False
         self.activePeers -= 1
 
-    def addFile(self, filename, filesize, lastModifiedTime, sourcePeer):
-        f = FileInGroup(filename, filesize, lastModifiedTime, sourcePeer)
+    def addFile(self, filename, filesize, lastModifiedTime):
+        f = FileInGroup(filename, filesize, lastModifiedTime)
         self.filesInGroup[filename] = f
         self.nrFiles += 1
 
@@ -65,11 +65,16 @@ class PeerInGroup:
 
 class FileInGroup:
 
-    def __init__(self, filename, filesize, lastModifiedTime, sourcePeer):
+    def __init__(self, filename, filesize, lastModified):
         self.filename = filename
         self.filesize = filesize
-        self.lastModifiedTime = lastModifiedTime
-        self.sourcePeer = sourcePeer
+        self.lastModified = lastModified
 
+    def getFileInfo(self):
+        fileInfo = dict()
+        fileInfo["filename"] = self.filename
+        fileInfo["filesize"] = self.filesize
+        fileInfo["lastModified"] = self.lastModified
+        return fileInfo
 
 

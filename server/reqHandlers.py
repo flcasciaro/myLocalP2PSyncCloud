@@ -191,6 +191,84 @@ def retrievePeers(request, thread, groups, peers):
         answer = "ERROR - GROUP {} DOESN'T EXIST".format(groupName)
     thread.client_sock.send(answer.encode('ascii'))
 
+def addFile(request, thread, groups, groupsLock):
+    """request is ADD_FILE <groupname> <filename> <filesize> <lastModifiedDate>"""
+
+    try:
+        requestFields = request.split()
+        groupName = requestFields[1]
+        filename = requestFields[2]
+        filesize = requestFields[3]
+        lastModified = requestFields[4] + " " + requestFields[5]
+
+        groupsLock.acquire()
+
+        if groupName in groups:
+            if thread.peerID in groups[groupName].peersInGroup:
+                if groups[groupName].peersInGroup[thread.peerID].role.upper() == "RO":
+                    answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
+                else:
+                    groups[groupName].addFile(filename, filesize, lastModified)
+                    answer = "OK - FILE ADDED TO THE GROUP"
+            else:
+                answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"
+        else:
+            answer = "ERROR - GROUP DOESN'T EXIST"
+        groupsLock.release()
+
+    except IndexError:
+        answer = "ERROR - INVALID REQUEST"
+
+    thread.client_sock.send(answer.encode('ascii'))
+
+def removeFile(request, thread, groups, groupsLock):
+    """request is REMOVE_FILE <groupname> <filename>"""
+
+    try:
+        requestFields = request.split()
+        groupName = requestFields[1]
+        filename = requestFields[2]
+
+        groupsLock.acquire()
+
+        if groupName in groups:
+            if thread.peerID in groups[groupName].peersInGroup:
+                if groups[groupName].peersInGroup[thread.peerID].role.upper() == "RO":
+                    answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
+                else:
+                    groups[groupName].removeFile(filename)
+                    answer = "OK - FILE REMOVED FROM THE GROUP"
+            else:
+                answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"
+        else:
+            answer = "ERROR - GROUP DOESN'T EXIST"
+        groupsLock.release()
+
+    except IndexError:
+        answer = "ERROR - INVALID REQUEST"
+
+    thread.client_sock.send(answer.encode('ascii'))
+
+def getFiles(request, thread, groups):
+    """request is GET_FILES <groupname> """
+
+    fileList = dict()
+
+    try:
+        requestFields = request.split()
+        groupName = requestFields[1]
+
+        if groupName in groups:
+                for file in groups[groupName].filesInGroup.values():
+                    fileList[file.filename]=file.getFileInfo()
+                answer = str(fileList)
+        else:
+            answer = "ERROR - GROUP DOESN'T EXIST"
+
+    except IndexError:
+        answer = "ERROR - INVALID REQUEST"
+
+    thread.client_sock.send(answer.encode('ascii'))
 
 def imHere(request, thread, peers):
 

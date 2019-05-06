@@ -22,7 +22,6 @@ another dictionary containing information about the peer e.g. peerIP and peerPor
 peers = dict()
 peersLock = Lock()
 
-stop = None
 
 groupsInfoFile = "sessionFiles/groupsInfo.txt"
 groupsPeersFile = "sessionFiles/groupsPeers.txt"
@@ -70,7 +69,7 @@ def initServer():
                 groupName = fileInfo[0]
                 filename = fileInfo[1]
                 groups[groupName].addFile(filename, fileInfo[2],
-                                          fileInfo[3], fileInfo[4])
+                                          fileInfo[3] + " " + fileInfo[4])
             f.close()
         except FileNotFoundError:
             pass
@@ -80,64 +79,79 @@ def saveState():
     """Save the state of groups and peers in order to allow to restore the session in future"""
     with open(groupsInfoFile, 'w') as f:
         for group in groups.values():
-            f.write(group.name+" "+
-                    group.tokenRW+" "+
-                    group.tokenRO+" "+
-                    group.totalUsers+"\n")
+            f.write(group.name + " " +
+                    group.tokenRW + " " +
+                    group.tokenRO + " " "\n")
 
     with open(groupsPeersFile, 'w') as f:
         for group in groups.values():
             for peer in group.peersInGroup.values():
-                f.write(peer.peerID+" "+
-                        group.name+" "+
-                        peer.role+"\n")
+                f.write(peer.peerID +" " +
+                        group.name + " " +
+                        peer.role + "\n")
 
+    with open(groupsFilesFile, 'w') as f:
+        for group in groups.values():
+            for file in group.filesInGroup.values():
+                f.write(group.name + " " +
+                        file.filename + " " +
+                        file.filesize + " " +
+                        file.lastModified + "\n")
 
-def startServer(host, port, max_clients = 10000):
+class Server:
 
-    """ Initialize the server with a host and port to listen to.
-    Provide a list of functions that will be used when receiving specific data """
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind((host, port))
-    sock.listen(max_clients)
-    sock_threads = []
-    counter = 0 # Will be used to give a number to each thread, can be improved (re-assigning free number)
+    def __init__(self, host, port, max_clients = 10000):
 
-    """ Accept an incoming connection.
-    Start a new SocketServerThread that will handle the communication. """
-    print('Starting socket server (host {}, port {})'.format(host, port))
+        """ Initialize the server with a host and port to listen to.
+        Provide a list of functions that will be used when receiving specific data """
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.sock.bind((host, port))
+        self.sock.listen(max_clients)
+        self.sock_threads = []
+        self.counter = 0 # Will be used to give a number to each thread, can be improved (re-assigning free number)
+        self.__stop = False
 
-    while not stop:
-        sock.settimeout(1)
-        try:
-            client_sock, client_addr = sock.accept()
-        except socket.timeout:
-            client_sock = None
+        """ Accept an incoming connection.
+        Start a new SocketServerThread that will handle the communication. """
+        print('Starting socket server (host {}, port {})'.format(host, port))
 
-        if client_sock:
-            client_thr = SocketServerThread(client_sock, client_addr, counter)
-            counter += 1
-            sock_threads.append(client_thr)
-            client_thr.start()
+        while not self.__stop:
+            try:
+                self.sock.settimeout(1)
+                try:
+                    client_sock, client_addr = self.sock.accept()
+                except socket.timeout:
+                    client_sock = None
 
-    closeServer(host, port, sock, sock_threads)
+                if client_sock:
+                    client_thr = SocketServerThread(client_sock, client_addr, self.counter)
+                    self.counter += 1
+                    self.sock_threads.append(client_thr)
+                    client_thr.start()
+            except KeyboardInterrupt:
+                self.stopServer()
 
-def closeServer(host, port, sock, sock_threads):
-    """ Close the client socket threads and server socket if they exists. """
-    print('Closing server socket (host {}, port {})'.format(host, port))
+        self.closeServer(host, port)
 
-    for thr in sock_threads:
-        thr.stop()
-        thr.join()
+    def closeServer(self, host, port):
+        """ Close the client socket threads and server socket if they exists. """
+        print('Closing server socket (host {}, port {})'.format(host, port))
 
-    if sock:
-        sock.close()
+        for thr in self.sock_threads:
+            thr.stop()
+            thr.join()
 
-def stopServer():
-    """This function will be called in order to stop the server (example using the X on the GUI or a signal)"""
-    global stop
-    stop = True
+        if self.sock:
+            self.sock.close()
+
+        print("Saving the state of the server")
+        saveState()
+        exit()
+
+    def stopServer(self):
+        """This function will be called in order to stop the server (example using the X on the GUI or a signal)"""
+        self.__stop = True
 
 
 class SocketServerThread(Thread):
@@ -206,26 +220,30 @@ def manageRequest(self, message):
 
     elif message.split()[0] == "RESTORE":
         reqHandlers.restoreGroup(message, self, groups)
-        #print(groups)
 
     elif message.split()[0] == "JOIN":
         reqHandlers.joinGroup(message, self, groups)
-        #print(groups)
 
     elif message.split()[0] == "CREATE":
         reqHandlers.createGroup(message, self, groups)
-        #print(groups)
 
     elif message.split()[0] == "ROLE":
         reqHandlers.manageRole(message, self, groups, groupsLock)
-        print(groups)
 
     elif message.split()[0] == "PEERS":
         reqHandlers.retrievePeers(message, self, groups, peers)
 
+    elif message.split()[0] == "ADD_FILE":
+        reqHandlers.addFile(message, self, groups, groupsLock)
+
+    elif message.split()[0] == "REMOVE_FILE":
+        reqHandlers.removeFile(message, self, groups, groupsLock)
+
+    elif message.split()[0] == "GET_FILES":
+        reqHandlers.getFiles(message, self, groups)
+
     elif message.split()[0] == "HERE":
         reqHandlers.imHere(message, self, peers)
-        print(peers)
 
     elif message.split()[0] == "LEAVE":
         reqHandlers.leaveGroup(self, groups, groupsLock, message.split()[2])
@@ -244,15 +262,11 @@ def manageRequest(self, message):
         answer = "WTF_U_WANT"
         self.client_sock.send(answer.encode('ascii'))
 
+
 if __name__ == '__main__':
     """main function, starts the server"""
-
     initServer()
 
-    stop = False
     myIP = socket.gethostbyname(socket.gethostname())
     port = 45154
-    startServer(myIP,port)
-
-    #server stopped
-    saveState()
+    server = Server(myIP,port)
