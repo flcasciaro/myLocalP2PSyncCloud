@@ -69,8 +69,10 @@ class myP2PSyncCloud(QMainWindow):
         self.joinOrRestoreButton = QPushButton("")
         self.fileListLabel = QLabel("Files List")
         self.fileList = QListWidget()
+        self.addRemoveLayout = QHBoxLayout()
         self.selectFile = QPushButton("ADD FILE")
-        self.syncButton = QPushButton("SYNC FILE")
+        self.removeFile = QPushButton("REMOVE FILE")
+        self.syncButton = QPushButton("SYNC FILES")
         self.peersListLabel = QLabel("Peers List")
         self.peersList = QListWidget()
         self.changeRoleLayout = QHBoxLayout()
@@ -80,6 +82,7 @@ class myP2PSyncCloud(QMainWindow):
         self.disconnectButton = QPushButton("DISCONNECT")
 
         self.signals = mySignals.mySig()
+        self.groupName = ""
 
         self.initUI()
 
@@ -140,7 +143,9 @@ class myP2PSyncCloud(QMainWindow):
         self.fileManagerLayout.addWidget(self.fileListLabel, alignment=Qt.AlignCenter)
         self.fileManagerLayout.addWidget(self.fileList)
         self.fileManagerLayout.addSpacing(15)
-        self.fileManagerLayout.addWidget(self.selectFile)
+        self.addRemoveLayout.addWidget(self.selectFile)
+        self.addRemoveLayout.addWidget(self.removeFile)
+        self.fileManagerLayout.addLayout(self.addRemoveLayout)
         self.fileManagerLayout.addWidget(self.syncButton)
         self.fileManagerLayout.addSpacing(30)
         self.fileManagerLayout.addWidget(self.peersListLabel, alignment=Qt.AlignCenter)
@@ -157,7 +162,9 @@ class myP2PSyncCloud(QMainWindow):
         self.resetCreateButton.clicked.connect(self.resetCreateHandler)
         self.activeGroupList.itemDoubleClicked.connect(self.activeGroupsDoubleClicked)
         self.otherGroupList.itemDoubleClicked.connect(self.otherGroupsDoubleClicked)
-        self.selectFile.clicked.connect(self.addFile)
+        self.fileList.itemDoubleClicked.connect(self.fileDoubleClicked)
+        self.selectFile.clicked.connect(self.addFileHandler)
+        self.removeFile.clicked.connect(self.removeFileHandler)
         self.changeRole.clicked.connect(self.changeRoleHandler)
         self.leaveButton.clicked.connect(self.leaveGroupHandler)
         self.disconnectButton.clicked.connect(self.disconnectGroupHandler)
@@ -220,6 +227,7 @@ class myP2PSyncCloud(QMainWindow):
         self.fileListLabel.hide()
         self.fileList.hide()
         self.selectFile.hide()
+        self.removeFile.hide()
         self.syncButton.hide()
         self.peersListLabel.hide()
         self.peersList.hide()
@@ -249,17 +257,7 @@ class myP2PSyncCloud(QMainWindow):
             item = QListWidgetItem(group["name"])
             item.setTextAlignment(Qt.AlignHCenter)
             self.otherGroupList.addItem(item)
-            
 
-    def updatePeersList(self, groupName):
-
-        if peerCore.retrievePeers(groupName, selectAll=True):
-            self.peersList.clear()
-            for peer in peerCore.activeGroupsList[groupName]["peersList"]:
-                status = "Active" if peer["active"] else "NotActive"
-                self.peersList.addItem(peer["peerID"] + "\t" + status + "\t\t" + peer["role"])
-        else:
-            QMessageBox.about(self, "Error", "Error while retrieving list of peers!")    
 
 
     def restoreAllHandler(self):
@@ -288,7 +286,8 @@ class myP2PSyncCloud(QMainWindow):
             if peerCore.createGroup(groupName, groupTokenRW, groupTokenRO):
                 self.fillGroupManager()
                 self.resetCreateHandler()
-                self.loadFileManager(groupName)
+                self.groupName = groupName
+                self.loadFileManager()
                 QMessageBox.about(self, "OK", "Groups successfully created!")
             else:
                 QMessageBox.about(self, "Error", "Group creation failed!")
@@ -302,22 +301,21 @@ class myP2PSyncCloud(QMainWindow):
         self.createTokenROConfirm.clear()
 
 
-
     def activeGroupsDoubleClicked(self, item):
-        groupName = item.text().split()[0]
-        self.loadFileManager(groupName)
+        self.groupName = item.text().split()[0]
+        self.loadFileManager()
 
-    def loadFileManager(self, groupName):
+    def loadFileManager(self):
 
         self.hideFileManager()
 
-        groupInfo = peerCore.retrieveGroupInfo(groupName)
+        groupInfo = peerCore.retrieveGroupInfo(self.groupName)
 
-        if groupInfo["role"] != peerCore.activeGroupsList[groupName]["role"]:
+        if groupInfo["role"] != peerCore.activeGroupsList[self.groupName]["role"]:
             """Update the role of the peer in case of change"""
-            peerCore.activeGroupsList[groupName]["role"] = groupInfo["role"]
+            peerCore.activeGroupsList[self.groupName]["role"] = groupInfo["role"]
 
-        self.fileManagerLabel1.setText("FILE MANAGER GROUP {}".format(groupName))
+        self.fileManagerLabel1.setText("FILE MANAGER GROUP {}".format(self.groupName))
         self.fileManagerLabel2.setText(statusLabel.format(
             groupInfo["role"], groupInfo["active"], groupInfo["total"]))
         
@@ -325,18 +323,20 @@ class myP2PSyncCloud(QMainWindow):
 
         "Fills the files list"
 
-        self.fileList.clear()
         self.fileList.show()
+        self.fillFileList()
 
-        if peerCore.activeGroupsList[groupName]["role"].upper() == "RW":
+        if peerCore.activeGroupsList[self.groupName]["role"].upper() == "RW":
             self.selectFile.show()
+            self.removeFile.show()
             self.syncButton.show()
 
-        if peerCore.activeGroupsList[groupName]["role"].upper() == "MASTER":
+        if peerCore.activeGroupsList[self.groupName]["role"].upper() == "MASTER":
             self.selectFile.show()
+            self.removeFile.show()
             self.syncButton.show()
             self.peersListLabel.show()
-            self.updatePeersList(groupName)
+            self.fillPeersList()
             self.peersList.show()
             self.selectRole.show()
             self.changeRole.show()
@@ -344,21 +344,40 @@ class myP2PSyncCloud(QMainWindow):
         self.leaveButton.show()
         self.disconnectButton.show()
 
+    def fillPeersList(self):
+
+        if peerCore.retrievePeers(self.groupName, selectAll=True):
+            self.peersList.clear()
+            for peer in peerCore.activeGroupsList[self.groupName]["peersList"]:
+                status = "Active" if peer["active"] else "NotActive"
+                self.peersList.addItem(peer["peerID"] + "\t" + status + "\t\t" + peer["role"])
+        else:
+            QMessageBox.about(self, "Error", "Error while retrieving list of peers!")
+
+    def fillFileList(self):
+        if peerCore.getFileList(self.groupName):
+            self.fileList.clear()
+            for file in peerCore.activeGroupsList[self.groupName]["fileList"].values():
+                self.fileList.addItem(file["filename"])
+        else:
+            QMessageBox.about(self, "Error", "Error while retrieving list of peers!")
+
+
     def otherGroupsDoubleClicked(self, item):
 
-        groupName = item.text().split()[0]
+        self.groupName = item.text().split()[0]
         self.hideFileManager()
         self.joinOrRestoreButton.show()
 
-        self.fileManagerLabel1.setText("GROUP {}".format(groupName))
+        self.fileManagerLabel1.setText("GROUP {}".format(self.groupName))
 
-        groupInfo = peerCore.retrieveGroupInfo(groupName)
+        groupInfo = peerCore.retrieveGroupInfo(self.groupName)
 
         if groupInfo["role"] != "":
 
-            if groupInfo["role"] != peerCore.restoreGroupsList[groupName]["role"]:
+            if groupInfo["role"] != peerCore.restoreGroupsList[self.groupName]["role"]:
                 """Update the role of the peer in case of change (by a master)"""
-                peerCore.restoreGroupsList[groupName]["role"] = groupInfo["role"]
+                peerCore.restoreGroupsList[self.groupName]["role"] = groupInfo["role"]
 
             self.fileManagerLabel2.setText(statusLabel.format(
                 groupInfo["role"], groupInfo["active"], groupInfo["total"]))
@@ -374,40 +393,58 @@ class myP2PSyncCloud(QMainWindow):
 
     def joinOrRestoreHandler(self):
 
-        groupName = self.fileManagerLabel1.text().split()[1]
-
         if self.joinOrRestoreButton.text().upper() == "RESTORE":
             reply = QMessageBox.question(self, 'Message', "Are you sure you want to restore the group {} ?"
-                                         .format(groupName),
+                                         .format(self.groupName),
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
             if reply == QMessageBox.Yes:
-                """call the restoreGroup function passing the groupName as parameter"""
-                if peerCore.restoreGroup(groupName, delete=True):
+                """call the restoreGroup function passing the self.groupName as parameter"""
+                if peerCore.restoreGroup(self.groupName, delete=True):
                     self.fillGroupManager()
-                    self.loadFileManager(groupName)
+                    self.loadFileManager()
                 else:
                     QMessageBox.about(self, "Error", "Something went wrong!")
         else:
             token, okPressed = QInputDialog.getText(self, "Get token", "Your token:", QLineEdit.Password, "")
             if okPressed and token != '':
-                if peerCore.joinGroup(groupName, token):
+                if peerCore.joinGroup(self.groupName, token):
                     self.fillGroupManager()
-                    self.loadFileManager(groupName)
+                    self.loadFileManager()
                 else:
                     QMessageBox.about(self, "Error", "Wrong token!")
 
 
-
-    def addFile(self):
+    def addFileHandler(self):
         dlg = QFileDialog()
-        filename = dlg.getOpenFileName(self, 'Add file to the group', 'c:\\')
-        print(filename)
-        self.fileList.addItem(filename[0])
+        file = dlg.getOpenFileName(self, 'Add file to the group', 'c:\\')
+        if peerCore.addFile(file[0], self.groupName):
+            self.loadFileManager()
+        else:
+            QMessageBox.about(self, "Error", "Cannot add the selected file!")
+
+
+    def removeFileHandler(self):
+        if self.fileList.currentItem() is not None:
+            filename = self.fileList.currentItem().text()
+            if peerCore.removeFile(filename, self.groupName):
+                self.loadFileManager()
+            else:
+                QMessageBox.about(self, "Error", "Cannot remove the selected file!")
+        else:
+            QMessageBox.about(self, "Error", "You must select a file from the list")
+
+    def fileDoubleClicked(self, item):
+        filename = item.text().split()[0]
+        """show file Info"""
+        QMessageBox.about(self, "File Info", "Filename: {}\nFilepath: {}"
+                                "\nFilesize: {}\nLastModifiedTime: {}"
+                                .format(filename, "", peerCore.activeGroupsList[self.groupName]["fileList"][filename]["filesize"],
+                                peerCore.activeGroupsList[self.groupName]["fileList"][filename]["lastModified"]))
+
 
     def changeRoleHandler(self):
 
         if self.peersList.currentItem() is not None:
-            groupName = self.fileManagerLabel1.text().split()[3]
             targetPeerID = self.peersList.currentItem().text().split()[0]
             targetPeerStatus = self.peersList.currentItem().text().split()[1]
             action = self.selectRole.currentText()
@@ -417,21 +454,8 @@ class myP2PSyncCloud(QMainWindow):
             if reply == QMessageBox.Yes:
                 """make action string compatible with peerCore.changePeer()"""
                 action = action.replace(" ", "_")
-                if peerCore.changeRole(groupName, targetPeerID, action.upper()):
-                    if action.upper() == "CHANGE_MASTER":
-                        nrPeers = self.fileManagerLabel2.text().split()[4]
-                        activeUsers = nrPeers.split("/")[0]
-                        totalUsers = nrPeers.split("/")[1]
-                        self.fileManagerLabel2.setText("ROLE: {} \t\t PEERS (ACTIVE/TOTAL): {}/{}"
-                                                      .format(peerCore.activeGroupsList[groupName]["role"].upper(),
-                                                              activeUsers, totalUsers))
-                        self.peersListLabel.hide()
-                        self.peersList.hide()
-                        self.selectRole.hide()
-                        self.changeRole.hide()
-                        self.fillGroupManager()
-                    else:
-                        self.updatePeersList(groupName)
+                if peerCore.changeRole(self.groupName, targetPeerID, action.upper()):
+                    self.loadFileManager()
                     #if the targetPeer is active send it a message in order to make it able to refresh the window
                     if targetPeerStatus == "ACTIVE":
                         pass
@@ -441,13 +465,12 @@ class myP2PSyncCloud(QMainWindow):
             QMessageBox.about(self, "Error", "You must select a peer from the list")
 
     def leaveGroupHandler(self):
-        groupName = self.fileManagerLabel1.text().split()[3]
         reply = QMessageBox.question(self, 'Message', "Are you sure you want to leave the group {} ?"
-                                     .format(groupName),
+                                     .format(self.groupName),
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
-            """call the leaveGroup function passing the groupName as parameter"""
-            if peerCore.leaveGroup(groupName):
+            """call the leaveGroup function passing the self.groupName as parameter"""
+            if peerCore.leaveGroup(self.groupName):
                 self.fillGroupManager()
                 self.loadInititalGroupInfo()
             else:
@@ -455,13 +478,12 @@ class myP2PSyncCloud(QMainWindow):
 
 
     def disconnectGroupHandler(self):
-        groupName = self.fileManagerLabel1.text().split()[3]
         reply = QMessageBox.question(self, 'Message', "Are you sure you want to disconnect from the group {} ?"
-                                     .format(groupName),
+                                     .format(self.groupName),
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
-            """call the disconnectGroup function passing the groupName as parameter"""
-            if peerCore.disconnectGroup(groupName):
+            """call the disconnectGroup function passing the self.groupName as parameter"""
+            if peerCore.disconnectGroup(self.groupName):
                 self.fillGroupManager()
                 self.loadInititalGroupInfo()
             else:

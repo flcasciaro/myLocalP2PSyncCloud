@@ -5,10 +5,10 @@
 import hashlib
 import select
 import socket
-import time
 import uuid
 from threading import Thread
 
+import fileClass
 
 configurationFile = "conf.txt"
 peerID = None
@@ -59,7 +59,7 @@ def closeSocket(sock):
     data = sock.recv(1024)
     print('Received from the server :', str(data.decode('ascii')))
     if data.decode('ascii').rstrip() == "BYE PEER":
-        time.sleep(0.1)
+        #time.sleep(0.1)
         sock.close()
     else:
         serverError()
@@ -258,6 +258,92 @@ def retrievePeers(groupName, selectAll):
     activeGroupsList[groupName]["peersList"] = peersList
     return success
 
+def getFileList(groupName):
+
+    s = handshake()
+
+    message = "GET_FILES {}".format(groupName)
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+
+    closeSocket(s)
+
+    if str(data.decode('ascii')).split()[0] == "ERROR":
+        filesList = None
+        success = False
+    else:
+        """add files to the personal list of the peer for the group"""
+        filesList = eval(str(data.decode('ascii')))
+        success = True
+
+    activeGroupsList[groupName]["fileList"] = filesList
+    return success
+
+def getFileInfo(filename, groupName):
+
+    s = handshake()
+
+    message = "GET_FILE_INFO {} {}".format(filename, groupName)
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+
+    closeSocket(s)
+
+    if str(data.decode('ascii')).split()[0] == "ERROR":
+        fileInfo = None
+    else:
+        """add files to the personal list of the peer for the group"""
+        fileInfo = eval(str(data.decode('ascii')))
+
+    return fileInfo
+
+
+def addFile(filepath, groupName):
+
+    filePathFields = filepath.split('/')
+    """select just the effective filename, discard the path"""
+    filename = filePathFields[len(filePathFields) - 1]
+
+    filesize, datetime = fileClass.getFileStat(filepath)
+    print(filesize)
+    print(datetime)
+
+    s = handshake()
+
+    message = "ADD_FILE {} {} {} {}".format(groupName, filename, filesize, datetime)
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+
+    closeSocket(s)
+
+    if str(data.decode('ascii')).split()[0] == "ERROR":
+        return False
+    else:
+        """add file to the personal list of the peer for the group"""
+        return True
+
+def removeFile(filename, groupName):
+    s = handshake()
+
+    message = "REMOVE_FILE {} {}".format(groupName, filename)
+    s.send(message.encode('ascii'))
+
+    data = s.recv(1024)
+    print('Received from the server :', str(data.decode('ascii')))
+
+    closeSocket(s)
+
+    if str(data.decode('ascii')).split()[0] == "ERROR":
+        return False
+    else:
+        """remove file from the personal list for the group"""
+        return True
 
 
 def leaveGroup(groupName):
