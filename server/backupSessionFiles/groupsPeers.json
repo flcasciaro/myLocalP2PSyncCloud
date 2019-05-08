@@ -1,0 +1,22 @@
+[
+    {
+        "peerID": "132098950711908",
+        "groupName": "ITDepartment",
+        "role": "Master"
+    },
+    {
+        "peerID": "000000000000001",
+        "groupName": "ITDepartment",
+        "role": "RW"
+    },
+    {
+        "peerID": "111222111222111",
+        "groupName": "Telecom",
+        "role": "Master"
+    },
+    {
+        "peerID": "000000000000001",
+        "groupName": "ShazList",
+        "role": "Master"
+    }
+]

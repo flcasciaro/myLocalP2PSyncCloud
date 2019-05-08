@@ -2,6 +2,7 @@
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
+import json
 import select
 import socket
 from threading import Thread, Lock
@@ -23,53 +24,69 @@ peers = dict()
 peersLock = Lock()
 
 
-groupsInfoFile = "sessionFiles/groupsInfo.txt"
-groupsPeersFile = "sessionFiles/groupsPeers.txt"
-groupsFilesFile = "sessionFiles/groupsFiles.txt"
+groupsInfoFile = "sessionFiles/groupsInfo.json"
+groupsPeersFile = "sessionFiles/groupsPeers.json"
+groupsFilesFile = "sessionFiles/groupsFiles.json"
 
 
 def initServer():
     """Initialize server data structures
     Data structures are filled with data read from local text files if they exist"""
 
+    global groups, peers
+
     previous = True
     try:
         f = open(groupsInfoFile, 'r')
-        for line in f:
-            groupInfo = line.split()
-            groups[groupInfo[0]] = Group(groupInfo[0],groupInfo[1],groupInfo[2])
+        try:
+            groupsJson = json.load(f)
+            for group in groupsJson:
+                groupName = group["groupName"]
+                tokenRW = group["tokenRW"]
+                tokenRO = group["tokenRO"]
+                groups[groupName] = Group(groupName, tokenRW, tokenRO)
+            del groupsJson
+        except ValueError:
+            return None
         f.close()
     except FileNotFoundError:
         print("No previous session session information found")
         previous = False
 
-
     if previous:
         try:
             f = open(groupsPeersFile, 'r')
-            for line in f:
-                peerInfo = line.split()
-                """peerID is simply the MAC address of the machine
-                If this string is not present in the dictionary this is the first time I find
-                this peer in the file, I need to initialize the list of groups"""
-                peerID = peerInfo[0]
-                if peerID not in peers:
-                    peers[peerID] = dict()
-                    peers[peerID]["peerIP"] = None
-                    peers[peerID]["peerPort"] = None
-                groups[peerInfo[1]].addPeer(peerID, False, peerInfo[2])
+            try:
+                peersJson = json.load(f)
+                for peer in peersJson:
+                    peerID = peer["peerID"]
+                    groupName = peer["groupName"]
+                    role = peer["role"]
+                    if peerID not in peers:
+                        peers[peerID] = dict()
+                        peers[peerID]["peerIP"] = None
+                        peers[peerID]["peerPort"] = None
+                    groups[groupName].addPeer(peerID, False, role)
+                del peersJson
+            except ValueError:
+                return None
             f.close()
         except FileNotFoundError:
             pass
 
         try:
             f = open(groupsFilesFile, 'r')
-            for line in f:
-                fileInfo = line.split()
-                groupName = fileInfo[0]
-                filename = fileInfo[1]
-                groups[groupName].addFile(filename, fileInfo[2],
-                                          fileInfo[3] + " " + fileInfo[4])
+            try:
+                filesJson = json.load(f)
+                for file in filesJson:
+                    groupName = file["groupName"]
+                    filename = file["filename"]
+                    filesize = file["filesize"]
+                    lastModified = file["lastModified"]
+                    groups[groupName].addFile(filename, filesize, lastModified)
+                del filesJson
+            except ValueError:
+                return None
             f.close()
         except FileNotFoundError:
             pass
@@ -77,26 +94,42 @@ def initServer():
 
 def saveState():
     """Save the state of groups and peers in order to allow to restore the session in future"""
+    groupsJson = list()
     with open(groupsInfoFile, 'w') as f:
         for group in groups.values():
-            f.write(group.name + " " +
-                    group.tokenRW + " " +
-                    group.tokenRO + " " "\n")
+            groupInfo = dict()
+            groupInfo["groupName"] = group.name
+            groupInfo["tokenRW"] = group.tokenRW
+            groupInfo["tokenRO"] = group.tokenRO
+            groupsJson.append(groupInfo)
+        json.dump(groupsJson, f, indent=4)
+        del groupsJson
 
+    peersJson = list()
     with open(groupsPeersFile, 'w') as f:
         for group in groups.values():
             for peer in group.peersInGroup.values():
-                f.write(peer.peerID +" " +
-                        group.name + " " +
-                        peer.role + "\n")
+                peerInfo = dict()
+                peerInfo["peerID"] = peer.peerID
+                peerInfo["groupName"] = group.name
+                peerInfo["role"] = peer.role
+                peersJson.append(peerInfo)
+        json.dump(peersJson, f, indent=4)
+        del peersJson
 
+    filesJson = list()
     with open(groupsFilesFile, 'w') as f:
         for group in groups.values():
             for file in group.filesInGroup.values():
-                f.write(group.name + " " +
-                        file.filename + " " +
-                        file.filesize + " " +
-                        file.lastModified + "\n")
+                fileInfo = dict()
+                fileInfo["groupName"] = group.name
+                fileInfo["filename"] = file.filename
+                fileInfo["filesize"] = file.filesize
+                fileInfo["lastModified"] = file.filesize
+                filesJson.append(fileInfo)
+        json.dump(filesJson, f, indent=4)
+        del filesJson
+
 
 class Server:
 
