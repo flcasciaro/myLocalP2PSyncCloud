@@ -174,7 +174,7 @@ class myP2PSyncCloud(QMainWindow):
         self.disconnectButton.clicked.connect(self.disconnectGroupHandler)
         self.joinOrRestoreButton.clicked.connect(self.joinOrRestoreHandler)
 
-        self.signals.refresh.connect(self.refreshGUI)
+        self.signals.refresh.connect(self.addLogMessage)
 
         success = peerInitialization()
 
@@ -271,7 +271,11 @@ class myP2PSyncCloud(QMainWindow):
             reply = QMessageBox.question(self, 'Message', "Are you sure?",
                                          QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
             if reply == QMessageBox.Yes:
-                peerCore.restoreAll()
+                groupsRestored = peerCore.restoreAll()
+                if groupsRestored == "":
+                    self.addLogMessage("It was not possible to restore any group")
+                else:
+                    self.addLogMessage("Groups {} restored".format(groupsRestored))
                 self.fillGroupManager()
         else:
             QMessageBox.about(self, "Alert", "You don't have joined groups that can be restored")
@@ -294,7 +298,7 @@ class myP2PSyncCloud(QMainWindow):
                 self.resetCreateHandler()
                 self.groupName = groupName
                 self.loadFileManager()
-                QMessageBox.about(self, "OK", "Groups successfully created!")
+                self.addLogMessage("Group {} successfully created".format(groupName))
             else:
                 QMessageBox.about(self, "Error", "Group creation failed!")
 
@@ -423,6 +427,7 @@ class myP2PSyncCloud(QMainWindow):
                 if peerCore.restoreGroup(self.groupName, delete=True):
                     self.fillGroupManager()
                     self.loadFileManager()
+                    self.addLogMessage("Group {} restored".format(self.groupName))
                 else:
                     QMessageBox.about(self, "Error", "Something went wrong!")
         else:
@@ -431,6 +436,7 @@ class myP2PSyncCloud(QMainWindow):
                 if peerCore.joinGroup(self.groupName, token):
                     self.fillGroupManager()
                     self.loadFileManager()
+                    self.addLogMessage("Group {} joined".format(self.groupName))
                 else:
                     QMessageBox.about(self, "Error", "Wrong token!")
 
@@ -438,8 +444,11 @@ class myP2PSyncCloud(QMainWindow):
     def addFileHandler(self):
         dlg = QFileDialog()
         file = dlg.getOpenFileName(self, 'Add file to the group', 'c:\\')
+        length = len(file[0].split("/"))
+        filename = file[0].split("/")[length-1]
         if peerCore.addFile(file[0], self.groupName):
             self.loadFileManager()
+            self.addLogMessage("File {} added to group {}".format(filename, self.groupName))
         else:
             QMessageBox.about(self, "Error", "Cannot add the selected file!")
 
@@ -448,6 +457,7 @@ class myP2PSyncCloud(QMainWindow):
         if self.fileList.currentItem() is not None:
             filename = self.fileList.currentItem().text()
             if peerCore.removeFile(filename, self.groupName):
+                self.addLogMessage("File {} removed from group {}".format(filename, self.groupName))
                 self.loadFileManager()
             else:
                 QMessageBox.about(self, "Error", "Cannot remove the selected file!")
@@ -476,6 +486,7 @@ class myP2PSyncCloud(QMainWindow):
                 """make action string compatible with peerCore.changePeer()"""
                 action = action.replace(" ", "_")
                 if peerCore.changeRole(self.groupName, targetPeerID, action.upper()):
+                    self.addLogMessage("Role changed successfully in group {}".format(self.groupName))
                     self.loadFileManager()
                     #if the targetPeer is active send it a message in order to make it able to refresh the window
                     if targetPeerStatus == "ACTIVE":
@@ -492,6 +503,7 @@ class myP2PSyncCloud(QMainWindow):
         if reply == QMessageBox.Yes:
             """call the leaveGroup function passing the self.groupName as parameter"""
             if peerCore.leaveGroup(self.groupName):
+                self.addLogMessage("Group {} left".format(self.groupName))
                 self.fillGroupManager()
                 self.loadInititalGroupInfo()
             else:
@@ -505,6 +517,7 @@ class myP2PSyncCloud(QMainWindow):
         if reply == QMessageBox.Yes:
             """call the disconnectGroup function passing the self.groupName as parameter"""
             if peerCore.disconnectGroup(self.groupName):
+                self.addLogMessage("Group {} disconnected".format(self.groupName))
                 self.fillGroupManager()
                 self.loadInititalGroupInfo()
             else:
@@ -529,9 +542,14 @@ class myP2PSyncCloud(QMainWindow):
 
 
 
-    def refreshGUI(self, message):
+    def addLogMessage(self, message):
         modMessage = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " >>> " + message
-        self.actionsList.addItem(modMessage)
+        """keep track of just the last 5 messages"""
+        if self.actionsList.count() == 5:
+            item = self.actionsList.item(4)
+            item.setText(modMessage)
+        else:
+            self.actionsList.addItem(modMessage)
         self.actionsList.sortItems(order=Qt.DescendingOrder)
         QMessageBox.about(self, "Notification", message)
 
