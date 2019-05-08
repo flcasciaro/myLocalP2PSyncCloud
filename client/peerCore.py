@@ -163,11 +163,18 @@ def restoreAll():
     delete = dict()
     for group in restoreGroupsList.values():
         delete[group["name"]] = restoreGroup(group["name"], False)
+
+    restoredGroups = ""
     for groupName in delete:
         if delete[groupName]:
             activeGroupsList[groupName] = restoreGroupsList[groupName]
             del restoreGroupsList[groupName]
+            restoredGroups += groupName
+            restoredGroups += ", "
 
+    """delete last comma and space (if any)"""
+    l = len(restoredGroups)
+    return restoredGroups[0:l-2]
 
 def joinGroup(groupName, token):
 
