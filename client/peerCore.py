@@ -3,24 +3,30 @@
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import hashlib
+import json
 import select
 import socket
 import uuid
 from threading import Thread
 
-import fileClass
+import fileManagement
 
-configurationFile = "conf.txt"
+configurationFile = "sessionFiles/configuration.json"
+previousSessionFile = "sessionFiles/fileList.json"
 peerID = None
 serverIP = None
 serverPort = None
 signals = None
 
 """main data structures for the groups handling"""
-activeGroupsList = {}
-restoreGroupsList = {}
-otherGroupsList = {}
-activeGroupsFiles = {}
+activeGroupsList = dict()
+restoreGroupsList = dict()
+otherGroupsList = dict()
+
+"""data structure that keeps track of the synchronized files
+key: filename+groupName in order to uniquely identify a file
+value: filename, groupname, filepath, filesize, lastModified"""
+filesStatus = dict()
 
 def setPeerID():
     global peerID
@@ -33,9 +39,12 @@ def findServer():
     global serverIP, serverPort
     try:
         file = open(configurationFile, 'r')
-        configuration = file.readline().split()
-        serverIP = configuration[0]
-        serverPort = int(configuration[1])
+        try:
+            configuration = json.load(file)
+            serverIP = configuration["serverIP"]
+            serverPort = configuration["serverPort"]
+        except ValueError:
+            return False
     except FileNotFoundError:
         return False
     file.close()
@@ -308,9 +317,7 @@ def addFile(filepath, groupName):
     """select just the effective filename, discard the path"""
     filename = filePathFields[len(filePathFields) - 1]
 
-    filesize, datetime = fileClass.getFileStat(filepath)
-    print(filesize)
-    print(datetime)
+    filesize, datetime = fileManagement.getFileStat(filepath)
 
     s = handshake()
 
@@ -325,7 +332,9 @@ def addFile(filepath, groupName):
     if str(data.decode('ascii')).split()[0] == "ERROR":
         return False
     else:
-        """add file to the personal list of the peer for the group"""
+        """add file to the personal list of files of the peer"""
+        filesStatus[groupName+filename] = fileManagement.File(groupName, filename,
+                                                            filepath, filesize, datetime)
         return True
 
 def removeFile(filename, groupName):
@@ -343,6 +352,7 @@ def removeFile(filename, groupName):
         return False
     else:
         """remove file from the personal list for the group"""
+        del filesStatus[groupName+filename]
         return True
 
 
@@ -390,6 +400,11 @@ def startSync(sig):
     global signals
     signals = sig
 
+    global filesStatus
+    filesStatus = fileManagement.getPreviousFiles(previousSessionFile)
+    if filesStatus is None:
+        return False
+
     """retrieve internal IP address"""
     myIP = socket.gethostbyname(socket.gethostname())
     portNumber = 12321
@@ -407,6 +422,8 @@ def startSync(sig):
     print('Received from the server :', str(data.decode('ascii')))
 
     closeSocket(s)
+
+    return True
 
 
 class Server(Thread):
@@ -538,3 +555,7 @@ def disconnectPeer():
         return False
     else:
         return True
+
+def syncFile(filename, groupName):
+    pass
+
