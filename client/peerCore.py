@@ -25,8 +25,8 @@ otherGroupsList = dict()
 
 """data structure that keeps track of the synchronized files
 key: filename+groupName in order to uniquely identify a file
-value: filename, groupname, filepath, filesize, lastModified"""
-filesStatus = dict()
+value: filename, groupname, filepath, filesize, lastModified, status"""
+localFileList = dict()
 
 def setPeerID():
     global peerID
@@ -274,7 +274,7 @@ def retrievePeers(groupName, selectAll):
     activeGroupsList[groupName]["peersList"] = peersList
     return success
 
-def getFileList(groupName):
+def updateLocalFileList(groupName):
 
     s = handshake()
 
@@ -287,14 +287,42 @@ def getFileList(groupName):
     closeSocket(s)
 
     if str(data.decode('ascii')).split()[0] == "ERROR":
-        filesList = None
         success = False
     else:
         """add files to the personal list of the peer for the group"""
-        filesList = eval(str(data.decode('ascii')))
-        success = True
+        updatedFileList = eval(str(data.decode('ascii')))
 
-    activeGroupsList[groupName]["fileList"] = filesList
+        """delete files removed from the group (if any)"""
+        delete = dict()
+        for key in localFileList:
+            if key not in updatedFileList:
+                delete[key] = True
+        for key in delete:
+            del localFileList[key]
+
+
+        for file in updatedFileList.values():
+
+            key = groupName + "_" + file["filename"]
+
+            if key in localFileList:
+                "update local file stats"
+                localFileList[key].updateFileStat()
+                if localFileList[key].lastModified == file["lastModified"]:
+                    localFileList[key].status = "S"
+                elif localFileList[key].lastModified < file["lastModified"]:
+                    localFileList[key].status = "D"
+                elif localFileList[key].lastModified > file["lastModified"]:
+                    localFileList[key].status = "U"
+            else:
+                """new file discovered"""
+                localFileList[key] = fileManagement.File(groupName = groupName,
+                                                    filename = file["filename"],
+                                                    filepath = "",
+                                                    filesize = file["filesize"],
+                                                    lastModified=file["lastModified"],
+                                                    status = "D")
+        success = True
     return success
 
 def getFileInfo(filename, groupName):
@@ -340,8 +368,10 @@ def addFile(filepath, groupName):
         return False
     else:
         """add file to the personal list of files of the peer"""
-        filesStatus[groupName+filename] = fileManagement.File(groupName, filename,
-                                                            filepath, filesize, datetime)
+        localFileList[groupName+"_"+filename] = fileManagement.File(groupName, filename,
+                                                        filepath, filesize, datetime, "S")
+        #sync file
+
         return True
 
 def removeFile(filename, groupName):
@@ -359,7 +389,7 @@ def removeFile(filename, groupName):
         return False
     else:
         """remove file from the personal list for the group"""
-        del filesStatus[groupName+filename]
+        del localFileList[groupName+"_"+filename]
         return True
 
 
@@ -407,9 +437,9 @@ def startSync(sig):
     global signals
     signals = sig
 
-    global filesStatus
-    filesStatus = fileManagement.getPreviousFiles(previousSessionFile)
-    if filesStatus is None:
+    global localFileList
+    localFileList = fileManagement.getPreviousFiles(previousSessionFile)
+    if localFileList is None:
         return False
 
     """retrieve internal IP address"""
@@ -561,6 +591,7 @@ def disconnectPeer():
     if str(data.decode('ascii')).split()[0] == "ERROR":
         return False
     else:
+        fileManagement.saveFileStatus(previousSessionFile, localFileList)
         return True
 
 def syncFile(filename, groupName):
