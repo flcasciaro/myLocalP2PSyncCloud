@@ -28,6 +28,8 @@ groupsInfoFile = "sessionFiles/groupsInfo.json"
 groupsPeersFile = "sessionFiles/groupsPeers.json"
 groupsFilesFile = "sessionFiles/groupsFiles.json"
 
+BUFSIZE = 4096
+
 
 def initServer():
     """Initialize server data structures
@@ -133,7 +135,7 @@ def saveState():
 
 class Server:
 
-    def __init__(self, host, port, max_clients = 10000):
+    def __init__(self, host, port, max_clients = 5):
 
         """ Initialize the server with a host and port to listen to.
         Provide a list of functions that will be used when receiving specific data """
@@ -211,7 +213,7 @@ class SocketServerThread(Thread):
                     return
 
                 if len(rdy_read) > 0:
-                    read_data = self.client_sock.recv(1024)
+                    read_data = self.client_sock.recv(BUFSIZE)
 
                     # Check if socket has been closed
                     if len(read_data) == 0:
@@ -248,9 +250,6 @@ def manageRequest(self, message):
         action = message.split()[1]       #ACTIVE or PREVIOUS or OTHER
         reqHandlers.sendGroups(self, groups, action)
 
-    elif message.split()[0] == "INFO":
-        reqHandlers.sendGroupInfo(message, self, groups)
-
     elif message.split()[0] == "RESTORE":
         reqHandlers.restoreGroup(message, self, groups)
 
@@ -268,6 +267,9 @@ def manageRequest(self, message):
 
     elif message.split()[0] == "ADD_FILE":
         reqHandlers.addFile(message, self, groups, groupsLock)
+
+    elif message.split()[0] == "UPDATE_FILE":
+        reqHandlers.updateFile(message, self, groups, groupsLock)
 
     elif message.split()[0] == "REMOVE_FILE":
         reqHandlers.removeFile(message, self, groups, groupsLock)
