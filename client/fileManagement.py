@@ -1,11 +1,10 @@
 import datetime
 import json
+import math
 import os
 import stat
 from threading import Lock
 
-"""define the size of a chunk: 1MB"""
-chunkSize = 1024000
 
 class File:
 
@@ -16,10 +15,19 @@ class File:
         self.filesize = filesize
         self.lastModified = str(lastModified)
         self.status = status
+
+        """properties useful for the file-sharing"""
+        self.chunksSize = 4096
+        self.chunksNumber = 0
+        self.missingChunks = None
+        self.availableChunks = None
+        self.progress = 0
+
         """used to lock the sync: avoid overlapping of sync process"""
         self.syncLock = Lock()
         """used to lock the file during the file-sharing process"""
         self.fileLock = Lock()
+
 
     def updateFileStat(self):
         try:
@@ -30,6 +38,26 @@ class File:
             self.filesize = st[stat.ST_SIZE]
         except OSError:
             print("File not found")
+
+    def initDownload(self):
+
+        self.chunksNumber = math.ceil(self.filesize / self.chunksSize)
+        self.missingChunks = list()
+        self.availableChunks = list()
+        for i in range(0, self.chunksNumber):
+            self.missingChunks.append(i)
+        self.progress = 0
+
+    def iHaveIt(self):
+
+        self.chunksNumber = math.ceil(self.filesize / self.chunksSize)
+        self.missingChunks = list()
+        self.availableChunks = list()
+        for i in range(0, self.chunksNumber):
+            self.availableChunks.append(i)
+        self.progress = 100
+
+
 
 
 def getFileStat(filepath):
@@ -45,18 +73,19 @@ def getFileStat(filepath):
 
 def getPreviousFiles(previousSessionFile):
 
+    fileList = dict()
+
     try:
         f = open(previousSessionFile, 'r')
         try:
             fileListJson = json.load(f)
         except ValueError:
-            return None
+            return fileList
         f.close()
     except FileNotFoundError:
         print("No previous session session information found")
-        return None
+        return fileList
 
-    fileList = dict()
     for fileKey in fileListJson:
         fileList[fileKey] = File(fileListJson[fileKey]["groupName"],
                                  fileListJson[fileKey]["filename"],
