@@ -41,25 +41,6 @@ def sendGroups(thread, groups, action):
 
     thread.client_sock.send(str(groupsList).encode('ascii'))
 
-def sendGroupInfo(request, thread, groups):
-    """This function return the main information about the group into a dictionary
-    with keys:
-    - name = name of the group
-    - active = number of active peers
-    - total = number of total peers (active + not active)
-    - role=role of the requester peer
-    """
-    groupName = request.split()[2]
-
-    if thread.peerID in groups[groupName].peersInGroup:
-        role = groups[groupName].peersInGroup[thread.peerID].role
-    else:
-        role = ""
-    groupInfo = groups[groupName].getPublicInfo(role)
-
-    thread.client_sock.send(str(groupInfo).encode('ascii'))
-
-
 
 def restoreGroup(request, thread, groups):
     """"make the user active in one of its group (already joined)"""
@@ -209,6 +190,36 @@ def addFile(request, thread, groups, groupsLock):
                     answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
                 else:
                     groups[groupName].addFile(filename, filesize, lastModified)
+                    answer = "OK - FILE ADDED TO THE GROUP"
+            else:
+                answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"
+        else:
+            answer = "ERROR - GROUP DOESN'T EXIST"
+        groupsLock.release()
+
+    except IndexError:
+        answer = "ERROR - INVALID REQUEST"
+
+    thread.client_sock.send(answer.encode('ascii'))
+
+def updateFile(request, thread, groups, groupsLock):
+    """request is UPDATE_FILE <groupname> <filename> <filesize> <lastModifiedDate>"""
+
+    try:
+        requestFields = request.split()
+        groupName = requestFields[1]
+        filename = requestFields[2]
+        filesize = requestFields[3]
+        lastModified = requestFields[4] + " " + requestFields[5]
+
+        groupsLock.acquire()
+
+        if groupName in groups:
+            if thread.peerID in groups[groupName].peersInGroup:
+                if groups[groupName].peersInGroup[thread.peerID].role.upper() == "RO":
+                    answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
+                else:
+                    groups[groupName].updateFile(filename, filesize, lastModified)
                     answer = "OK - FILE ADDED TO THE GROUP"
             else:
                 answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"
