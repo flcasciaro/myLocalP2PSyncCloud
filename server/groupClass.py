@@ -42,6 +42,10 @@ class Group:
         self.filesInGroup[filename] = f
         self.nrFiles += 1
 
+    def updateFile(self, filename, filesize, lastModifiedTime):
+        self.filesInGroup[filename].filesize = filesize
+        self.filesInGroup[filename].lastModifiedTime = lastModifiedTime
+
     def removeFile(self, filename):
         del self.filesInGroup[filename]
         self.nrFiles -= 1
