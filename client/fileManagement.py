@@ -5,6 +5,9 @@ import os
 import stat
 from threading import Lock
 
+SMALL_CHUNK_SIZE = 16 * 1024                #   16 KB
+BIG_CHUNK_SIZE = 2 * 1048576                #    2 MB
+BIGGEST_SMALL_FILE_SIZE = 32 * 1048576      #   32 MB
 
 class File:
 
@@ -17,7 +20,7 @@ class File:
         self.status = status
 
         """properties useful for the file-sharing"""
-        self.chunksSize = 4096
+        self.chunksSize = 0
         self.chunksNumber = 0
         self.missingChunks = None
         self.availableChunks = None
@@ -39,8 +42,16 @@ class File:
         except OSError:
             print("File not found")
 
-    def initDownload(self):
+    def setChunksSize(self):
+        if self.filesize <= BIGGEST_SMALL_FILE_SIZE:
+            self.chunksSize = SMALL_CHUNK_SIZE
+        else:
+            self.chunksSize = BIG_CHUNK_SIZE
 
+
+    def initDownload(self):
+        """initialize all the properties in order to work as peer (download/upload)"""
+        self.setChunksSize()
         self.chunksNumber = math.ceil(self.filesize / self.chunksSize)
         self.missingChunks = list()
         self.availableChunks = list()
@@ -49,15 +60,14 @@ class File:
         self.progress = 0
 
     def iHaveIt(self):
-
+        """initialize all the properties in order to work as a seed for the file"""
+        self.setChunksSize()
         self.chunksNumber = math.ceil(self.filesize / self.chunksSize)
         self.missingChunks = list()
         self.availableChunks = list()
         for i in range(0, self.chunksNumber):
             self.availableChunks.append(i)
         self.progress = 100
-
-
 
 
 def getFileStat(filepath):
