@@ -29,9 +29,6 @@ groupsInfoFile = "sessionFiles/groupsInfo.json"
 groupsPeersFile = "sessionFiles/groupsPeers.json"
 groupsFilesFile = "sessionFiles/groupsFiles.json"
 
-BUFSIZE = 4096
-
-
 def initServer():
     """Initialize server data structures
     Data structures are filled with data read from local text files if they exist"""
