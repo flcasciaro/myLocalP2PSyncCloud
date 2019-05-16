@@ -22,8 +22,6 @@ groupsLock = Lock()
 It's a dictionary where the key is the peerID and the value is
 another dictionary containing information about the peer e.g. peerIP and peerPort"""
 peers = dict()
-peersLock = Lock()
-
 
 groupsInfoFile = "sessionFiles/groupsInfo.json"
 groupsPeersFile = "sessionFiles/groupsPeers.json"
