@@ -8,6 +8,7 @@ import socket
 from threading import Thread, Lock
 
 import reqHandlers
+import transmission
 from groupClass import Group
 
 """Main data structure for groups management
@@ -213,7 +214,7 @@ class SocketServerThread(Thread):
                     return
 
                 if len(rdy_read) > 0:
-                    read_data = self.client_sock.recv(BUFSIZE)
+                    read_data = transmission.myRecv(self.client_sock)
 
                     # Check if socket has been closed
                     if len(read_data) == 0:
@@ -221,7 +222,7 @@ class SocketServerThread(Thread):
                         self.stop()
                     else:
                         # Strip newlines just for output clarity
-                        message = read_data.decode('ascii').rstrip()
+                        message = read_data.rstrip()
                         manageRequest(self, message)
             else:
                 print("[Thr {}] No client is connected, SocketServer can't receive data".format(self.number))
@@ -291,11 +292,11 @@ def manageRequest(self, message):
 
     elif message == "BYE":
         answer = "BYE PEER"
-        self.client_sock.send(answer.encode('ascii'))
+        transmission.mySend(self.client_sock, answer)
         self.stop()
     else:
-        answer = "WTF_U_WANT"
-        self.client_sock.send(answer.encode('ascii'))
+        answer = "UNEXPECTED MESSAGE"
+        transmission.mySend(self.client_sock, answer)
 
 
 if __name__ == '__main__':
