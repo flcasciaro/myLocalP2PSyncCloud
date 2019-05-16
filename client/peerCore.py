@@ -12,6 +12,7 @@ from threading import Thread
 
 import fileManagement
 import fileSharing
+import transmission
 
 configurationFile = "sessionFiles/configuration.json"
 previousSessionFile = "sessionFiles/fileList.json"
@@ -69,16 +70,16 @@ def createSocket(host, port):
     return s
 
 
-def closeSocket(sock):
+def closeSocket(s):
     # close the connection sock
     message = "BYE"
-    sock.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = sock.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
-    if data.decode('ascii').rstrip() == "BYE PEER":
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
+    if data.rstrip() == "BYE PEER":
         # time.sleep(0.1)
-        sock.close()
+        s.close()
     else:
         serverError()
 
@@ -97,9 +98,9 @@ def handshake():
     s = createSocket(serverIP, serverPort)
 
     message = "I'M {}".format(peerID)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    answer = s.recv(BUFSIZE).decode('ascii').strip()
+    answer = transmission.myRecv(s).strip()
 
     if answer != "HELLO {}".format(peerID):
         print("Unable to perform the initial handshake with the server")
@@ -115,19 +116,20 @@ def retrieveGroups():
     s = handshake()
 
     message = "SEND ACTIVE GROUPS"
-    s.send(message.encode('ascii'))
-    data = s.recv(BUFSIZE)
-    activeGroupsList = eval(str(data.decode('ascii')))
+    transmission.mySend(s, message)
+    
+    data = transmission.myRecv(s)
+    activeGroupsList = eval(data)
 
     message = "SEND PREVIOUS GROUPS"
-    s.send(message.encode('ascii'))
-    data = s.recv(BUFSIZE)
-    restoreGroupsList = eval(str(data.decode('ascii')))
+    transmission.mySend(s, message)
+    data = transmission.myRecv(s)
+    restoreGroupsList = eval(data)
 
     message = "SEND OTHER GROUPS"
-    s.send(message.encode('ascii'))
-    data = s.recv(BUFSIZE)
-    otherGroupsList = eval(str(data.decode('ascii')))
+    transmission.mySend(s, message)
+    data = transmission.myRecv(s)
+    otherGroupsList = eval(data)
 
     closeSocket(s)
 
@@ -137,14 +139,14 @@ def restoreGroup(groupName, delete):
 
     message = "RESTORE Group: {}".format(groupName)
     # print(message)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if data.split()[0] == "ERROR":
         return False
     else:
         if delete:
@@ -178,14 +180,14 @@ def joinGroup(groupName, token):
 
     message = "JOIN Group: {} Token: {}".format(groupName, encryptedToken.hexdigest())
     # print(message)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if data.split()[0] == "ERROR":
         return False
     else:
         activeGroupsList[groupName] = otherGroupsList[groupName]
@@ -202,13 +204,13 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
     message = "CREATE Group: {} TokenRW: {} TokenRO: {}".format(groupName,
                                                                 encryptedTokenRW.hexdigest(),
                                                                 encryptedTokenRO.hexdigest())
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if data.split()[0] == "ERROR":
         return False
     else:
         activeGroupsList[groupName] = dict()
@@ -226,14 +228,14 @@ def changeRole(groupName, targetPeerID, action):
     print(action.upper())
 
     message = "ROLE {} {} GROUP {}".format(action.upper(), targetPeerID, groupName)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if data.split()[0] == "ERROR":
         return False
     else:
         if action.upper() == "CHANGE_MASTER":
@@ -251,14 +253,14 @@ def retrievePeers(groupName, selectAll):
 
     message = "PEERS {} {} ".format(groupName, tmp)
     print(message)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    if data.decode('ascii').split()[0] == "ERROR":
-        print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    if data.split()[0] == "ERROR":
+        print('Received from the server :', data)
         peersList = None
     else:
-        peersList = eval(str(data.decode('ascii')))
+        peersList = eval(data)
 
     closeSocket(s)
 
@@ -274,19 +276,19 @@ def updateLocalFileList():
         s = handshake()
 
         message = "GET_FILES {}".format(groupName)
-        s.send(message.encode('ascii'))
+        transmission.mySend(s, message)
 
-        data = s.recv(BUFSIZE)
-        print('Received from the server :', str(data.decode('ascii')))
+        data = transmission.myRecv(s)
+        print('Received from the server :', data)
 
         closeSocket(s)
 
-        if str(data.decode('ascii')).split()[0] == "ERROR":
+        if data.split()[0] == "ERROR":
             continue
         else:
             """merge the current and the retrieved dictionaries 
             (concatenation of dictionaries of different groups)"""
-            groupFileList = eval(str(data.decode('ascii')))
+            groupFileList = eval(data)
             for file in groupFileList.values():
                 file["groupName"] = groupName
                 updatedFileList[groupName + "_" + file["filename"]] = file
@@ -315,7 +317,6 @@ def updateLocalFileList():
                     localFileList[key].status = "S"
                 elif localFileList[key].lastModified < file["lastModified"]:
                     localFileList[key].lastModified = file["lastModified"]
-                    localFileList[key].initDownload()
                     localFileList[key].status = "D"
                 elif localFileList[key].lastModified > file["lastModified"]:
                     localFileList[key].status = "U"
@@ -354,14 +355,14 @@ def updateFile(file):
 
     message = "UPDATE_FILE {} {} {} {}".format(file.groupName, file.filename,
                                                file.filesize, file.lastModified)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if data.split()[0] == "ERROR":
         return False
     else:
         file.iHaveIt()
@@ -379,14 +380,14 @@ def addFile(filepath, groupName):
     s = handshake()
 
     message = "ADD_FILE {} {} {} {}".format(groupName, filename, filesize, datetime)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if data.split()[0] == "ERROR":
         return False
     else:
         """add file to the personal list of files of the peer"""
@@ -399,14 +400,14 @@ def removeFile(filename, groupName):
     s = handshake()
 
     message = "REMOVE_FILE {} {}".format(groupName, filename)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if data.split()[0] == "ERROR":
         return False
     else:
         """remove file from the personal list for the group"""
@@ -418,14 +419,14 @@ def leaveGroup(groupName):
     s = handshake()
 
     message = "LEAVE Group: {}".format(groupName)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if data.split()[0] == "ERROR":
         return False
     else:
         otherGroupsList[groupName] = activeGroupsList[groupName]
@@ -437,14 +438,14 @@ def disconnectGroup(groupName):
     s = handshake()
 
     message = "DISCONNECT Group: {}".format(groupName)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if data.split()[0] == "ERROR":
         return False
     else:
         restoreGroupsList[groupName] = activeGroupsList[groupName]
@@ -456,14 +457,14 @@ def disconnectPeer():
     s = handshake()
 
     message = "PEER DISCONNECT"
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if data.split()[0] == "ERROR":
         return False
     else:
         fileManagement.saveFileStatus(previousSessionFile, localFileList)
@@ -490,10 +491,10 @@ def startSync(sig):
     s = handshake()
 
     message = "HERE {} {}".format(myIP, portNumber)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(BUFSIZE)
-    print('Received from the server :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
     closeSocket(s)
 
@@ -583,7 +584,7 @@ class SocketServerThread(Thread):
                         self.stop()
                     else:
                         # Strip newlines just for output clarity
-                        message = read_data.decode('ascii').rstrip()
+                        message = read_data.rstrip()
                         manageRequest(self, message)
             else:
                 print("[Thr {}] No client is connected, SocketServer can't receive data".format(self.number))
@@ -612,7 +613,7 @@ def manageRequest(self, message):
 
     elif message == "BYE":
         answer = "BYE PEER"
-        self.client_sock.send(answer.encode('ascii'))
+        self.client_sock.send(answer)
         self.stop()
 
 

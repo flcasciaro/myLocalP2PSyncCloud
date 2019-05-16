@@ -5,6 +5,7 @@
 from random import randint
 
 import peerCore
+import transmission
 
 
 def sendChunksList(message, thread, localFileList):
@@ -23,7 +24,7 @@ def sendChunksList(message, thread, localFileList):
     else:
         answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
 
-    thread.client_sock.send(answer.encode('ascii'))
+    transmission.mySend(thread.client_sock, answer)
 
 def sendChunk(message, thread, localFileList):
 
@@ -43,7 +44,7 @@ def sendChunk(message, thread, localFileList):
     else:
         answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
 
-    thread.client_sock.send(answer.encode('ascii'))
+    transmission.mySend(thread.client_sock, answer)
 
 
 
@@ -51,8 +52,7 @@ def downloadFile(file):
 
     file.syncLock.acquire()
 
-    if len(file.availableChunks) != 0:
-        file.initDownload()
+    file.initDownload()
 
     unavailable = 0
 
@@ -134,18 +134,18 @@ def getChunksList(key, lastModified, peerIP, peerPort):
     s = peerCore.createSocket(peerIP, peerPort)
 
     message = "CHUNKS_LIST {} {}".format(key, lastModified)
-    s.send(message.encode('ascii'))
+    transmission.mySend(s, message)
 
-    data = s.recv(peerCore.BUFSIZE)
-    print('Received from the peer :', str(data.decode('ascii')))
+    data = transmission.myRecv(s)
+    print('Received from the peer :', str(data))
 
     peerCore.closeSocket(s)
 
-    if str(data.decode('ascii')).split()[0] == "ERROR":
+    if str(data).split()[0] == "ERROR":
         #return empty list
         return chunksList
     else:
-        chunksList = eval(str(data.decode('ascii')))
+        chunksList = eval(str(data))
         return chunksList
 
 
