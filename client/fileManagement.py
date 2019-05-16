@@ -21,6 +21,7 @@ class File:
 
         """properties useful for the file-sharing"""
         self.chunksSize = 0
+        self.lastChunkSize = 0
         self.chunksNumber = 0
         self.missingChunks = None
         self.availableChunks = None
@@ -48,11 +49,15 @@ class File:
         else:
             self.chunksSize = BIG_CHUNK_SIZE
 
+    def setProgress(self):
+        self.progress = math.floor((len(self.availableChunks) / self.chunksNumber) * 100 )
+
 
     def initDownload(self):
         """initialize all the properties in order to work as peer (download/upload)"""
         self.setChunksSize()
         self.chunksNumber = math.ceil(self.filesize / self.chunksSize)
+        self.lastChunkSize = self.filesize % self.chunksSize
         self.missingChunks = list()
         self.availableChunks = list()
         for i in range(0, self.chunksNumber):
