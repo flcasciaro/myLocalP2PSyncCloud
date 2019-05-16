@@ -2,6 +2,9 @@
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
+import base64
+import os
+import time
 from random import randint
 
 import peerCore
@@ -34,9 +37,57 @@ def sendChunk(message, thread, localFileList):
     chunkID = messageFields[4]
 
     if key in localFileList:
-        if localFileList[key].lastModified == lastModified:
+        file = localFileList[key]
+        if file.lastModified == lastModified:
+            if chunkID in file.availableChunks:
 
-            #send chunk
+                if chunkID == file.chunksNumber - 1:
+                    chunkSize = file.lastChunkSize
+                else:
+                    chunkSize = file.chunksSize
+
+                if file.status == "S":
+                    """peer has the whole file -> open and send it"""
+
+                    try:
+                        file.fileLock.acquire()
+                        f = open(file.filepath, 'rb')
+
+                        offset = chunkID * file.chunksSize
+                        f.seek(offset)
+
+                        dataChunk = f.read(chunkSize)
+                        encodedChunk = base64.b64encode(dataChunk)
+
+                        transmission.mySend(thread.client_sock, encodedChunk)
+
+                        f.close()
+                        file.fileLock.release()
+                    except FileNotFoundError:
+                        answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
+                        file.fileLock.release()
+
+
+                if file.status == "D":
+                    """peer is still downloading the file -> send chunk from tmp file"""
+
+                    try:
+                        file.fileLock.acquire()
+
+                        chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
+
+                        f = open(chunkPath, 'rb')
+
+                        dataChunk = f.read(chunkSize)
+                        encodedChunk = base64.b64encode(dataChunk)
+
+                        transmission.mySend(thread.client_sock, encodedChunk)
+
+                        f.close()
+                        file.fileLock.release()
+                    except FileNotFoundError:
+                        answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
+                        file.fileLock.release()
             pass
 
         else:
@@ -55,8 +106,6 @@ def downloadFile(file):
     file.initDownload()
 
     unavailable = 0
-
-    key = file.groupName + "_" + file.filename
 
     # ask for the missing peers while the missing list is not empty
     while len(file.missingChunks) > 0 and unavailable < 5:
@@ -77,7 +126,7 @@ def downloadFile(file):
 
             #print(peer)
 
-            chunksList = getChunksList(key, file.lastModified, peer["peerIP"], peer["peerPort"])
+            chunksList = getChunksList(file, peer["peerIP"], peer["peerPort"])
 
             if chunksList is not None:
 
@@ -117,6 +166,8 @@ def downloadFile(file):
                     if i >= askFor:
                         break
 
+        file.setProgress()
+
         del chunksCounter
         del chunks_peers
 
@@ -124,16 +175,20 @@ def downloadFile(file):
         file.syncLock.release()
         return
 
-    file.status = "S"
+    if mergeChunk(file):
+        file.status = "S"
+
     file.syncLock.release()
 
-def getChunksList(key, lastModified, peerIP, peerPort):
+def getChunksList(file, peerIP, peerPort):
 
     chunksList = list()
 
+    key = file.groupName + "_" + file.filename
+
     s = peerCore.createSocket(peerIP, peerPort)
 
-    message = "CHUNKS_LIST {} {}".format(key, lastModified)
+    message = "CHUNKS_LIST {} {}".format(key, file.lastModified)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -152,7 +207,68 @@ def getChunksList(key, lastModified, peerIP, peerPort):
 
 def getChunk(file, chunkID, peerIP, peerPort):
 
+    s = peerCore.createSocket(peerIP, peerPort)
+
+    key = file.groupName + "_" + file.filename
+
+    message = "CHUNK {} {} {}".format(key, file.lastModified, chunkID)
+    transmission.mySend(s, message)
+
+    encodedData = transmission.myRecv(s)
+    # print('Received from the peer :', str(data))
+
+    peerCore.closeSocket(s)
+
+    data = base64.b64decode(encodedData)
+
+    try:
+        file.fileLock.acquire()
+
+        if not os.path.exists(file.filepath + "_tmp"):
+            print("creating the path: " + file.filepath + "_tmp")
+            os.makedirs(file.filepath + "_tmp")
+
+        chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
+
+        f = open(chunkPath, 'wb')
+
+        f.write(data)
+
+        f.close()
+        file.fileLock.release()
+    except FileNotFoundError:
+        file.fileLock.release()
+        return False
+
+
     file.missingChunks.remove(chunkID)
     file.availableChunks.append(chunkID)
+
+    return True
+
+
+def mergeChunk(file):
+
+    newPath = file.filepath + "_new"
+
+    try:
+        f1 = open(newPath, 'wb')
+        for chunkID in range(0, file.chunksNumber):
+            chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
+            with open(chunkPath, 'rb') as f2:
+                f1.write(f2.read())
+    except FileNotFoundError:
+        print("Error while creating the new file")
+        return False
+
+    os.remove(file.filepath)
+    os.rename(newPath, file.filepath)
+
+    os.shutil.rmtree(file.filepath + "_tmp")
+
+    #date = datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute, second=second)
+    modTime = time.mktime(file.lastModified)
+
+    os.utime(file.filepath, (modTime, modTime))
 
 
