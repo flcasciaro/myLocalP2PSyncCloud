@@ -144,7 +144,7 @@ class myP2PSyncCloud(QMainWindow):
         self.fileManagerLayout.addWidget(self.fileManagerLabel2, alignment=Qt.AlignCenter)
         self.fileManagerLayout.addSpacing(20)
         self.fileManagerLayout.addWidget(self.fileListLabel, alignment=Qt.AlignCenter)
-        self.fileList.setHeaderLabels(["Filename", "Filepath", "Filesize", "LastModified"])
+        self.fileList.setHeaderLabels(["Filename", "Filepath", "Filesize", "LastModified", "Status"])
         self.fileList.setAlternatingRowColors(True)
         self.fileList.setMinimumWidth(self.width / 2)
         self.fileList.setMinimumHeight(100)
@@ -413,7 +413,14 @@ class myP2PSyncCloud(QMainWindow):
         self.fileList.clear()
         for file in peerCore.localFileList.values():
             if file.groupName == self.groupName:
-                item = QTreeWidgetItem([file.filename, file.filepath, str(file.filesize), file.lastModified])
+                if file.status == "S":
+                    syncStatus = "Synchronized"
+                elif file.status == "U":
+                    syncStatus = "Not synchronized"
+                elif file.status == "D":
+                    syncStatus = "Synchronizing: " + str(file.progress) + "%"
+                item = QTreeWidgetItem([file.filename, file.filepath, str(file.filesize),
+                                        file.lastModified, syncStatus])
                 self.fileList.addTopLevelItem(item)
 
 
@@ -541,7 +548,6 @@ class myP2PSyncCloud(QMainWindow):
             for i in range(0,self.fileList.count()):
                 filename = self.fileList.item(i).text().split()[0]
                 peerCore.syncFile(filename,self.groupName)
-
 
 
 
