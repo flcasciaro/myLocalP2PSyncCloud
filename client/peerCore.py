@@ -38,7 +38,6 @@ def setPeerID():
     global peerID
     """peer unique Identifier obtained from the MAC address of the machine"""
     macAddress = uuid.getnode()
-    # peerID = int(time.ctime(os.path.getctime(configurationFile))) & macAddress
     peerID = macAddress
 
 
@@ -55,7 +54,7 @@ def findServer():
     except FileNotFoundError:
         return False
     file.close()
-    return True
+    return serverIsReachable()
 
 
 def setServerCoordinates(coordinates):
@@ -66,7 +65,11 @@ def setServerCoordinates(coordinates):
 
 def createSocket(host, port):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((host, int(port)))
+    s.settimeout(5)
+    try:
+        s.connect((host, int(port)))
+    except (socket.timeout, ConnectionRefusedError):
+        return None
     return s
 
 
@@ -81,17 +84,7 @@ def closeSocket(s):
         # time.sleep(0.1)
         s.close()
     else:
-        serverError()
-
-
-def serverError():
-    print("UNEXPECTED ANSWER OF THE SERVER")
-    exit(-1)
-
-
-def serverUnreachable():
-    print("UNABLE TO REACH THE SERVER")
-    exit(-1)
+        return
 
 
 def handshake():
@@ -108,6 +101,14 @@ def handshake():
 
     print("Connection with server established")
     return s
+
+def serverIsReachable():
+    s = createSocket(serverIP, serverPort)
+    if s is not None:
+        closeSocket(s)
+        return True
+    else:
+        return False
 
 
 def retrieveGroups():
