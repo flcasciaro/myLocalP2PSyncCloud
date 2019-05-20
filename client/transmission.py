@@ -5,6 +5,8 @@ SIZE_LENGTH = 16
 def mySend(socket, data):
     """wrapper for the send function"""
 
+    socket.setTimeout(3)
+
     "data is a string message"
     data = str(data).encode('ascii')
     size = len(data)
@@ -21,7 +23,10 @@ def mySend(socket, data):
     """send the size of the following data"""
     totalSent = 0
     while totalSent < SIZE_LENGTH:
-        sent = socket.send(strSize[totalSent:])
+        try:
+            sent = socket.send(strSize[totalSent:])
+        except socket.timeout:
+            raise socket.timeout
         if sent == 0:
             raise RuntimeError("socket connection broken")
         totalSent = totalSent + sent
@@ -31,7 +36,10 @@ def mySend(socket, data):
     """send data"""
     totalSent = 0
     while totalSent < size:
-        sent = socket.send(data[totalSent:])
+        try:
+            sent = socket.send(data[totalSent:])
+        except socket.timeout:
+            raise socket.timeout
         if sent == 0:
             raise RuntimeError("socket connection broken")
         totalSent = totalSent + sent
@@ -42,11 +50,16 @@ def mySend(socket, data):
 def myRecv(socket):
     """wrapper for the recv function"""
 
+    socket.setTimeout(3)
+
     """read the 16 byte string representing the data size"""
     chunks = []
     bytesRec = 0
     while bytesRec < SIZE_LENGTH:
-        chunk = socket.recv(min(SIZE_LENGTH - bytesRec, SIZE_LENGTH))
+        try:
+            chunk = socket.recv(min(SIZE_LENGTH - bytesRec, SIZE_LENGTH))
+        except socket.timeout:
+            raise socket.timeout
         if chunk == '':
             raise RuntimeError("Socket connection broken")
         bytesRec += len(chunk)
@@ -59,7 +72,11 @@ def myRecv(socket):
     chunks = []
     bytesRec = 0
     while bytesRec < dataSize:
-        chunk = socket.recv(min(dataSize - bytesRec, BUFSIZE))
+        try:
+            chunk = socket.recv(min(dataSize - bytesRec, BUFSIZE))
+        except socket.timeout:
+            raise socket.timeout
+
         if chunk == '':
             raise RuntimeError("Socket connection broken")
         #print(chunk)
