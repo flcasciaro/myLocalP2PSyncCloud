@@ -185,16 +185,15 @@ class myP2PSyncCloud(QMainWindow):
 
         self.signals.refresh.connect(self.refreshGUI)
 
-        success = peerInitialization()
+        peerCore.setPeerID()
+        serverReachable = peerCore.findServer()
 
         self.peerLabel.setText("Personal peerID is {}".format(peerCore.peerID))
-        self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverIP, peerCore.serverPort))
 
-        self.loadInititalGroupInfo()
-
+        self.loadInititalFileManager()
         self.show()
 
-        if not success:
+        while not serverReachable:
             """Create dialog box in order to set server coordinates"""
             ok = False
             while not ok:
@@ -202,7 +201,11 @@ class myP2PSyncCloud(QMainWindow):
                                                        'Enter Server IP Address and Server Port\nUse the format: serverIP:ServerPort')
 
             peerCore.setServerCoordinates(coordinates)
-            self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverIP, peerCore.serverPort))
+            serverReachable = peerCore.serverIsReachable()
+            if not serverReachable:
+                QMessageBox.about(self, "Alert", "Server not reachable or coordinates not valid")
+
+        self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverIP, peerCore.serverPort))
 
         self.fillGroupManager()
 
@@ -248,7 +251,7 @@ class myP2PSyncCloud(QMainWindow):
         else:
             event.ignore()
 
-    def loadInititalGroupInfo(self):
+    def loadInititalFileManager(self):
         self.fileManagerLabel1.setText(firstTip)
         self.fileManagerLabel2.setText(secondTip)
         self.hideFileManager()
@@ -562,14 +565,6 @@ class myP2PSyncCloud(QMainWindow):
         self.actionsList.sortItems(order=Qt.DescendingOrder)
         QMessageBox.about(self, "Notification", message)
 
-
-def peerInitialization():
-    peerCore.setPeerID()
-    found = peerCore.findServer()
-    if found:
-        return True
-    else:
-        return False
 
 
 if __name__ == '__main__':
