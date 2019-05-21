@@ -27,6 +27,7 @@ def sendChunksList(message, thread, localFileList):
     else:
         answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
 
+    print("asking with my chunk list: " + answer)
     transmission.mySend(thread.client_sock, answer)
 
 def sendChunk(message, thread, localFileList):
@@ -95,11 +96,14 @@ def sendChunk(message, thread, localFileList):
     else:
         answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
 
+    print("asking with: " + answer)
     transmission.mySend(thread.client_sock, answer)
 
 
 
 def downloadFile(file):
+
+    print("Starting synchronization of", file.filename)
 
     file.syncLock.acquire()
 
@@ -116,6 +120,8 @@ def downloadFile(file):
         if activePeers is None:
             unavailable += 1
             continue
+
+        print(activePeers)
 
         """chunks_peers is a dictionary where key is the chunkID and
         value is the list of peer which have that chunk"""
@@ -252,6 +258,8 @@ def getChunk(file, chunkID, peerIP, peerPort):
 
 
 def mergeChunk(file):
+
+    print("merging chunk")
 
     newPath = file.filepath + "_new"
 
