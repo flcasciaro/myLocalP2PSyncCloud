@@ -289,8 +289,9 @@ def manageRequest(self, message):
         answer = "BYE PEER"
         transmission.mySend(self.client_sock, answer)
         self.stop()
+
     else:
-        answer = "UNEXPECTED MESSAGE"
+        answer = "ERROR - UNEXPECTED MESSAGE"
         transmission.mySend(self.client_sock, answer)
 
 
