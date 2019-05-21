@@ -113,6 +113,10 @@ def downloadFile(file):
         """retrieve the list of active peers for the file"""
         activePeers = peerCore.retrievePeers(file.groupName, selectAll=False)
 
+        if activePeers is None:
+            unavailable += 1
+            continue
+
         """chunks_peers is a dictionary where key is the chunkID and
         value is the list of peer which have that chunk"""
         chunks_peers = dict()
