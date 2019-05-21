@@ -231,7 +231,7 @@ class myP2PSyncCloud(QMainWindow):
             self.signals.refreshEmit()
 
     def refreshGUI(self):
-
+        print("REFRESHING GUI")
         self.fillGroupManager()
         if not self.fileList.isHidden():
             self.loadFileManager()
