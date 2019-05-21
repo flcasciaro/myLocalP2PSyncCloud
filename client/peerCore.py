@@ -79,7 +79,7 @@ def closeSocket(s):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
+    #print('Received from the server :', data)
     if data.rstrip() == "BYE PEER":
         # time.sleep(0.1)
         s.close()
@@ -87,8 +87,7 @@ def closeSocket(s):
         return
 
 
-def handshake():
-    s = createSocket(serverIP, serverPort)
+def handshake(s):
 
     message = "I'M {}".format(peerID)
     transmission.mySend(s, message)
@@ -97,10 +96,11 @@ def handshake():
 
     if answer != "HELLO {}".format(peerID):
         print("Unable to perform the initial handshake with the server")
-        return None
+        return False
 
-    print("Connection with server established")
-    return s
+    #print("Successfull handshake")
+
+    return True
 
 def serverIsReachable():
     s = createSocket(serverIP, serverPort)
@@ -114,7 +114,10 @@ def serverIsReachable():
 def retrieveGroups():
     global activeGroupsList, restoreGroupsList, otherGroupsList
 
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     message = "SEND ACTIVE GROUPS"
     transmission.mySend(s, message)
@@ -136,7 +139,10 @@ def retrieveGroups():
 
 
 def restoreGroup(groupName, delete):
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     message = "RESTORE Group: {}".format(groupName)
     # print(message)
@@ -175,7 +181,10 @@ def restoreAll():
 
 
 def joinGroup(groupName, token):
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     encryptedToken = hashlib.md5(token.encode())
 
@@ -197,7 +206,10 @@ def joinGroup(groupName, token):
 
 
 def createGroup(groupName, groupTokenRW, groupTokenRO):
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     encryptedTokenRW = hashlib.md5(groupTokenRW.encode())
     encryptedTokenRO = hashlib.md5(groupTokenRO.encode())
@@ -224,7 +236,10 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
 
 def changeRole(groupName, targetPeerID, action):
     """this function addresses the management of the master and the management of roles by the master"""
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     print(action.upper())
 
@@ -245,7 +260,11 @@ def changeRole(groupName, targetPeerID, action):
 
 
 def retrievePeers(groupName, selectAll):
-    s = handshake()
+
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return None
 
     if selectAll:
         tmp = "ALL"
@@ -274,7 +293,10 @@ def updateLocalFileList():
 
     for groupName in activeGroupsList:
 
-        s = handshake()
+        s = createSocket(serverIP, serverPort)
+        if not handshake(s):
+            closeSocket(s)
+            return False
 
         message = "GET_FILES {}".format(groupName)
         transmission.mySend(s, message)
@@ -352,7 +374,10 @@ def updateLocalFileList():
 
 
 def updateFile(file):
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     message = "UPDATE_FILE {} {} {} {}".format(file.groupName, file.filename,
                                                file.filesize, file.lastModified)
@@ -378,7 +403,10 @@ def addFile(filepath, groupName):
 
     filesize, datetime = fileManagement.getFileStat(filepath)
 
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     message = "ADD_FILE {} {} {} {}".format(groupName, filename, filesize, datetime)
     transmission.mySend(s, message)
@@ -398,7 +426,10 @@ def addFile(filepath, groupName):
 
 
 def removeFile(filename, groupName):
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     message = "REMOVE_FILE {} {}".format(groupName, filename)
     transmission.mySend(s, message)
@@ -417,7 +448,10 @@ def removeFile(filename, groupName):
 
 
 def leaveGroup(groupName):
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     message = "LEAVE Group: {}".format(groupName)
     transmission.mySend(s, message)
@@ -436,7 +470,10 @@ def leaveGroup(groupName):
 
 
 def disconnectGroup(groupName):
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     message = "DISCONNECT Group: {}".format(groupName)
     transmission.mySend(s, message)
@@ -455,7 +492,10 @@ def disconnectGroup(groupName):
 
 
 def disconnectPeer():
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
     message = "PEER DISCONNECT"
     transmission.mySend(s, message)
@@ -483,15 +523,18 @@ def startSync(sig):
 
     """retrieve internal IP address"""
     myIP = socket.gethostbyname(socket.gethostname())
-    portNumber = 12321
+    myPortNumber = 12321
 
     """create a server thread that listens on the port X"""
-    server = Server(myIP, portNumber)
+    server = Server(myIP, myPortNumber)
     server.start()
 
-    s = handshake()
+    s = createSocket(serverIP, serverPort)
+    if not handshake(s):
+        closeSocket(s)
+        return False
 
-    message = "HERE {} {}".format(myIP, portNumber)
+    message = "HERE {} {}".format(myIP, myPortNumber)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
