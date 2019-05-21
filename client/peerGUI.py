@@ -511,7 +511,7 @@ class myP2PSyncCloud(QMainWindow):
             if peerCore.leaveGroup(self.groupName):
                 self.addLogMessage("Group {} left".format(self.groupName))
                 self.fillGroupManager()
-                self.loadInititalGroupInfo()
+                self.loadInititalFileManager()
             else:
                 QMessageBox.about(self, "Error", "Something went wrong!")
 
@@ -527,7 +527,7 @@ class myP2PSyncCloud(QMainWindow):
             if peerCore.disconnectGroup(self.groupName):
                 self.addLogMessage("Group {} disconnected".format(self.groupName))
                 self.fillGroupManager()
-                self.loadInititalGroupInfo()
+                self.loadInititalFileManager()
             else:
                 QMessageBox.about(self, "Error", "Something went wrong!")
 
