@@ -614,7 +614,7 @@ class SocketServerThread(Thread):
         self.__stop = False
 
     def run(self):
-        print("[Thr {}] SocketServerThread starting with client {}".format(self.number, self.client_addr))
+        print("[Thr {}] SocketServerThread starting with peer {}".format(self.number, self.client_addr))
 
         while not self.__stop:
             if self.client_sock:
@@ -627,7 +627,7 @@ class SocketServerThread(Thread):
                     return
 
                 if len(rdy_read) > 0:
-                    read_data = self.client_sock.recv(BUFSIZE)
+                    read_data = transmission.myRecv(self.client_sock)
 
                     # Check if socket has been closed
                     if len(read_data) == 0:
@@ -638,7 +638,7 @@ class SocketServerThread(Thread):
                         message = read_data.rstrip()
                         manageRequest(self, message)
             else:
-                print("[Thr {}] No client is connected, SocketServer can't receive data".format(self.number))
+                print("[Thr {}] No peer is connected, SocketServer can't receive data".format(self.number))
                 self.stop()
         self.close()
 
