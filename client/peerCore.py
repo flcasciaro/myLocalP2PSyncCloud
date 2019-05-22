@@ -667,7 +667,7 @@ def manageRequest(self, message):
 
     elif message == "BYE":
         answer = "BYE PEER"
-        self.client_sock.send(answer)
+        transmission.mySend(self.client_sock, answer)
         self.stop()
 
 
