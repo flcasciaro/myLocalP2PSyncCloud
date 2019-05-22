@@ -62,6 +62,10 @@ def sendChunk(message, thread, localFileList):
                         dataChunk = f.read(chunkSize)
                         encodedChunk = base64.b64encode(dataChunk)
 
+                        print("************************************")
+                        print(encodedChunk)
+                        print("************************************")
+
                         transmission.mySend(thread.client_sock, encodedChunk)
 
                         f.close()
