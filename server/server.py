@@ -127,7 +127,7 @@ def saveState():
                 fileInfo["groupName"] = group.name
                 fileInfo["filename"] = file.filename
                 fileInfo["filesize"] = file.filesize
-                fileInfo["lastModified"] = file.filesize
+                fileInfo["lastModified"] = file.lastModified
                 filesJson.append(fileInfo)
         json.dump(filesJson, f, indent=4)
         del filesJson
