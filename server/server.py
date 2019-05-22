@@ -24,7 +24,8 @@ It's a dictionary where the key is the peerID and the value is
 another dictionary containing information about the peer e.g. peerIP and peerPort"""
 peers = dict()
 
-scriptPath = os.path.relpath(__file__) + '/'
+scriptPath, scriptName = os.path.strip((os.path.abspath(__file__)))
+scriptPath += "/"
 
 groupsInfoFile = scriptPath + 'sessionFiles/groupsInfo.json'
 groupsPeersFile = scriptPath + 'sessionFiles/groupsPeers.json'
