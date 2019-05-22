@@ -3,6 +3,7 @@
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import json
+import os
 import select
 import socket
 from threading import Thread, Lock
@@ -23,9 +24,11 @@ It's a dictionary where the key is the peerID and the value is
 another dictionary containing information about the peer e.g. peerIP and peerPort"""
 peers = dict()
 
-groupsInfoFile = 'sessionFiles/groupsInfo.json'
-groupsPeersFile = 'sessionFiles/groupsPeers.json'
-groupsFilesFile = 'sessionFiles/groupsFiles.json'
+scriptPath = os.path.abspath(__file__) + '/'
+
+groupsInfoFile = scriptPath + 'sessionFiles/groupsInfo.json'
+groupsPeersFile = scriptPath + 'sessionFiles/groupsPeers.json'
+groupsFilesFile = scriptPath + 'sessionFiles/groupsFiles.json'
 
 def initServer():
     """Initialize server data structures
