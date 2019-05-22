@@ -1,17 +1,17 @@
 [
     {
-        "groupName": "ITDepartment",
+        "tokenRW": "4aaeccfbad1193ed615c20e6cd20608e ",
+        "groupName": "ShazList",
+        "tokenRO": "4aaeccfbad1193ed615c20e6cd20608e "
+    },
+    {
         "tokenRW": "60034e5cfe487c56d588fc2d00d12265",
+        "groupName": "ITDepartment",
         "tokenRO": "60034e5cfe487c56d588fc2d00d12265"
     },
     {
-        "groupName": "Telecom",
         "tokenRW": "fc3b40ed3462bfaa58b14b978c7bc628",
+        "groupName": "Telecom",
         "tokenRO": "fc3b40ed3462bfaa58b14b978c7bc628"
-    },
-    {
-        "groupName": "ShazList",
-        "tokenRW": "4aaeccfbad1193ed615c20e6cd20608e ",
-        "tokenRO": "4aaeccfbad1193ed615c20e6cd20608e "
     }
 ]
