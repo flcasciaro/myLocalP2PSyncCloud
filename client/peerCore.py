@@ -14,8 +14,11 @@ import fileManagement
 import fileSharing
 import transmission
 
-configurationFile = "sessionFiles/configuration.json"
-previousSessionFile = "sessionFiles/fileList.json"
+scriptPath, scriptName = os.path.split((os.path.abspath(__file__)))
+scriptPath += "/"
+
+configurationFile = scriptPath + "sessionFiles/configuration.json"
+previousSessionFile = scriptPath + "sessionFiles/fileList.json"
 peerID = None
 serverIP = None
 serverPort = None
@@ -347,7 +350,7 @@ def updateLocalFileList():
 
         else:
             """new file discovered"""
-            path = "filesSync/" + file["groupName"]
+            path = scriptPath + "filesSync/" + file["groupName"]
             if not os.path.exists(path):
                 print("creating the path: " + path)
                 os.makedirs(path)
