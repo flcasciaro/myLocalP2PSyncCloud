@@ -8,6 +8,9 @@ TIMEOUT = 3
 def mySend(sock, data):
     """wrapper for the send function"""
 
+    if sock is None:
+        return
+
     sock.settimeout(TIMEOUT)
 
     "data is a string message"
@@ -52,6 +55,9 @@ def mySend(sock, data):
 
 def myRecv(sock):
     """wrapper for the recv function"""
+
+    if sock is None:
+        return None
 
     sock.settimeout(TIMEOUT)
 
