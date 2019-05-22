@@ -207,13 +207,15 @@ class myP2PSyncCloud(QMainWindow):
 
         self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverIP, peerCore.serverPort))
 
+        peerCore.retrieveGroups()
         self.fillGroupManager()
 
-        reply = QMessageBox.question(self, 'Message', "Do you want to restore last session groups?",
+        if len(peerCore.restoreGroupsList) > 0:
+            reply = QMessageBox.question(self, 'Message', "Do you want to restore last session groups?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                self.restoreAllHandler()
 
-        if reply == QMessageBox.Yes:
-            self.restoreAllHandler()
 
         if not peerCore.startSync(self.signals):
             exit(-1)
@@ -231,7 +233,9 @@ class myP2PSyncCloud(QMainWindow):
 
     def refreshGUI(self):
         print("REFRESHING GUI")
+        peerCore.retrieveGroups()
         self.fillGroupManager()
+        peerCore.updateLocalFileList()
         if not self.fileList.isHidden():
             self.loadFileManager()
 
@@ -269,8 +273,6 @@ class myP2PSyncCloud(QMainWindow):
         self.disconnectButton.hide()
 
     def fillGroupManager(self):
-
-        peerCore.retrieveGroups()
 
         self.groupsList.clear()
 
@@ -408,8 +410,6 @@ class myP2PSyncCloud(QMainWindow):
 
 
     def fillFileList(self):
-
-        peerCore.updateLocalFileList()
 
         self.fileList.clear()
         for file in peerCore.localFileList.values():
