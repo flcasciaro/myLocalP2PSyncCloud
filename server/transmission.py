@@ -3,7 +3,7 @@ import socket
 BUFSIZE = 4096
 SIZE_LENGTH = 16
 
-TIMEOUT = 3
+TIMEOUT = 3.0
 
 def mySend(sock, data):
     """wrapper for the send function"""
