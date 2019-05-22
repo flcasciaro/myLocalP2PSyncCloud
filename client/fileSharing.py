@@ -118,8 +118,16 @@ def downloadFile(file):
         activePeers = peerCore.retrievePeers(file.groupName, selectAll=False)
 
         if activePeers is None:
+            """error occurred while asking the peers list to the server"""
+            time.sleep(3)
             unavailable += 1
             continue
+        else:
+            """"Empty list retrieved: no active peers for that group"""
+            if len(activePeers) == 0:
+                time.sleep(3)
+                unavailable += 1
+                continue
 
         print(activePeers)
 
