@@ -23,9 +23,9 @@ It's a dictionary where the key is the peerID and the value is
 another dictionary containing information about the peer e.g. peerIP and peerPort"""
 peers = dict()
 
-groupsInfoFile = "sessionFiles/groupsInfo.json"
-groupsPeersFile = "sessionFiles/groupsPeers.json"
-groupsFilesFile = "sessionFiles/groupsFiles.json"
+groupsInfoFile = "./sessionFiles/groupsInfo.json"
+groupsPeersFile = "./sessionFiles/groupsPeers.json"
+groupsFilesFile = "./sessionFiles/groupsFiles.json"
 
 def initServer():
     """Initialize server data structures
