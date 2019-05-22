@@ -37,6 +37,8 @@ def sendChunk(message, thread, localFileList):
     lastModified = messageFields[2] + " " + messageFields[3]
     chunkID = messageFields[4]
 
+    answer = None
+
     if key in localFileList:
         file = localFileList[key]
         if file.lastModified == lastModified:
@@ -96,8 +98,9 @@ def sendChunk(message, thread, localFileList):
     else:
         answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
 
-    print("asking with: " + answer)
-    transmission.mySend(thread.client_sock, answer)
+    if answer is not None:
+        print("asking with: " + answer)
+        transmission.mySend(thread.client_sock, answer)
 
 
 
