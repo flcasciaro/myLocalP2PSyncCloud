@@ -189,12 +189,7 @@ def downloadFile(file):
             if chunk in file.missingChunks:
 
                 """choose a random peer from the list"""
-                r = randint(0, len(chunks_peers[chunk]))
-
-                print('******************************************************chunks_peers[chunk]: ', chunks_peers[chunk])
-                print('******************************************************len(chunks_peers[chunk]): ', len(chunks_peers[chunk]))
-                print('******************************************************r: ', r)
-                print('******************************************************chunk:', chunk)
+                r = randint(0, len(chunks_peers[chunk]) - 1)
 
                 peerIP = chunks_peers[chunk][r]["peerIP"]
                 peerPort = chunks_peers[chunk][r]["peerPort"]
