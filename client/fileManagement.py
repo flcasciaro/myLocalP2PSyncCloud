@@ -15,7 +15,7 @@ class File:
         self.groupName = groupName
         self.filename = filename
         self.filepath = filepath
-        self.filesize = filesize
+        self.filesize = int(filesize)
         self.lastModified = str(lastModified)
         self.status = status
 
@@ -44,7 +44,7 @@ class File:
             print("File not found")
 
     def setChunksSize(self):
-        if int(self.filesize) <= BIGGEST_SMALL_FILE_SIZE:
+        if self.filesize <= BIGGEST_SMALL_FILE_SIZE:
             self.chunksSize = SMALL_CHUNK_SIZE
         else:
             self.chunksSize = BIG_CHUNK_SIZE
