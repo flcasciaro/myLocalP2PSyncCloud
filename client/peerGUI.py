@@ -248,6 +248,7 @@ class myP2PSyncCloud(QMainWindow):
             self.refreshThread.join()
             peerCore.disconnectPeer()
             event.accept()
+            exit()
         else:
             event.ignore()
 
