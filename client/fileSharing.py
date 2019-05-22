@@ -37,6 +37,10 @@ def sendChunk(message, thread, localFileList):
     lastModified = messageFields[2] + " " + messageFields[3]
     chunkID = messageFields[4]
 
+    print("************************************")
+    print("chunkID: ", chunkID)
+    print("************************************")
+
     answer = None
 
     if key in localFileList:
@@ -54,11 +58,12 @@ def sendChunk(message, thread, localFileList):
 
                     try:
                         file.fileLock.acquire()
+                        print("here1")
                         f = open(file.filepath, 'rb')
-
+                        print("here2")
                         offset = chunkID * file.chunksSize
                         f.seek(offset)
-
+                        print("here3")
                         dataChunk = f.read(chunkSize)
                         encodedChunk = base64.b64encode(dataChunk)
 
