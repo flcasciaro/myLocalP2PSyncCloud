@@ -333,20 +333,23 @@ def updateLocalFileList():
     for key, file in updatedFileList.items():
 
         if key in localFileList:
-            if localFileList[key].syncLock.acquire(blocking=False):
+            myFile = localFileList[key]
+            if myFile.syncLock.acquire(blocking=False):
 
                 """try to lock the file in order to update local stats
                 if it's not possible to acquire the lock (acquire return false)
                 there is a synchronization process already running"""
-                localFileList[key].updateFileStat()
-                if localFileList[key].lastModified == file["lastModified"]:
-                    localFileList[key].status = "S"
-                elif localFileList[key].lastModified < file["lastModified"]:
-                    localFileList[key].lastModified = file["lastModified"]
-                    localFileList[key].status = "D"
-                elif localFileList[key].lastModified > file["lastModified"]:
-                    localFileList[key].status = "U"
-                localFileList[key].syncLock.release()
+                myFile.updateFileStat()
+                if myFile.lastModified == file["lastModified"]:
+                    myFile.status = "S"
+                    if myFile.availableChunks is None:
+                        myFile.iHaveIt()
+                elif myFile.lastModified < file["lastModified"]:
+                    myFile.lastModified = file["lastModified"]
+                    myFile.status = "D"
+                elif myFile.lastModified > file["lastModified"]:
+                    myFile.status = "U"
+                myFile.syncLock.release()
 
         else:
             """new file discovered"""
