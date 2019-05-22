@@ -53,9 +53,11 @@ def sendChunk(message, thread, localFileList):
                 else:
                     chunkSize = file.chunksSize
 
+                print("*******************************file status: ",file.status)
+
                 if file.status == "S":
                     """peer has the whole file -> open and send it"""
-
+                    print("here")
                     try:
                         file.fileLock.acquire()
                         print("here1")
