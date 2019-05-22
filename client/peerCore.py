@@ -364,16 +364,20 @@ def updateLocalFileList():
 
     for file in localFileList.values():
 
-        #Automatically update the file
-        """
-        if file.status == "U":
-            if updateFile(file):
-                file.status = "S
-        """
-        #Automatically sync file
-        if file.status == "D":
-            syncThread = Thread(target=fileSharing.downloadFile, args=(file,))
-            syncThread.start()
+        #if the file is not already in sync
+        if file.syncLock.acquire(blocking=False):
+
+            #Automatically update the file
+            """
+            if file.status == "U":
+                if updateFile(file):
+                    file.status = "S"
+            """
+            #Automatically sync file
+            if file.status == "D":
+                syncThread = Thread(target=fileSharing.downloadFile, args=(file,))
+                syncThread.start()
+            file.syncLock.release()
 
 
 def updateFile(file):
