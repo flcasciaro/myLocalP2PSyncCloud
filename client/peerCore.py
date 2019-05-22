@@ -376,6 +376,7 @@ def updateLocalFileList():
             #Automatically sync file
             if file.status == "D":
                 syncThread = Thread(target=fileSharing.downloadFile, args=(file,))
+                syncThread.daemon = True
                 syncThread.start()
             file.syncLock.release()
 
@@ -534,6 +535,7 @@ def startSync(sig):
 
     """create a server thread that listens on the port X"""
     server = Server(myIP, myPortNumber)
+    server.daemon = True
     server.start()
 
     s = createSocket(serverIP, serverPort)
@@ -583,6 +585,7 @@ class Server(Thread):
                 client_thr = SocketServerThread(client_sock, client_addr, self.counter)
                 self.counter += 1
                 self.sock_threads.append(client_thr)
+                client_thr.daemon = True
                 client_thr.start()
 
         self.closeServer()

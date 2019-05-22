@@ -218,17 +218,16 @@ class myP2PSyncCloud(QMainWindow):
         if not peerCore.startSync(self.signals):
             exit(-1)
 
+        self.refreshThread.daemon = True
         self.refreshThread.start()
 
     def refreshHandler(self):
 
-        while not self.stopRefresh:
+        while True:
             for i in range(0,10):
-                if self.stopRefresh:
-                    exit()
-                else:
-                    time.sleep(1)
+                time.sleep(1)
             self.signals.refreshEmit()
+
 
     def refreshGUI(self):
         print("REFRESHING GUI")
@@ -244,8 +243,6 @@ class myP2PSyncCloud(QMainWindow):
 
         if reply == QMessageBox.Yes:
             """kill the refresh thread"""
-            self.stopRefresh = True
-            self.refreshThread.join()
             peerCore.disconnectPeer()
             event.accept()
             exit()

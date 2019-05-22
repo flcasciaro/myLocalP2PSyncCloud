@@ -163,6 +163,7 @@ class Server:
                     client_thr = SocketServerThread(client_sock, client_addr, self.counter)
                     self.counter += 1
                     self.sock_threads.append(client_thr)
+                    client_thr.daemon = True
                     client_thr.start()
             except KeyboardInterrupt:
                 self.stopServer()
