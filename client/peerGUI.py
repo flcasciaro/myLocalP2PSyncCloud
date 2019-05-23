@@ -183,7 +183,7 @@ class myP2PSyncCloud(QMainWindow):
         self.leaveButton.clicked.connect(self.leaveGroupHandler)
         self.disconnectButton.clicked.connect(self.disconnectGroupHandler)
 
-        self.signals.refresh.connect(self.refreshGUI)
+        self.signals.refresh.connect(self.refreshAll)
 
         peerCore.setPeerID()
         serverReachable = peerCore.findServer()
@@ -233,8 +233,8 @@ class myP2PSyncCloud(QMainWindow):
             self.signals.refreshEmit()
 
 
-    def refreshGUI(self):
-        print("REFRESHING GUI")
+    def refreshAll(self):
+        print("REFRESHING ALL")
         peerCore.retrieveGroups()
         self.fillGroupManager()
         peerCore.updateLocalFileList()
