@@ -255,7 +255,7 @@ def getChunk(file, chunkID, peerIP, peerPort):
 
         f = open(chunkPath, 'wb')
 
-        f.write(bytes(data))
+        f.write(bytes(data), encoding='utf8')
 
         f.close()
         file.fileLock.release()
