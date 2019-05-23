@@ -4,6 +4,7 @@
 
 import base64
 import os
+import shutil
 import time
 from random import randint
 
@@ -304,7 +305,7 @@ def mergeChunk(file):
     os.rename(newFilePath, file.filepath)
 
     #remove chunks directory
-    os.shutil.rmtree(tmpDirPath)
+    shutil.rmtree(tmpDirPath)
 
     #date = datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute, second=second)
     modTime = time.mktime(file.lastModified)
