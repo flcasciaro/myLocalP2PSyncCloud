@@ -42,7 +42,7 @@ def sendChunk(message, thread, localFileList):
         file = localFileList[key]
         if file.timestamp == timestamp:
             if chunkID in file.availableChunks:
-                print("*****************setting chunk size")
+
                 if chunkID == file.chunksNumber - 1:
                     chunkSize = file.lastChunkSize
                 else:
