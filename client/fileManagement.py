@@ -11,12 +11,12 @@ BIGGEST_SMALL_FILE_SIZE = 32 * 1048576      #   32 MB
 
 class File:
 
-    def __init__(self, groupName, filename, filepath, filesize, lastModified, status):
+    def __init__(self, groupName, filename, filepath, filesize, timestamp, status):
         self.groupName = groupName
         self.filename = filename
         self.filepath = filepath
         self.filesize = int(filesize)
-        self.lastModified = str(lastModified)
+        self.timestamp = int(timestamp)
         self.status = status
 
         """properties useful for the file-sharing"""
@@ -32,14 +32,19 @@ class File:
         """used to lock the file during the file-sharing process"""
         self.fileLock = Lock()
 
+    def getLastModifiedTime(self):
+        """convert the timestamp into a Y/M/D h/m/s datetime"""
+        lastModifiedTime = datetime.datetime.fromtimestamp(self.timestamp)
+        return str(lastModifiedTime)
+
 
     def updateFileStat(self):
         try:
             st = os.stat(self.filepath)
-            """convert the retrieved timestamp into a Y/M/D h/m/s datetime"""
-            lastModifiedTime = datetime.datetime.fromtimestamp(st[stat.ST_MTIME])
-            self.lastModified = str(lastModifiedTime)
+
             self.filesize = st[stat.ST_SIZE]
+            self.timestamp = st[stat.ST_MTIME]
+
         except OSError:
             print("File not found")
 
@@ -80,9 +85,8 @@ def getFileStat(filepath):
     """This function returnes filesize and lastModifiedTime of a parameter filepath"""
     try:
         st = os.stat(filepath)
-        """convert the retrieved timestamp into a Y/M/D h/m/s datetime"""
-        lastModifiedTime = datetime.datetime.fromtimestamp(st[stat.ST_MTIME])
-        return st[stat.ST_SIZE], str(lastModifiedTime)
+        print("type:", type(st[stat.ST_MTIME]))
+        return st[stat.ST_SIZE], st[stat.ST_MTIME]
     except OSError:
         return None, None
 
@@ -107,7 +111,7 @@ def getPreviousFiles(previousSessionFile):
                                  fileListJson[fileKey]["filename"],
                                  fileListJson[fileKey]["filepath"],
                                  fileListJson[fileKey]["filesize"],
-                                 fileListJson[fileKey]["lastModified"],
+                                 fileListJson[fileKey]["timestamp"],
                                  status = "")
     del fileListJson
 
@@ -124,7 +128,7 @@ def saveFileStatus(previousSessionFile, fileList):
         fileListJson[fileKey]["filename"] = fileList[fileKey].filename
         fileListJson[fileKey]["filepath"] = fileList[fileKey].filepath
         fileListJson[fileKey]["filesize"] = fileList[fileKey].filesize
-        fileListJson[fileKey]["lastModified"] = fileList[fileKey].lastModified
+        fileListJson[fileKey]["timestamp"] = fileList[fileKey].timestamp
 
     try:
         f = open(previousSessionFile, 'w')

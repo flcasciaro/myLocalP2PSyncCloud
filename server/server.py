@@ -84,8 +84,8 @@ def initServer():
                     groupName = file["groupName"]
                     filename = file["filename"]
                     filesize = file["filesize"]
-                    lastModified = file["lastModified"]
-                    groups[groupName].addFile(filename, filesize, lastModified)
+                    timestamp = file["timestamp"]
+                    groups[groupName].addFile(filename, filesize, timestamp)
                 del filesJson
             except ValueError:
                 return None
@@ -127,7 +127,7 @@ def saveState():
                 fileInfo["groupName"] = group.name
                 fileInfo["filename"] = file.filename
                 fileInfo["filesize"] = file.filesize
-                fileInfo["lastModified"] = file.lastModified
+                fileInfo["timestamp"] = file.timestamp
                 filesJson.append(fileInfo)
         json.dump(filesJson, f, indent=4)
         del filesJson

@@ -5,7 +5,6 @@
 import base64
 import os
 import shutil
-import time
 from random import randint
 
 import peerCore
@@ -16,10 +15,10 @@ def sendChunksList(message, thread, localFileList):
 
     messageFields = message.split()
     key = messageFields[1]
-    lastModified = messageFields[2] + " " + messageFields[3]
+    timestamp = int(messageFields[2])
 
     if key in localFileList:
-        if localFileList[key].lastModified == lastModified:
+        if localFileList[key].timestamp == timestamp:
 
             answer = str(localFileList[key].availableChunks)
 
@@ -35,14 +34,14 @@ def sendChunk(message, thread, localFileList):
 
     messageFields = message.split()
     key = messageFields[1]
-    lastModified = messageFields[2] + " " + messageFields[3]
-    chunkID = int(messageFields[4])
+    timestamp = int(messageFields[2])
+    chunkID = int(messageFields[3])
 
     answer = None
 
     if key in localFileList:
         file = localFileList[key]
-        if file.lastModified == lastModified:
+        if file.timestamp == timestamp:
             if chunkID in file.availableChunks:
                 print("*****************setting chunk size")
                 if chunkID == file.chunksNumber - 1:
@@ -121,24 +120,22 @@ def downloadFile(file):
 
     file.initDownload()
 
-    unavailable = 0
+    unavailable = False
 
     # ask for the missing peers while the missing list is not empty
-    while len(file.missingChunks) > 0 and unavailable < 5:
+    while len(file.missingChunks) > 0 and not unavailable:
 
         """retrieve the list of active peers for the file"""
         activePeers = peerCore.retrievePeers(file.groupName, selectAll=False)
 
         if activePeers is None:
             """error occurred while asking the peers list to the server"""
-            time.sleep(3)
-            unavailable += 1
+            unavailable = True
             continue
         else:
             """"Empty list retrieved: no active peers for that group"""
             if len(activePeers) == 0:
-                time.sleep(3)
-                unavailable += 1
+                unavailable = True
                 continue
 
         print(activePeers)
@@ -202,7 +199,7 @@ def downloadFile(file):
         del chunksCounter
         del chunks_peers
 
-    if unavailable == 4:
+    if unavailable:
         file.syncLock.release()
         return
 
@@ -219,7 +216,7 @@ def getChunksList(file, peerIP, peerPort):
 
     s = peerCore.createSocket(peerIP, peerPort)
 
-    message = "CHUNKS_LIST {} {}".format(key, file.lastModified)
+    message = "CHUNKS_LIST {} {}".format(key, file.timestamp)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -242,7 +239,7 @@ def getChunk(file, chunkID, peerIP, peerPort):
 
     key = file.groupName + "_" + file.filename
 
-    message = "CHUNK {} {} {}".format(key, file.lastModified, chunkID)
+    message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
     transmission.mySend(s, message)
 
     encodedData = transmission.myRecv(s)
@@ -307,11 +304,8 @@ def mergeChunk(file):
     #remove chunks directory
     shutil.rmtree(tmpDirPath)
 
-    #date = datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute, second=second)
-    modTime = time.mktime(file.lastModified)
-
-    #force lastModifiedTime
-    os.utime(file.filepath, (modTime, modTime))
+    #force timestamp to syncBeginningTime timestamp
+    os.utime(file.filepath, (file.filestamp, file.filestamp))
 
 def getNewFilePath(file):
     """

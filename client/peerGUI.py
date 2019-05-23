@@ -220,6 +220,8 @@ class myP2PSyncCloud(QMainWindow):
         if not peerCore.startSync(self.signals):
             exit(-1)
 
+        peerCore.updateLocalFileList()
+
         self.refreshThread.daemon = True
         self.refreshThread.start()
 
@@ -246,10 +248,8 @@ class myP2PSyncCloud(QMainWindow):
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
-            """kill the refresh thread"""
             peerCore.disconnectPeer()
             event.accept()
-            exit()
         else:
             event.ignore()
 
@@ -421,7 +421,7 @@ class myP2PSyncCloud(QMainWindow):
                 elif file.status == "D":
                     syncStatus = "Synchronizing: " + str(file.progress) + "%"
                 item = QTreeWidgetItem([file.filename, file.filepath, str(file.filesize),
-                                        file.lastModified, syncStatus])
+                                        file.getLastModifiedTime(), syncStatus])
                 self.fileList.addTopLevelItem(item)
 
 
@@ -548,7 +548,7 @@ class myP2PSyncCloud(QMainWindow):
         else:
             for i in range(0,self.fileList.count()):
                 filename = self.fileList.item(i).text().split()[0]
-                peerCore.syncFile(filename,self.groupName)
+                peerCore.updateFile(filename,self.groupName)
 
 
 

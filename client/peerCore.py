@@ -31,7 +31,7 @@ otherGroupsList = dict()
 
 """data structure that keeps track of the synchronized files
 key: filename+groupName in order to uniquely identify a file
-value: filename, groupname, filepath, filesize, lastModified, status"""
+value: filename, groupname, filepath, filesize, timestamp, status"""
 localFileList = dict()
 
 BUFSIZE = 4096
@@ -340,14 +340,14 @@ def updateLocalFileList():
                 if it's not possible to acquire the lock (acquire return false)
                 there is a synchronization process already running"""
                 myFile.updateFileStat()
-                if myFile.lastModified == file["lastModified"]:
+                if myFile.timestamp == file["timestamp"]:
                     myFile.status = "S"
                     if myFile.availableChunks is None:
                         myFile.iHaveIt()
-                elif myFile.lastModified < file["lastModified"]:
-                    myFile.lastModified = file["lastModified"]
+                elif myFile.timestamp < file["timestamp"]:
+                    myFile.timestamp = file["timestamp"]
                     myFile.status = "D"
-                elif myFile.lastModified > file["lastModified"]:
+                elif myFile.timestamp > file["timestamp"]:
                     myFile.status = "U"
                 myFile.syncLock.release()
 
@@ -362,7 +362,7 @@ def updateLocalFileList():
                                                      filename=file["filename"],
                                                      filepath=filepath,
                                                      filesize=file["filesize"],
-                                                     lastModified=file["lastModified"],
+                                                     timestamp=file["timestamp"],
                                                      status="D")
 
     for file in localFileList.values():
@@ -391,7 +391,7 @@ def updateFile(file):
         return False
 
     message = "UPDATE_FILE {} {} {} {}".format(file.groupName, file.filename,
-                                               file.filesize, file.lastModified)
+                                               file.filesize, file.timestamp)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -412,14 +412,14 @@ def addFile(filepath, groupName):
     """select just the effective filename, discard the path"""
     filename = filePathFields[len(filePathFields) - 1]
 
-    filesize, datetime = fileManagement.getFileStat(filepath)
+    filesize, timestamp = fileManagement.getFileStat(filepath)
 
     s = createSocket(serverIP, serverPort)
     if not handshake(s):
         closeSocket(s)
         return False
 
-    message = "ADD_FILE {} {} {} {}".format(groupName, filename, filesize, datetime)
+    message = "ADD_FILE {} {} {} {}".format(groupName, filename, filesize, timestamp)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -432,7 +432,7 @@ def addFile(filepath, groupName):
     else:
         """add file to the personal list of files of the peer"""
         localFileList[groupName + "_" + filename] = fileManagement.File(groupName, filename,
-                                                                        filepath, filesize, datetime, "S")
+                                                                        filepath, filesize, timestamp, "S")
         return True
 
 
