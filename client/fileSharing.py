@@ -305,7 +305,7 @@ def mergeChunk(file):
     shutil.rmtree(tmpDirPath)
 
     #force timestamp to syncBeginningTime timestamp
-    os.utime(file.filepath, (file.filestamp, file.filestamp))
+    os.utime(file.filepath, (file.timestamp, file.timestamp))
 
 def getNewFilePath(file):
     """
