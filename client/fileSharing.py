@@ -35,7 +35,7 @@ def sendChunk(message, thread, localFileList):
     messageFields = message.split()
     key = messageFields[1]
     lastModified = messageFields[2] + " " + messageFields[3]
-    chunkID = messageFields[4]
+    chunkID = int(messageFields[4])
 
     answer = None
 
@@ -43,8 +43,8 @@ def sendChunk(message, thread, localFileList):
         file = localFileList[key]
         if file.lastModified == lastModified:
             if chunkID in file.availableChunks:
-
-                if chunkID == str(file.chunksNumber - 1):
+                print("*****************setting chunk size")
+                if chunkID == file.chunksNumber - 1:
                     chunkSize = file.lastChunkSize
                 else:
                     chunkSize = file.chunksSize
@@ -99,8 +99,8 @@ def sendChunk(message, thread, localFileList):
                     except FileNotFoundError:
                         answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
                         file.fileLock.release()
-            pass
-
+            else:
+                answer = "ERROR - UNAVAILABLE CHUNK"
         else:
             answer = "ERROR - DIFFERENT VERSION"
     else:
