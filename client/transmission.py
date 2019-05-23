@@ -127,7 +127,7 @@ def recvChunk(sock, chunkSize):
         except socket.timeout:
             raise socket.timeout
 
-        if piece == '':
+        if piece == b'':
             raise RuntimeError("sock connection broken")
         # print(chunk)
         bytesRec += len(piece)
