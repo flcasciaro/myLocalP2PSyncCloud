@@ -56,13 +56,8 @@ def sendChunk(message, thread, localFileList):
                         f = open(file.filepath, 'rb')
                         offset = chunkID * file.chunksSize
                         f.seek(offset)
+
                         dataChunk = f.read(chunkSize)
-
-                        #encodedChunk = base64.b64encode(dataChunk)
-
-                        print("************************************")
-                        print(dataChunk)
-                        print("************************************")
 
                         transmission.sendChunk(thread.client_sock, dataChunk, chunkSize)
 
@@ -84,8 +79,6 @@ def sendChunk(message, thread, localFileList):
                         f = open(chunkPath, 'rb')
 
                         dataChunk = f.read(chunkSize)
-
-                        #encodedChunk = base64.b64encode(dataChunk)
 
                         transmission.mySend(thread.client_sock, dataChunk)
 
