@@ -2,6 +2,7 @@
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
+import base64
 import os
 import shutil
 from random import randint
@@ -58,13 +59,13 @@ def sendChunk(message, thread, localFileList):
                         f.seek(offset)
                         dataChunk = f.read(chunkSize)
 
-                        #encodedChunk = base64.b64encode(dataChunk)
+                        encodedChunk = base64.b64encode(dataChunk)
 
                         print("************************************")
                         print(dataChunk)
                         print("************************************")
 
-                        transmission.mySend(thread.client_sock, dataChunk)
+                        transmission.mySend(thread.client_sock, encodedChunk)
 
                         f.close()
                         file.fileLock.release()
@@ -237,8 +238,10 @@ def getChunk(file, chunkID, peerIP, peerPort):
     message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
     transmission.mySend(s, message)
 
-    data = transmission.myRecv(s)
-    print('Received from the peer :', data)
+    encodedData = transmission.myRecv(s)
+    print('Received from the peer :', encodedData)
+
+    data = base64.b64decode(encodedData)
 
     peerCore.closeSocket(s)
 
@@ -255,7 +258,7 @@ def getChunk(file, chunkID, peerIP, peerPort):
 
         f = open(chunkPath, 'wb')
 
-        f.write(data.encode('ascii'))
+        f.write(data)
 
         f.close()
         file.fileLock.release()
