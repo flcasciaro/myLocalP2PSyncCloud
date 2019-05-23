@@ -45,6 +45,9 @@ def sendChunk(message, thread, localFileList):
 
     if key in localFileList:
         file = localFileList[key]
+        print(file)
+        print(file.lastModified)
+        print(lastModified)
         if file.lastModified == lastModified:
             if chunkID in file.availableChunks:
 
@@ -52,6 +55,8 @@ def sendChunk(message, thread, localFileList):
                     chunkSize = file.lastChunkSize
                 else:
                     chunkSize = file.chunksSize
+
+                print(chunkSize)
 
                 print("*******************************file status: ",file.status)
 
