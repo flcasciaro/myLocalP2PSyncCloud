@@ -133,7 +133,7 @@ def recvChunk(sock, chunkSize):
         bytesRec += len(piece)
         pieces.append(piece)
 
-    chunk = ''.join(pieces)
+    chunk =  b''.join(pieces)
     # print("data", data)
 
     return chunk
