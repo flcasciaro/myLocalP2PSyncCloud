@@ -236,7 +236,7 @@ def getChunk(file, chunkID, peerIP, peerPort):
     transmission.mySend(s, message)
 
     data = transmission.recvChunk(s, chunkSize)
-    print('Received from the peer :', data)
+    #print('Received from the peer :', data)
 
     peerCore.closeSocket(s)
 
