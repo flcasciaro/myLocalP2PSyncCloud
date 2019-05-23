@@ -95,3 +95,45 @@ def myRecv(sock):
     data = ''.join(chunks)
     # print("data", data)
     return str(data)
+
+
+def sendChunk(sock, chunk, chunkSize):
+
+    if sock is None:
+        return
+
+    sock.settimeout(TIMEOUT)
+
+    """send data"""
+    totalSent = 0
+    while totalSent < chunkSize:
+        try:
+            sent = sock.send(chunk[totalSent:])
+        except socket.timeout:
+            raise socket.timeout
+        if sent == 0:
+            raise RuntimeError("sock connection broken")
+        totalSent = totalSent + sent
+
+
+
+def recvChunk(sock, chunkSize):
+    """read data"""
+    pieces = []
+    bytesRec = 0
+    while bytesRec < chunkSize:
+        try:
+            piece = sock.recv(min(chunkSize - bytesRec, BUFSIZE))
+        except socket.timeout:
+            raise socket.timeout
+
+        if piece == '':
+            raise RuntimeError("sock connection broken")
+        # print(chunk)
+        bytesRec += len(piece)
+        pieces.append(piece)
+
+    chunk = ''.join(pieces)
+    # print("data", data)
+
+    return chunk

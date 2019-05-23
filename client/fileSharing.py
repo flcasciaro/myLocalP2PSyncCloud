@@ -65,7 +65,7 @@ def sendChunk(message, thread, localFileList):
                         print(dataChunk)
                         print("************************************")
 
-                        transmission.mySend(thread.client_sock, encodedChunk)
+                        transmission.sendChunk(thread.client_sock, encodedChunk, chunkSize)
 
                         f.close()
                         file.fileLock.release()
@@ -235,10 +235,15 @@ def getChunk(file, chunkID, peerIP, peerPort):
 
     key = file.groupName + "_" + file.filename
 
+    if chunkID == file.chunksNumber - 1:
+        chunkSize = file.lastChunkSize
+    else:
+        chunkSize = file.chunksSize
+
     message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
     transmission.mySend(s, message)
 
-    encodedData = transmission.myRecv(s)
+    encodedData = transmission.recvChunk(s, chunkSize)
     print('Received from the peer :', encodedData)
 
     data = base64.b64decode(encodedData)
