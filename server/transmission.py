@@ -11,7 +11,7 @@ def mySend(sock, data):
     sock.settimeout(TIMEOUT)
 
     "data is a string message"
-    data = str(data).encode('ascii')
+    data = str(data).encode('utf-8')
     size = len(data)
 
     # print("data: ", data)
@@ -19,7 +19,7 @@ def mySend(sock, data):
 
     """put size on a 16 byte string"""
     strSize = str(size).zfill(SIZE_LENGTH)
-    strSize = strSize.encode('ascii')
+    strSize = strSize.encode('utf-8')
 
     # print("strSize: ", strSize)
 
@@ -66,7 +66,7 @@ def myRecv(sock):
         if chunk == '':
             raise RuntimeError("sock connection broken")
         bytesRec += len(chunk)
-        chunks.append(chunk.decode('ascii'))
+        chunks.append(chunk.decode('utf-8'))
 
     dataSize = int(''.join(chunks))
     # print("datasize", dataSize)
@@ -84,7 +84,7 @@ def myRecv(sock):
             raise RuntimeError("sock connection broken")
         # print(chunk)
         bytesRec += len(chunk)
-        chunks.append(chunk.decode('ascii'))
+        chunks.append(chunk.decode('utf-8'))
 
     data = ''.join(chunks)
     # print("data", data)
