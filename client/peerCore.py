@@ -432,7 +432,8 @@ def addFile(filepath, groupName):
     else:
         """add file to the personal list of files of the peer"""
         localFileList[groupName + "_" + filename] = fileManagement.File(groupName, filename,
-                                                                        filepath, filesize, timestamp, "S")
+                                                                        filepath, filesize,
+                                                                        timestamp, "S")
         return True
 
 
