@@ -68,6 +68,7 @@ class File:
         """initialize all the properties in order to work as a seed for the file"""
         self.setChunksSize()
         self.chunksNumber = math.ceil(self.filesize / self.chunksSize)
+        self.lastChunkSize = self.filesize % self.chunksSize
         self.missingChunks = list()
         self.availableChunks = list()
         for i in range(0, self.chunksNumber):
