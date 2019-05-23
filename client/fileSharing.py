@@ -2,7 +2,6 @@
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
-import base64
 import os
 import shutil
 from random import randint
@@ -54,7 +53,7 @@ def sendChunk(message, thread, localFileList):
 
                     try:
                         file.fileLock.acquire()
-                        f = open(file.filepath, 'r')
+                        f = open(file.filepath, 'rb')
                         offset = chunkID * file.chunksSize
                         f.seek(offset)
                         dataChunk = f.read(chunkSize)
@@ -82,12 +81,13 @@ def sendChunk(message, thread, localFileList):
 
                         chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
 
-                        f = open(chunkPath, 'r')
+                        f = open(chunkPath, 'rb')
 
                         dataChunk = f.read(chunkSize)
-                        encodedChunk = base64.b64encode(dataChunk)
 
-                        transmission.mySend(thread.client_sock, encodedChunk)
+                        #encodedChunk = base64.b64encode(dataChunk)
+
+                        transmission.mySend(thread.client_sock, dataChunk)
 
                         f.close()
                         file.fileLock.release()
@@ -215,7 +215,7 @@ def getChunksList(file, peerIP, peerPort):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the peer :', str(data))
+    print('Received from the peer :', data)
 
     peerCore.closeSocket(s)
 
@@ -242,8 +242,6 @@ def getChunk(file, chunkID, peerIP, peerPort):
 
     peerCore.closeSocket(s)
 
-    #data = base64.b64decode(encodedData)
-
     tmpDirPath = getTmpDirPath(file)
 
     try:
@@ -255,7 +253,7 @@ def getChunk(file, chunkID, peerIP, peerPort):
 
         chunkPath = tmpDirPath + "chunk" + str(chunkID)
 
-        f = open(chunkPath, 'w')
+        f = open(chunkPath, 'wb')
 
         f.write(data)
 
@@ -281,10 +279,10 @@ def mergeChunk(file):
 
     #merge chunks writing each chunks in the new file
     try:
-        f1 = open(newFilePath, 'w')
+        f1 = open(newFilePath, 'wb')
         for chunkID in range(0, file.chunksNumber):
             chunkPath = tmpDirPath + "chunk" + str(chunkID)
-            with open(chunkPath, 'r') as f2:
+            with open(chunkPath, 'rb') as f2:
                 f1.write(f2.read())
     except FileNotFoundError:
         print("Error while creating the new file")
