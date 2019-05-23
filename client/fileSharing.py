@@ -49,20 +49,14 @@ def sendChunk(message, thread, localFileList):
                 else:
                     chunkSize = file.chunksSize
 
-                print(chunkSize)
-                print("*******************************file status: ",file.status)
-
                 if file.status == "S":
                     """peer has the whole file -> open and send it"""
-                    print("here")
+
                     try:
                         file.fileLock.acquire()
-                        print("here1")
-                        f = open(file.filepath, 'rb')
-                        print("here2")
+                        f = open(file.filepath, 'r')
                         offset = chunkID * file.chunksSize
                         f.seek(offset)
-                        print("here3")
                         dataChunk = f.read(chunkSize)
                         encodedChunk = base64.b64encode(dataChunk)
 
@@ -260,7 +254,7 @@ def getChunk(file, chunkID, peerIP, peerPort):
 
         chunkPath = tmpDirPath + "chunk" + str(chunkID)
 
-        f = open(chunkPath, 'wb')
+        f = open(chunkPath, 'w')
 
         f.write(data)
 
@@ -286,10 +280,10 @@ def mergeChunk(file):
 
     #merge chunks writing each chunks in the new file
     try:
-        f1 = open(newFilePath, 'wb')
+        f1 = open(newFilePath, 'w')
         for chunkID in range(0, file.chunksNumber):
             chunkPath = tmpDirPath + "chunk" + str(chunkID)
-            with open(chunkPath, 'rb') as f2:
+            with open(chunkPath, 'r') as f2:
                 f1.write(f2.read())
     except FileNotFoundError:
         print("Error while creating the new file")
