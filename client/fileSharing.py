@@ -245,20 +245,22 @@ def getChunk(file, chunkID, peerIP, peerPort):
     transmission.mySend(s, message)
 
     encodedData = transmission.myRecv(s)
-    # print('Received from the peer :', str(data))
+    print('Received from the peer :', str(encodedData))
 
     peerCore.closeSocket(s)
 
     data = base64.b64decode(encodedData)
 
+    tmpDirPath = getTmpDirPath(file)
+
     try:
         file.fileLock.acquire()
 
-        if not os.path.exists(file.filepath + "_tmp"):
-            print("creating the path: " + file.filepath + "_tmp")
-            os.makedirs(file.filepath + "_tmp")
+        if not os.path.exists(tmpDirPath):
+            print("creating the path: " + tmpDirPath)
+            os.makedirs(tmpDirPath)
 
-        chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
+        chunkPath = tmpDirPath + "chunk" + str(chunkID)
 
         f = open(chunkPath, 'wb')
 
@@ -281,26 +283,84 @@ def mergeChunk(file):
 
     print("merging chunk")
 
-    newPath = file.filepath + "_new"
+    newFilePath = getNewFilePath(file)
+    tmpDirPath = getTmpDirPath(file)
 
+    #merge chunks writing each chunks in the new file
     try:
-        f1 = open(newPath, 'wb')
+        f1 = open(newFilePath, 'wb')
         for chunkID in range(0, file.chunksNumber):
-            chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
+            chunkPath = tmpDirPath + "chunk" + str(chunkID)
             with open(chunkPath, 'rb') as f2:
                 f1.write(f2.read())
     except FileNotFoundError:
         print("Error while creating the new file")
         return False
 
-    os.remove(file.filepath)
-    os.rename(newPath, file.filepath)
+    #remove previous version of the file (if any)
+    if os.path.exists(file.filepath):
+        os.remove(file.filepath)
 
-    os.shutil.rmtree(file.filepath + "_tmp")
+    os.rename(newFilePath, file.filepath)
+
+    #remove chunks directory
+    os.shutil.rmtree(tmpDirPath)
 
     #date = datetime.datetime(year=year, month=month, day=day, hour=hour, minute=minute, second=second)
     modTime = time.mktime(file.lastModified)
 
+    #force lastModifiedTime
     os.utime(file.filepath, (modTime, modTime))
+
+def getNewFilePath(file):
+    """
+        build the newFilePath
+           ex.
+           file.filepath = home/prova.txt
+           filenameWE = prova
+           fileExtension = splitFilename[1] = txt
+           dirPath = home/
+           newFilePath = home/prova_new.txt
+    """
+
+    # split filepath into directorypath and filename
+    (dirPath, filename) = os.path.split(file.filepath)
+    # remove extension from the filename (if any)
+    # WoE stands for Without Extension
+    splitFilename = filename.split(".")
+    filenameWoE = splitFilename[0]
+
+    # path where the file will be merged
+    newFilePath = dirPath + "/" + filenameWoE + "_new"
+    if len(splitFilename) > 1:
+        # concatenate file extension if present
+        newFilePath += "."
+        newFilePath += splitFilename[1]
+
+    return newFilePath
+
+
+def getTmpDirPath(file):
+    """
+            build the new temporary paths
+               ex.
+               file.filepath = home/prova.txt
+               filenameWE = prova
+               fileExtension = splitFilename[1] = txt
+               dirPath = home/
+               tmpDirPath = home/prova_new_tmp/
+        """
+
+    # split filepath into directorypath and filename
+    (dirPath, filename) = os.path.split(file.filepath)
+    # remove extension from the filename (if any)
+    # WoE stands for Without Extension
+    splitFilename = filename.split(".")
+    filenameWoE = splitFilename[0]
+
+    # directory path where the chunks have been stored
+    tmpDirPath = dirPath + "/" + filenameWoE + "_tmp/"
+
+    return tmpDirPath
 
 
