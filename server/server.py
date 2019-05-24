@@ -176,7 +176,6 @@ class Server:
 
         for thr in self.sock_threads:
             thr.stop()
-            thr.join()
 
         if self.sock:
             self.sock.close()
