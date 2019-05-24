@@ -26,7 +26,7 @@ def sendChunksList(message, thread, localFileList):
     else:
         answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
 
-    print("asking with my chunk list: " + answer)
+    #print("asking with my chunk list: " + answer)
     transmission.mySend(thread.client_sock, answer)
 
 def sendChunk(message, thread, localFileList):
@@ -59,6 +59,8 @@ def sendChunk(message, thread, localFileList):
 
                         dataChunk = f.read(chunkSize)
 
+                        answer = "OK - I'M SENDING IT"
+                        transmission.mySend(thread.client_sock, answer)
                         transmission.sendChunk(thread.client_sock, dataChunk, chunkSize)
 
                         f.close()
@@ -80,6 +82,8 @@ def sendChunk(message, thread, localFileList):
 
                         dataChunk = f.read(chunkSize)
 
+                        answer = "OK - I'M SENDING IT"
+                        transmission.mySend(thread.client_sock, answer)
                         transmission.mySend(thread.client_sock, dataChunk)
 
                         f.close()
@@ -95,7 +99,7 @@ def sendChunk(message, thread, localFileList):
         answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
 
     if answer is not None:
-        print("asking with: " + answer)
+        #print("asking with: " + answer)
         transmission.mySend(thread.client_sock, answer)
 
 
@@ -208,7 +212,7 @@ def getChunksList(file, peerIP, peerPort):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the peer :', data)
+    #print('Received from the peer :', data)
 
     peerCore.closeSocket(s)
 
@@ -234,6 +238,11 @@ def getChunk(file, chunkID, peerIP, peerPort):
 
     message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
     transmission.mySend(s, message)
+
+    answer = transmission.myRecv(s)
+    if answer.split(" ")[0] == "ERROR":
+        peerCore.closeSocket(s)
+        return False
 
     data = transmission.recvChunk(s, chunkSize)
     #print('Received from the peer :', data)
@@ -270,7 +279,7 @@ def getChunk(file, chunkID, peerIP, peerPort):
 
 def mergeChunk(file):
 
-    print("merging chunk")
+    print("*********Merging chunks*************")
 
     newFilePath = getNewFilePath(file)
     tmpDirPath = getTmpDirPath(file)
