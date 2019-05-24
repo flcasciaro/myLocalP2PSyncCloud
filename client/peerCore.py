@@ -548,10 +548,12 @@ def startSync(sig):
         return False
 
     message = "HERE {} {}".format(myIP, myPortNumber)
+    #print('Sending to the server:', message)
+
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
+    print('Received from the server:', data)
 
     closeSocket(s)
 
