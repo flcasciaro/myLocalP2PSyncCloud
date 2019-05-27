@@ -50,12 +50,13 @@ class Group:
         del self.filesInGroup[filename]
         self.nrFiles -= 1
 
-    def getPublicInfo(self, role):
+    def getPublicInfo(self, role, status):
         groupInfo = dict()
         groupInfo["name"] = self.name
         groupInfo["total"] = self.totalPeers
         groupInfo["active"] = self.activePeers
         groupInfo["role"] = role
+        groupInfo["status"] = status
         return groupInfo
 
 
