@@ -210,14 +210,9 @@ class myP2PSyncCloud(QMainWindow):
         peerCore.retrieveGroups()
         self.fillGroupManager()
 
-        if len(peerCore.restoreGroupsList) > 0:
-            reply = QMessageBox.question(self, 'Message', "Do you want to restore last session groups?",
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if reply == QMessageBox.Yes:
-                self.restoreAllHandler()
+        self.restoreAllHandler()
 
-
-        if not peerCore.startSync(self.signals):
+        if not peerCore.startSync():
             exit(-1)
 
         peerCore.updateLocalFileList()
@@ -276,42 +271,55 @@ class myP2PSyncCloud(QMainWindow):
 
         self.groupsList.clear()
 
-        """This function update groups list for the peer, retrieving information from the server"""     
+        itemsActive = list()
+        itemsRestorable = list()
+        itemsOther = list()
 
-        for group in peerCore.activeGroupsList.values():
-            item = QTreeWidgetItem([group["name"],
-                        str(group["active"]) + "/" + str(group["total"]),
-                        group["role"], "ACTIVE"])
+        for group in peerCore.groupsList.values():
+            if group["status"] == "ACTIVE":
+                itemsActive.append(QTreeWidgetItem([group["name"],
+                                        str(group["active"]) + "/" + str(group["total"]),
+                                        group["role"], "ACTIVE"]))
+            elif group["status"] == "RESTORABLE":
+                itemsRestorable.append(QTreeWidgetItem([group["name"],
+                                        str(group["active"]) + "/" + str(group["total"]),
+                                        group["role"], "RESTORABLE"]))
+            else:
+                itemsOther.append(QTreeWidgetItem([group["name"],
+                                        str(group["active"]) + "/" + str(group["total"]),
+                                        "/", "NOT JOINED"]))
+
+        for item in itemsActive:
             self.groupsList.addTopLevelItem(item)
-
-        for group in peerCore.restoreGroupsList.values():
-            item = QTreeWidgetItem([group["name"],
-                        str(group["active"]) + "/" + str(group["total"]),
-                        group["role"], "RESTORABLE"])
+        for item in itemsRestorable:
             self.groupsList.addTopLevelItem(item)
-
-        for group in peerCore.otherGroupsList.values():
-            item = QTreeWidgetItem([group["name"],
-                        str(group["active"]) + "/" + str(group["total"]),
-                        "/", "NOT JOINED"])
+        for item in itemsOther:
             self.groupsList.addTopLevelItem(item)
 
 
 
     def restoreAllHandler(self):
 
-        if len(peerCore.restoreGroupsList) != 0:
-            """reply = QMessageBox.question(self, 'Message', "Are you sure?",
-                                         QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-            if reply == QMessageBox.Yes:"""
-            groupsRestored = peerCore.restoreAll()
-            if groupsRestored == "":
-                self.addLogMessage("It was not possible to restore any group")
+        reply = QMessageBox.question(self, 'Message', "Do you want to restore all the groups?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+
+            restorable = 0
+
+            for group in peerCore.groupsList.values():
+                if group["status"] == "RESTORABLE":
+                    restorable += 1
+
+            if restorable > 0:
+
+                groupsRestored = peerCore.restoreAll()
+                if groupsRestored == "":
+                    self.addLogMessage("It was not possible to restore any group")
+                else:
+                    self.addLogMessage("Groups {} restored".format(groupsRestored))
+                self.fillGroupManager()
             else:
-                self.addLogMessage("Groups {} restored".format(groupsRestored))
-            self.fillGroupManager()
-        else:
-            QMessageBox.about(self, "Alert", "You don't have joined groups that can be restored")
+                QMessageBox.about(self, "Alert", "You don't have joined groups that can be restored")
 
 
     def createGroupHandler(self):
@@ -363,9 +371,9 @@ class myP2PSyncCloud(QMainWindow):
 
         self.fileManagerLabel1.setText("FILE MANAGER GROUP {}".format(self.groupName))
         self.fileManagerLabel2.setText(statusLabel.format(
-                                        peerCore.activeGroupsList[self.groupName]["role"],
-                                        peerCore.activeGroupsList[self.groupName]["active"],
-                                        peerCore.activeGroupsList[self.groupName]["total"]))
+                                        peerCore.groupsList[self.groupName]["role"],
+                                        peerCore.groupsList[self.groupName]["active"],
+                                        peerCore.groupsList[self.groupName]["total"]))
         
         self.fileListLabel.show()
 
@@ -374,13 +382,13 @@ class myP2PSyncCloud(QMainWindow):
         self.fileList.show()
         self.fillFileList()
 
-        if peerCore.activeGroupsList[self.groupName]["role"].upper() == "RW":
+        if peerCore.groupsList[self.groupName]["role"].upper() == "RW":
             self.selectFile.show()
             self.removeFile.show()
             self.syncButton.show()
             self.syncAllButton.show()
 
-        if peerCore.activeGroupsList[self.groupName]["role"].upper() == "MASTER":
+        if peerCore.groupsList[self.groupName]["role"].upper() == "MASTER":
             self.selectFile.show()
             self.removeFile.show()
             self.syncButton.show()

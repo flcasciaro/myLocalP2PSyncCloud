@@ -28,16 +28,15 @@ serverIP = None
 serverPort = None
 
 """
-Main data structures for the groups handling.
-Each of the following dictionaries has the following structure:
+Main data structure for the groups handling.
+It's a dictionary with the following structure:
     key: groupName
     value: another dictionary containing group information
+            ex. status: can be ACTIVE or RESTORABLE or OTHER
             ex. active -> number of active users in the group
             ex. role -> role of the peer in the group
 """
-activeGroupsList = dict()
-restoreGroupsList = dict()
-otherGroupsList = dict()
+groupsList = dict()
 
 """
 Data structure that keeps track of the synchronized files.
@@ -46,7 +45,6 @@ It's a dictionary with the following structure:
     value: a File object (see fileManagement for class File)
 """
 localFileList = dict()
-
 
 
 def setPeerID():
@@ -59,7 +57,6 @@ def setPeerID():
     global peerID
     macAddress = uuid.getnode()
     peerID = macAddress
-
 
 
 def serverIsReachable():
@@ -75,7 +72,6 @@ def serverIsReachable():
         return True
     else:
         return False
-
 
 
 def findServer():
@@ -107,7 +103,6 @@ def findServer():
     return serverIsReachable()
 
 
-
 def setServerCoordinates(coordinates):
     """
     Set server coordinates reading them from a string
@@ -118,7 +113,6 @@ def setServerCoordinates(coordinates):
     global serverIP, serverPort
     serverIP = coordinates.split(":")[0]
     serverPort = coordinates.split(":")[1]
-
 
 
 def createSocket(ipAddress, port):
@@ -140,7 +134,6 @@ def createSocket(ipAddress, port):
     return s
 
 
-
 def closeSocket(s):
     """
     Wrapper function for socket.close().
@@ -151,88 +144,52 @@ def closeSocket(s):
     :return: void
     """
 
-    message = "BYE"
+    message = str(peerID)+ " " + "BYE"
     try:
         transmission.mySend(s, message)
-        data = transmission.myRecv(s)
+        # get the answer into an "ignore" variable
+        __ = transmission.myRecv(s)
     except (socket.timeout, RuntimeError):
         pass
 
-    #close the socket anyway
+    # close the socket anyway
     s.close()
-
-
-
-def handshake(s):
-    """
-    Perform an inital handshake with the server announcing the peerID.
-    Return True in case of successfully handshake, oterwise False.
-    :param s: socket on which the handshake will be performed
-    :return: boolean
-    """
-
-    message = "I'M {}".format(peerID)
-    try:
-        transmission.mySend(s, message)
-        answer = transmission.myRecv(s).strip()
-    except (socket.timeout, RuntimeError):
-        return False
-
-    if answer != "HELLO {}".format(peerID):
-        print("Unable to perform the initial handshake with the server")
-        return False
-
-    # print("Successfull handshake")
-    return True
 
 
 
 def retrieveGroups():
     """
-    Retrieves groups from the server and update local data structures.
+    Retrieves groups from the server and update local groups list.
     In case of error return immediately without updating local groups.
     :return: boolean
     """
-    global activeGroupsList, restoreGroupsList, otherGroupsList
+    global groupsList
 
     s = createSocket(serverIP, serverPort)
     if s is None:
         return
-    if not handshake(s):
-        closeSocket(s)
-        return
 
     try:
-        message = "SEND ACTIVE GROUPS"
+        message = str(peerID)+ " " + "SEND GROUPS"
         transmission.mySend(s, message)
-        first = transmission.myRecv(s)
-
-        message = "SEND PREVIOUS GROUPS"
-        transmission.mySend(s, message)
-        second = transmission.myRecv(s)
-
-        message = "SEND OTHER GROUPS"
-        transmission.mySend(s, message)
-        third = transmission.myRecv(s)
+        answer = transmission.myRecv(s)
     except (socket.timeout, RuntimeError):
         closeSocket(s)
         return False
 
-    activeGroupsList = eval(first)
-    restoreGroupsList = eval(second)
-    otherGroupsList = eval(third)
+    groupsList = eval(answer)
     closeSocket(s)
 
     return True
 
 
-def restoreGroup(groupName, delete):
+def restoreGroup(groupName):
+
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
+    if s is None:
         return False
 
-    message = "RESTORE Group: {}".format(groupName)
+    message = str(peerID)+ " " + "RESTORE Group: {}".format(groupName)
     # print(message)
     transmission.mySend(s, message)
 
@@ -244,94 +201,79 @@ def restoreGroup(groupName, delete):
     if data.split()[0] == "ERROR":
         return False
     else:
-        if delete:
-            activeGroupsList[groupName] = restoreGroupsList[groupName]
-            del restoreGroupsList[groupName]
+        groupsList[groupName]["status"] = "ACTIVE"
         return True
 
 
 def restoreAll():
-    delete = dict()
-    for group in restoreGroupsList.values():
-        delete[group["name"]] = restoreGroup(group["name"], False)
 
     restoredGroups = ""
-    for groupName in delete:
-        if delete[groupName]:
-            activeGroupsList[groupName] = restoreGroupsList[groupName]
-            del restoreGroupsList[groupName]
-            restoredGroups += groupName
-            restoredGroups += ", "
 
-    """delete last comma and space (if any)"""
+    for group in groupsList.values():
+        if group["status"] == "RESTORABLE":
+                    if restoreGroup(group["name"]):
+                        restoredGroups += group["name"]
+                        restoredGroups += ", "
+
+    #delete last comma and space (if any)
     l = len(restoredGroups)
     return restoredGroups[0:l - 2]
 
 
 def joinGroup(groupName, token):
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return False
 
     encryptedToken = hashlib.md5(token.encode())
 
-    message = "JOIN Group: {} Token: {}".format(groupName, encryptedToken.hexdigest())
-    # print(message)
+    message = str(peerID)+ " " + "JOIN Group: {} Token: {}".format(groupName, encryptedToken.hexdigest())
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
+    # print('Received from the server :', data)
 
     closeSocket(s)
 
     if data.split()[0] == "ERROR":
         return False
     else:
-        activeGroupsList[groupName] = otherGroupsList[groupName]
-        del otherGroupsList[groupName]
+        groupsList[groupName]["status"] = "ACTIVE"
         return True
 
 
 def createGroup(groupName, groupTokenRW, groupTokenRO):
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return False
 
     encryptedTokenRW = hashlib.md5(groupTokenRW.encode())
     encryptedTokenRO = hashlib.md5(groupTokenRO.encode())
 
-    message = "CREATE Group: {} TokenRW: {} TokenRO: {}".format(groupName,
+    message = str(peerID)+ " " + "CREATE Group: {} TokenRW: {} TokenRO: {}".format(groupName,
                                                                 encryptedTokenRW.hexdigest(),
                                                                 encryptedTokenRO.hexdigest())
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
+    # print('Received from the server :', data)
 
     closeSocket(s)
     if data.split()[0] == "ERROR":
         return False
     else:
-        activeGroupsList[groupName] = dict()
-        activeGroupsList[groupName]["name"] = groupName
-        activeGroupsList[groupName]["total"] = 1
-        activeGroupsList[groupName]["active"] = 1
-        activeGroupsList[groupName]["role"] = "MASTER"
+        groupsList[groupName] = dict()
+        groupsList[groupName]["name"] = groupName
+        groupsList[groupName]["status"] = "ACTIVE"
+        groupsList[groupName]["total"] = 1
+        groupsList[groupName]["active"] = 1
+        groupsList[groupName]["role"] = "MASTER"
         return True
 
 
 def changeRole(groupName, targetPeerID, action):
     """this function addresses the management of the master and the management of roles by the master"""
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return False
 
     print(action.upper())
 
-    message = "ROLE {} {} GROUP {}".format(action.upper(), targetPeerID, groupName)
+    message = str(peerID)+ " " + "ROLE {} {} GROUP {}".format(action.upper(), targetPeerID, groupName)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -343,23 +285,19 @@ def changeRole(groupName, targetPeerID, action):
         return False
     else:
         if action.upper() == "CHANGE_MASTER":
-            activeGroupsList[groupName]["role"] = "RW"
+            groupsList[groupName]["role"] = "RW"
         return True
 
 
 def retrievePeers(groupName, selectAll):
-
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return None
 
     if selectAll:
         tmp = "ALL"
     else:
         tmp = "ACTIVE"
 
-    message = "PEERS {} {} ".format(groupName, tmp)
+    message = str(peerID)+ " " + "PEERS {} {} ".format(groupName, tmp)
     print(message)
     transmission.mySend(s, message)
 
@@ -372,37 +310,25 @@ def retrievePeers(groupName, selectAll):
 
     closeSocket(s)
 
-    # activeGroupsList[groupName]["peersList"] = peersList
     return peersList
 
 
 def updateLocalFileList():
-    updatedFileList = dict()
 
-    for groupName in activeGroupsList:
+    s = createSocket(serverIP, serverPort)
 
-        s = createSocket(serverIP, serverPort)
-        if not handshake(s):
-            closeSocket(s)
-            return False
+    message = str(peerID) + " " + "GET_FILES"
+    transmission.mySend(s, message)
 
-        message = "GET_FILES {}".format(groupName)
-        transmission.mySend(s, message)
+    data = transmission.myRecv(s)
+    print('Received from the server :', data)
 
-        data = transmission.myRecv(s)
-        print('Received from the server :', data)
+    closeSocket(s)
 
-        closeSocket(s)
-
-        if data.split()[0] == "ERROR":
-            continue
-        else:
-            """merge the current and the retrieved dictionaries 
-            (concatenation of dictionaries of different groups)"""
-            groupFileList = eval(data)
-            for file in groupFileList.values():
-                file["groupName"] = groupName
-                updatedFileList[groupName + "_" + file["filename"]] = file
+    if data.split()[0] == "ERROR":
+        return
+    else:
+        updatedFileList = eval(data)
 
     """delete files removed from groups (if any)"""
     delete = dict()
@@ -411,7 +337,6 @@ def updateLocalFileList():
             delete[key] = True
     for key in delete:
         del localFileList[key]
-
 
     """push updated files (if any)
     download not-sync files (if any)"""
@@ -452,16 +377,16 @@ def updateLocalFileList():
 
     for file in localFileList.values():
 
-        #if the file is not already in sync
+        # if the file is not already in sync
         if file.syncLock.acquire(blocking=False):
 
-            #Automatically update the file
+            # Automatically update the file
             """
             if file.status == "U":
                 if updateFile(file):
                     file.status = "S"
             """
-            #Automatically sync file
+            # Automatically sync file
             if file.status == "D":
                 syncThread = Thread(target=fileSharing.downloadFile, args=(file,))
                 syncThread.daemon = True
@@ -471,11 +396,8 @@ def updateLocalFileList():
 
 def updateFile(file):
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return False
 
-    message = "UPDATE_FILE {} {} {} {}".format(file.groupName, file.filename,
+    message = str(peerID)+ " " + "UPDATE_FILE {} {} {} {}".format(file.groupName, file.filename,
                                                file.filesize, file.timestamp)
     transmission.mySend(s, message)
 
@@ -491,7 +413,6 @@ def updateFile(file):
         return True
 
 
-
 def addFile(filepath, groupName):
     filePathFields = filepath.split('/')
     """select just the effective filename, discard the path"""
@@ -500,11 +421,8 @@ def addFile(filepath, groupName):
     filesize, timestamp = fileManagement.getFileStat(filepath)
 
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return False
 
-    message = "ADD_FILE {} {} {} {}".format(groupName, filename, filesize, timestamp)
+    message = str(peerID)+ " " + "ADD_FILE {} {} {} {}".format(groupName, filename, filesize, timestamp)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -524,11 +442,8 @@ def addFile(filepath, groupName):
 
 def removeFile(filename, groupName):
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return False
 
-    message = "REMOVE_FILE {} {}".format(groupName, filename)
+    message = str(peerID)+ " " + "REMOVE_FILE {} {}".format(groupName, filename)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -546,11 +461,8 @@ def removeFile(filename, groupName):
 
 def leaveGroup(groupName):
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return False
 
-    message = "LEAVE Group: {}".format(groupName)
+    message = str(peerID)+ " " + "LEAVE Group: {}".format(groupName)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -561,18 +473,14 @@ def leaveGroup(groupName):
     if data.split()[0] == "ERROR":
         return False
     else:
-        otherGroupsList[groupName] = activeGroupsList[groupName]
-        del activeGroupsList[groupName]
+        groupsList[groupName]["status"] = "OTHER"
         return True
 
 
 def disconnectGroup(groupName):
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return False
 
-    message = "DISCONNECT Group: {}".format(groupName)
+    message = str(peerID)+ " " + "DISCONNECT Group: {}".format(groupName)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -583,18 +491,14 @@ def disconnectGroup(groupName):
     if data.split()[0] == "ERROR":
         return False
     else:
-        restoreGroupsList[groupName] = activeGroupsList[groupName]
-        del activeGroupsList[groupName]
+        groupsList[groupName]["status"] = "RESTORABLE"
         return True
 
 
 def disconnectPeer():
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return False
 
-    message = "PEER DISCONNECT"
+    message = str(peerID)+ " " + "PEER DISCONNECT"
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -609,9 +513,7 @@ def disconnectPeer():
         return True
 
 
-def startSync(sig):
-    global signals
-    signals = sig
+def startSync():
 
     global localFileList
     localFileList = fileManagement.getPreviousFiles(previousSessionFile)
@@ -628,12 +530,9 @@ def startSync(sig):
     server.start()
 
     s = createSocket(serverIP, serverPort)
-    if not handshake(s):
-        closeSocket(s)
-        return False
 
-    message = "HERE {} {}".format(myIP, myPortNumber)
-    #print('Sending to the server:', message)
+    message = str(peerID)+ " " + "HERE {} {}".format(myIP, myPortNumber)
+    # print('Sending to the server:', message)
 
     transmission.mySend(s, message)
 
@@ -760,5 +659,3 @@ def manageRequest(self, message):
         answer = "BYE PEER"
         transmission.mySend(self.client_sock, answer)
         self.stop()
-
-
