@@ -190,11 +190,9 @@ def restoreGroup(groupName):
         return False
 
     message = str(peerID)+ " " + "RESTORE Group: {}".format(groupName)
-    # print(message)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
 
     closeSocket(s)
 
@@ -229,7 +227,6 @@ def joinGroup(groupName, token):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    # print('Received from the server :', data)
 
     closeSocket(s)
 
@@ -252,7 +249,6 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    # print('Received from the server :', data)
 
     closeSocket(s)
     if data.split()[0] == "ERROR":
@@ -298,7 +294,6 @@ def retrievePeers(groupName, selectAll):
         tmp = "ACTIVE"
 
     message = str(peerID)+ " " + "PEERS {} {} ".format(groupName, tmp)
-    print(message)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -321,7 +316,6 @@ def updateLocalFileList():
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
 
     closeSocket(s)
 
@@ -402,7 +396,6 @@ def updateFile(file):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
 
     closeSocket(s)
 
@@ -426,7 +419,6 @@ def addFile(filepath, groupName):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
 
     closeSocket(s)
 
@@ -447,7 +439,6 @@ def removeFile(filename, groupName):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
 
     closeSocket(s)
 
@@ -466,7 +457,6 @@ def leaveGroup(groupName):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
 
     closeSocket(s)
 
@@ -484,7 +474,6 @@ def disconnectGroup(groupName):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
 
     closeSocket(s)
 
@@ -502,7 +491,6 @@ def disconnectPeer():
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server :', data)
 
     closeSocket(s)
 
@@ -532,12 +520,10 @@ def startSync():
     s = createSocket(serverIP, serverPort)
 
     message = str(peerID)+ " " + "HERE {} {}".format(myIP, myPortNumber)
-    # print('Sending to the server:', message)
 
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    print('Received from the server:', data)
 
     closeSocket(s)
 
