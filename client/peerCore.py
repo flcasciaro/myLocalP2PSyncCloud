@@ -1,4 +1,4 @@
-"""Peer core code of myLocalP2PSyncCLoud"""
+"""Peer core code of myP2PSyncCLoud"""
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
@@ -14,42 +14,89 @@ import fileManagement
 import fileSharing
 import transmission
 
+"""Obtain script path and script name, it will be useful to manage filepaths"""
 scriptPath, scriptName = os.path.split((os.path.abspath(__file__)))
 scriptPath += "/"
 
+"""Set session files' paths"""
 configurationFile = scriptPath + "sessionFiles/configuration.json"
 previousSessionFile = scriptPath + "sessionFiles/fileList.json"
+
+"""Initialize some global variables"""
 peerID = None
 serverIP = None
 serverPort = None
-signals = None
 
-"""main data structures for the groups handling"""
+"""
+Main data structures for the groups handling.
+Each of the following dictionaries has the following structure:
+    key: groupName
+    value: another dictionary containing group information
+            ex. active -> number of active users in the group
+            ex. role -> role of the peer in the group
+"""
 activeGroupsList = dict()
 restoreGroupsList = dict()
 otherGroupsList = dict()
 
-"""data structure that keeps track of the synchronized files
-key: filename+groupName in order to uniquely identify a file
-value: filename, groupname, filepath, filesize, timestamp, status"""
+"""
+Data structure that keeps track of the synchronized files.
+It's a dictionary with the following structure:
+    key: groupName_filename in order to uniquely identify a file
+    value: a File object (see fileManagement for class File)
+"""
 localFileList = dict()
 
-BUFSIZE = 4096
 
 
 def setPeerID():
+    """
+    Extract from the MAC address a peerID and
+    set into the associate global variable.
+    :return: void
+    """
+
     global peerID
-    """peer unique Identifier obtained from the MAC address of the machine"""
     macAddress = uuid.getnode()
     peerID = macAddress
 
 
+
+def serverIsReachable():
+    """
+    Try to reach the server: in case of success return True.
+    Otherwise return False
+    :return: boolean
+    """
+
+    s = createSocket(serverIP, serverPort)
+    if s is not None:
+        closeSocket(s)
+        return True
+    else:
+        return False
+
+
+
 def findServer():
+    """
+    Read server coordinates (IP, Port) from the configuration file.
+    If any problem happens reading the file (e.g. file not exists)
+    return false. If the file exist and the reading operation is successfull
+    return serverIsReachable() value (this function try to reach the server
+    and return True/False whether the server is reachable or not).
+    :return: boolean
+    """
+
     global serverIP, serverPort
     try:
         file = open(configurationFile, 'r')
         try:
+            # Configuration file wrote in JSON format
+            # json.load return a dictionary
             configuration = json.load(file)
+
+            # Extract server coordinates
             serverIP = configuration["serverIP"]
             serverPort = configuration["serverPort"]
         except ValueError:
@@ -60,85 +107,123 @@ def findServer():
     return serverIsReachable()
 
 
+
 def setServerCoordinates(coordinates):
+    """
+    Set server coordinates reading them from a string
+    :param coordinates: is a string like <IPaddress>:<PortNumber>
+    :return: void
+    """
+
     global serverIP, serverPort
     serverIP = coordinates.split(":")[0]
     serverPort = coordinates.split(":")[1]
 
 
-def createSocket(host, port):
+
+def createSocket(ipAddress, port):
+    """
+    Create a socket connection with a remote host.
+    In case of success return the established socket.
+    In case of failure (timeout or connection refused) return None.
+    :param ipAddress: IP address of the host
+    :param port: port number on which the host is listening
+    :return: socket or None
+    """
+
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(5)
     try:
-        s.connect((host, int(port)))
+        s.connect((ipAddress, int(port)))
     except (socket.timeout, ConnectionRefusedError):
         return None
     return s
 
 
-def closeSocket(s):
-    # close the connection sock
-    message = "BYE"
-    transmission.mySend(s, message)
 
-    data = transmission.myRecv(s)
-    #print('Received from the server :', data)
-    if data.rstrip() == "BYE PEER":
-        # time.sleep(0.1)
-        s.close()
-    else:
-        return
+def closeSocket(s):
+    """
+    Wrapper function for socket.close().
+    Coordinates the socket close operation with the server.
+    Send a BYE message and wait for a reply.
+    Finally close the socket anyway.
+    :param s: socket which will be closed
+    :return: void
+    """
+
+    message = "BYE"
+    try:
+        transmission.mySend(s, message)
+        data = transmission.myRecv(s)
+    except (socket.timeout, RuntimeError):
+        pass
+
+    #close the socket anyway
+    s.close()
+
 
 
 def handshake(s):
+    """
+    Perform an inital handshake with the server announcing the peerID.
+    Return True in case of successfully handshake, oterwise False.
+    :param s: socket on which the handshake will be performed
+    :return: boolean
+    """
 
     message = "I'M {}".format(peerID)
-    transmission.mySend(s, message)
-
-    answer = transmission.myRecv(s).strip()
+    try:
+        transmission.mySend(s, message)
+        answer = transmission.myRecv(s).strip()
+    except (socket.timeout, RuntimeError):
+        return False
 
     if answer != "HELLO {}".format(peerID):
         print("Unable to perform the initial handshake with the server")
         return False
 
-    #print("Successfull handshake")
-
+    # print("Successfull handshake")
     return True
 
-def serverIsReachable():
-    s = createSocket(serverIP, serverPort)
-    if s is not None:
-        closeSocket(s)
-        return True
-    else:
-        return False
 
 
 def retrieveGroups():
+    """
+    Retrieves groups from the server and update local data structures.
+    In case of error return immediately without updating local groups.
+    :return: boolean
+    """
     global activeGroupsList, restoreGroupsList, otherGroupsList
 
     s = createSocket(serverIP, serverPort)
+    if s is None:
+        return
     if not handshake(s):
+        closeSocket(s)
+        return
+
+    try:
+        message = "SEND ACTIVE GROUPS"
+        transmission.mySend(s, message)
+        first = transmission.myRecv(s)
+
+        message = "SEND PREVIOUS GROUPS"
+        transmission.mySend(s, message)
+        second = transmission.myRecv(s)
+
+        message = "SEND OTHER GROUPS"
+        transmission.mySend(s, message)
+        third = transmission.myRecv(s)
+    except (socket.timeout, RuntimeError):
         closeSocket(s)
         return False
 
-    message = "SEND ACTIVE GROUPS"
-    transmission.mySend(s, message)
-    
-    data = transmission.myRecv(s)
-    activeGroupsList = eval(data)
-
-    message = "SEND PREVIOUS GROUPS"
-    transmission.mySend(s, message)
-    data = transmission.myRecv(s)
-    restoreGroupsList = eval(data)
-
-    message = "SEND OTHER GROUPS"
-    transmission.mySend(s, message)
-    data = transmission.myRecv(s)
-    otherGroupsList = eval(data)
-
+    activeGroupsList = eval(first)
+    restoreGroupsList = eval(second)
+    otherGroupsList = eval(third)
     closeSocket(s)
+
+    return True
 
 
 def restoreGroup(groupName, delete):
