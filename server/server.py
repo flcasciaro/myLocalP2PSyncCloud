@@ -196,7 +196,6 @@ class SocketServerThread(Thread):
         self.client_sock = client_sock
         self.client_addr = client_addr
         self.number = number
-        self.peerID = None  #it will be set after the connection establishment (socket creation)
         self.__stop = False
 
     def run(self):
@@ -222,7 +221,10 @@ class SocketServerThread(Thread):
                     else:
                         # Strip newlines just for output clarity
                         message = read_data.rstrip()
-                        manageRequest(self, message)
+                        messageFields = message.split(' ', 1)
+                        peerID = messageFields[0]
+                        request = messageFields[1]
+                        manageRequest(self, request, peerID)
             else:
                 print("[Thr {}] No client is connected, SocketServer can't receive data".format(self.number))
                 self.stop()
@@ -238,64 +240,60 @@ class SocketServerThread(Thread):
             self.client_sock.close()
 
 
-def manageRequest(self, message):
+def manageRequest(self, request, peerID):
 
     """Serves the different client requests"""
-    print('[Thr {}] Received {}'.format(self.number, message))
+    print('[Thr {}] Received {}'.format(self.number, request))
 
-    if message.split()[0] == "I'M":
-        reqHandlers.handshake(message, self)
+    if request == "SEND GROUPS":
+        reqHandlers.sendGroups(self, groups, peerID)
 
-    elif message.split()[0] == "SEND":
-        action = message.split()[1]       #ACTIVE or PREVIOUS or OTHER
-        reqHandlers.sendGroups(self, groups, action)
+    elif request.split()[0] == "RESTORE":
+        reqHandlers.restoreGroup(request, self, groups, peerID)
 
-    elif message.split()[0] == "RESTORE":
-        reqHandlers.restoreGroup(message, self, groups)
+    elif request.split()[0] == "JOIN":
+        reqHandlers.joinGroup(request, self, groups, peerID)
 
-    elif message.split()[0] == "JOIN":
-        reqHandlers.joinGroup(message, self, groups)
+    elif request.split()[0] == "CREATE":
+        reqHandlers.createGroup(request, self, groups, peerID)
 
-    elif message.split()[0] == "CREATE":
-        reqHandlers.createGroup(message, self, groups)
+    elif request.split()[0] == "ROLE":
+        reqHandlers.manageRole(request, self, groups, groupsLock, peerID)
 
-    elif message.split()[0] == "ROLE":
-        reqHandlers.manageRole(message, self, groups, groupsLock)
+    elif request.split()[0] == "PEERS":
+        reqHandlers.retrievePeers(request, self, groups, peers, peerID)
 
-    elif message.split()[0] == "PEERS":
-        reqHandlers.retrievePeers(message, self, groups, peers)
+    elif request.split()[0] == "ADD_FILE":
+        reqHandlers.addFile(request, self, groups, groupsLock, peerID)
 
-    elif message.split()[0] == "ADD_FILE":
-        reqHandlers.addFile(message, self, groups, groupsLock)
+    elif request.split()[0] == "UPDATE_FILE":
+        reqHandlers.updateFile(request, self, groups, groupsLock, peerID)
 
-    elif message.split()[0] == "UPDATE_FILE":
-        reqHandlers.updateFile(message, self, groups, groupsLock)
+    elif request.split()[0] == "REMOVE_FILE":
+        reqHandlers.removeFile(request, self, groups, groupsLock, peerID)
 
-    elif message.split()[0] == "REMOVE_FILE":
-        reqHandlers.removeFile(message, self, groups, groupsLock)
+    elif request.split()[0] == "GET_FILES":
+        reqHandlers.getFiles(self, groups, peerID)
 
-    elif message.split()[0] == "GET_FILES":
-        reqHandlers.getFiles(message, self, groups)
+    elif request.split()[0] == "HERE":
+        reqHandlers.imHere(request, self, peers, peerID)
 
-    elif message.split()[0] == "HERE":
-        reqHandlers.imHere(message, self, peers)
+    elif request.split()[0] == "LEAVE":
+        reqHandlers.leaveGroup(self, groups, groupsLock, request.split()[2], peerID)
 
-    elif message.split()[0] == "LEAVE":
-        reqHandlers.leaveGroup(self, groups, groupsLock, message.split()[2])
+    elif request.split()[0] == "DISCONNECT":
+        reqHandlers.disconnectGroup(self, groups, groupsLock, request.split()[2], peerID)
 
-    elif message.split()[0] == "DISCONNECT":
-        reqHandlers.disconnectGroup(self, groups, groupsLock, message.split()[2])
+    elif request == "PEER DISCONNECT":
+        reqHandlers.peerDisconnection(self, groups, groupsLock, peers, peerID)
 
-    elif message == "PEER DISCONNECT":
-        reqHandlers.peerDisconnection(self, groups, groupsLock, peers)
-
-    elif message == "BYE":
+    elif request == "BYE":
         answer = "OK - BYE PEER"
         transmission.mySend(self.client_sock, answer)
         self.stop()
 
     else:
-        answer = "ERROR - UNEXPECTED MESSAGE"
+        answer = "ERROR - UNEXPECTED request"
         transmission.mySend(self.client_sock, answer)
 
 

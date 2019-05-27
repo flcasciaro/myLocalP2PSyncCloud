@@ -7,51 +7,33 @@ import transmission
 from groupClass import Group
 
 
-def handshake(request, thread):
-    """Add or update information (IP, Port) about a peer.
-    No need for peersLock, should be thread safe because only a single
-    thread is in charge of a specific peer"""
-
-    thread.peerID = request.split()[1]
-    answer = "HELLO {}".format(thread.peerID)
-    transmission.mySend(thread.client_sock, answer)
-
-
-def sendGroups(thread, groups, action):
+def sendGroups(thread, groups, peerID):
     """This function can retrieve the list of active, previous or other groups for a certain peerID"""
     groupsList = dict()
-    action = action.upper()
 
-    if action == "ACTIVE":
-        for g in groups.values():
-            if thread.peerID in g.peersInGroup:
-                if g.peersInGroup[thread.peerID].active:
-                    role = g.peersInGroup[thread.peerID].role
-                    groupsList[g.name] = g.getPublicInfo(role)
+    for g in groups.values():
+        if peerID in g.peersInGroup:
+            if g.peersInGroup[peerID].active:
+                role = g.peersInGroup[peerID].role
+                groupsList[g.name] = g.getPublicInfo(role,"ACTIVE")
+            else:
+                role = g.peersInGroup[peerID].role
+                groupsList[g.name] = g.getPublicInfo(role,"RESTORABLE")
+        else:
+            groupsList[g.name] = g.getPublicInfo("","OTHER")
 
-    elif action == "PREVIOUS":
-        for g in groups.values():
-            if thread.peerID in g.peersInGroup:
-                if not g.peersInGroup[thread.peerID].active:
-                    role = g.peersInGroup[thread.peerID].role
-                    groupsList[g.name] = g.getPublicInfo(role)
-
-    elif action == "OTHER":
-        for g in groups.values():
-            if thread.peerID not in g.peersInGroup:
-                groupsList[g.name]= g.getPublicInfo("")
 
     transmission.mySend(thread.client_sock, str(groupsList))
 
 
-def restoreGroup(request, thread, groups):
+def restoreGroup(request, thread, groups, peerID):
     """"make the user active in one of its group (already joined)"""
 
     groupName = request.split()[2]
     if groupName in groups:
-            if thread.peerID in groups[groupName].peersInGroup:
-                if not groups[groupName].peersInGroup[thread.peerID].active: #if not already active
-                    groups[groupName].restorePeer(thread.peerID)
+            if peerID in groups[groupName].peersInGroup:
+                if not groups[groupName].peersInGroup[peerID].active: #if not already active
+                    groups[groupName].restorePeer(peerID)
                     answer = "OK - GROUP {} RESTORED".format(groupName)
                 else:
                     answer = "ERROR: - IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER ALREADY ACTIVE".format(groupName)
@@ -62,7 +44,7 @@ def restoreGroup(request, thread, groups):
 
     transmission.mySend(thread.client_sock, answer)
 
-def joinGroup(request, thread, groups):
+def joinGroup(request, thread, groups, peerID):
     """"make the user active in a new group group
     choosing also the role as function of the token provided"""
 
@@ -77,7 +59,7 @@ def joinGroup(request, thread, groups):
             elif tokenProvided == groups[groupName].tokenRO:
                 role = "RO"
                 answer = "OK - GROUP {} JOINED IN ReadOnly MODE".format(groupName)
-            groups[groupName].addPeer(thread.peerID, True, role)
+            groups[groupName].addPeer(peerID, True, role)
 
         else:
             answer = "ERROR - IMPOSSIBLE TO JOIN GROUP {} - WRONG TOKEN".format(groupName)
@@ -86,7 +68,7 @@ def joinGroup(request, thread, groups):
 
     transmission.mySend(thread.client_sock, answer)
 
-def createGroup(request, thread, groups):
+def createGroup(request, thread, groups, peerID):
     """This function allows a peer to create a new synchronization group
     specifying the groupName and the tokens. The creator peer become also the master
     of the new group."""
@@ -99,7 +81,7 @@ def createGroup(request, thread, groups):
         """create the new group and insert in the group dictionary"""
 
         newGroup = Group(newGroupName, newGroupTokenRW, newGroupTokenRO)
-        newGroup.addPeer(thread.peerID, True, "Master")
+        newGroup.addPeer(peerID, True, "Master")
         groups[newGroupName] = newGroup
 
         answer =  "OK - GROUP {} SUCCESSFULLY CREATED".format(newGroupName)
@@ -108,7 +90,7 @@ def createGroup(request, thread, groups):
 
     transmission.mySend(thread.client_sock, answer)
 
-def manageRole(request, thread, groups, groupsLock):
+def manageRole(request, thread, groups, groupsLock, peerID):
 
     action = request.split()[1]
     modPeerID = request.split()[2]
@@ -125,14 +107,14 @@ def manageRole(request, thread, groups, groupsLock):
 
     if groupName in groups:
         """check if both peerIDs actually belongs to the group"""
-        if thread.peerID in groups[groupName].peersInGroup and modPeerID in groups[groupName].peersInGroup:
-            if groups[groupName].peersInGroup[thread.peerID].role.upper() == "MASTER":
+        if peerID in groups[groupName].peersInGroup and modPeerID in groups[groupName].peersInGroup:
+            if groups[groupName].peersInGroup[peerID].role.upper() == "MASTER":
 
                 groupsLock.acquire()
                 groups[groupName].peersInGroup[modPeerID].role = newRole
 
                 if action.upper() == "CHANGE_MASTER":
-                    groups[groupName].peersInGroup[thread.peerID].role = "RW"
+                    groups[groupName].peersInGroup[peerID].role = "RW"
 
                 groupsLock.release()
                 answer = "OK - OPERATION ALLOWED"
@@ -146,7 +128,7 @@ def manageRole(request, thread, groups, groupsLock):
 
     transmission.mySend(thread.client_sock, answer)
 
-def retrievePeers(request, thread, groups, peers):
+def retrievePeers(request, thread, groups, peers, peerID):
     """"retrieve a list of peers (only active or all) for a specific group
     request format: "PEERS <GROUPNAME> <ACTIVE/ALL>"   """
 
@@ -160,7 +142,7 @@ def retrievePeers(request, thread, groups, peers):
             if not groups[groupName].peersInGroup[peer].active and not selectAll:
                 continue
             """skip the peer which made the request"""
-            if peer == thread.peerID:
+            if peer == peerID:
                 continue
             peerInfo = dict()
             peerInfo["peerID"] = peer
@@ -174,7 +156,7 @@ def retrievePeers(request, thread, groups, peers):
         answer = "ERROR - GROUP {} DOESN'T EXIST".format(groupName)
     transmission.mySend(thread.client_sock, answer)
 
-def addFile(request, thread, groups, groupsLock):
+def addFile(request, thread, groups, groupsLock, peerID):
     """request is ADD_FILE <groupname> <filename> <filesize> <timestamp>"""
 
     try:
@@ -187,8 +169,8 @@ def addFile(request, thread, groups, groupsLock):
         groupsLock.acquire()
 
         if groupName in groups:
-            if thread.peerID in groups[groupName].peersInGroup:
-                if groups[groupName].peersInGroup[thread.peerID].role.upper() == "RO":
+            if peerID in groups[groupName].peersInGroup:
+                if groups[groupName].peersInGroup[peerID].role.upper() == "RO":
                     answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
                 else:
                     groups[groupName].addFile(filename, filesize, timestamp)
@@ -204,7 +186,7 @@ def addFile(request, thread, groups, groupsLock):
 
     transmission.mySend(thread.client_sock, answer)
 
-def updateFile(request, thread, groups, groupsLock):
+def updateFile(request, thread, groups, groupsLock, peerID):
     """request is UPDATE_FILE <groupname> <filename> <filesize> <timestamp>"""
 
     try:
@@ -217,8 +199,8 @@ def updateFile(request, thread, groups, groupsLock):
         groupsLock.acquire()
 
         if groupName in groups:
-            if thread.peerID in groups[groupName].peersInGroup:
-                if groups[groupName].peersInGroup[thread.peerID].role.upper() == "RO":
+            if peerID in groups[groupName].peersInGroup:
+                if groups[groupName].peersInGroup[peerID].role.upper() == "RO":
                     answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
                 else:
                     groups[groupName].updateFile(filename, filesize, timestamp)
@@ -234,7 +216,7 @@ def updateFile(request, thread, groups, groupsLock):
 
     transmission.mySend(thread.client_sock, answer)
 
-def removeFile(request, thread, groups, groupsLock):
+def removeFile(request, thread, groups, groupsLock, peerID):
     """request is REMOVE_FILE <groupname> <filename>"""
 
     try:
@@ -245,8 +227,8 @@ def removeFile(request, thread, groups, groupsLock):
         groupsLock.acquire()
 
         if groupName in groups:
-            if thread.peerID in groups[groupName].peersInGroup:
-                if groups[groupName].peersInGroup[thread.peerID].role.upper() == "RO":
+            if peerID in groups[groupName].peersInGroup:
+                if groups[groupName].peersInGroup[peerID].role.upper() == "RO":
                     answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
                 else:
                     groups[groupName].removeFile(filename)
@@ -262,77 +244,69 @@ def removeFile(request, thread, groups, groupsLock):
 
     transmission.mySend(thread.client_sock, answer)
 
-def getFiles(request, thread, groups):
-    """request is GET_FILES <groupname> """
+def getFiles(thread, groups, peerID):
 
     fileList = dict()
 
-    try:
-        requestFields = request.split()
-        groupName = requestFields[1]
-
-        if groupName in groups:
-                for file in groups[groupName].filesInGroup.values():
-                    fileList[file.filename]=file.getFileInfo()
-                answer = str(fileList)
-        else:
-            answer = "ERROR - GROUP DOESN'T EXIST"
-
-    except IndexError:
-        answer = "ERROR - INVALID REQUEST"
+    for g in groups.values():
+        groupName = g.name
+        if peerID in g.peersInGroup:
+            for file in groups[groupName].filesInGroup.values():
+                fileList[groupName+"_"+file.filename]=file.getFileInfo()
+    answer = str(fileList)
 
     transmission.mySend(thread.client_sock, answer)
 
-def imHere(request, thread, peers):
+def imHere(request, thread, peers, peerID):
 
     """store IP address and Port Number on which the peer can be contacted by other peers"""
 
-    if thread.peerID not in peers:
+    if peerID not in peers:
         """unknown peer"""
-        peers[thread.peerID] = dict()
+        peers[peerID] = dict()
 
     """unknown peer"""
-    peers[thread.peerID]["peerIP"] = request.split()[1]
-    peers[thread.peerID]["peerPort"] = request.split()[2]
+    peers[peerID]["peerIP"] = request.split()[1]
+    peers[peerID]["peerPort"] = request.split()[2]
 
     answer = "PEER INFO UPDATED"
     transmission.mySend(thread.client_sock, answer)
 
-def leaveGroup(thread, groups, groupsLock, groupName):
+def leaveGroup(thread, groups, groupsLock, groupName, peerID):
     """remove the peer from the group"""
     groupsLock.acquire()
 
-    groups[groupName].removePeer(thread.peerID)
+    groups[groupName].removePeer(peerID)
 
     groupsLock.release()
 
     answer = "OK - GROUP LEFT"
     transmission.mySend(thread.client_sock, answer)
 
-def disconnectGroup(thread, groups, groupsLock, groupName):
+def disconnectGroup(thread, groups, groupsLock, groupName, peerID):
     """disconnect the peer from the group (active=False)"""
     groupsLock.acquire()
 
-    groups[groupName].disconnectPeer(thread.peerID)
+    groups[groupName].disconnectPeer(peerID)
 
     groupsLock.release()
 
     answer = "OK - GROUP DISCONNECTED"
     transmission.mySend(thread.client_sock, answer)
 
-def peerDisconnection(thread, groups, groupsLock, peers):
+def peerDisconnection(thread, groups, groupsLock, peers, peerID):
     """Disconnect the peer from all the synchronization groups in which is active"""
 
     groupsLock.acquire()
 
     for group in groups.values():
-        if thread.peerID in group.peersInGroup:
-            if group.peersInGroup[thread.peerID].active:
-                group.disconnectPeer(thread.peerID)
+        if peerID in group.peersInGroup:
+            if group.peersInGroup[peerID].active:
+                group.disconnectPeer(peerID)
 
     groupsLock.release()
 
-    del peers[thread.peerID]
+    del peers[peerID]
 
     answer = "OK - PEER DISCONNECTED"
     transmission.mySend(thread.client_sock, answer)
