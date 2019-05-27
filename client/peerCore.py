@@ -508,7 +508,7 @@ def startSync():
     if localFileList is None:
         return False
 
-    """retrieve internal IP address"""
+    # retrieve internal IP address
     myIP = socket.gethostbyname(socket.gethostname())
     myPortNumber = 12321
 
@@ -589,7 +589,6 @@ class SocketServerThread(Thread):
         self.client_sock = client_sock
         self.client_addr = client_addr
         self.number = number
-        self.peerID = None  # it will be set after the connection establishment (socket creation)
         self.__stop = False
 
     def run(self):
