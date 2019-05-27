@@ -307,7 +307,7 @@ def manageRequest(self, request, peerID):
         self.stop()
 
     else:
-        answer = "ERROR - UNEXPECTED request"
+        answer = "ERROR - UNEXPECTED REQUEST"
         transmission.mySend(self.client_sock, answer)
 
 
