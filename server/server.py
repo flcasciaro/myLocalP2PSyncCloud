@@ -290,7 +290,7 @@ def manageRequest(self, message):
         reqHandlers.peerDisconnection(self, groups, groupsLock, peers)
 
     elif message == "BYE":
-        answer = "BYE PEER"
+        answer = "OK - BYE PEER"
         transmission.mySend(self.client_sock, answer)
         self.stop()
 
