@@ -3,11 +3,27 @@ to serve clients request"""
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
-import transmission
 from groupClass import Group
 
 
-def sendGroups(thread, groups, peerID):
+def imHere(request, peers, peerID):
+
+    """store IP address and Port Number on which the peer can be contacted by other peers"""
+
+    if peerID not in peers:
+        """unknown peer"""
+        peers[peerID] = dict()
+
+    """unknown peer"""
+    peers[peerID]["peerIP"] = request.split()[1]
+    peers[peerID]["peerPort"] = request.split()[2]
+
+    answer = "PEER INFO UPDATED"
+    return answer
+
+
+
+def sendGroups(groups, peerID):
     """This function can retrieve the list of active, previous or other groups for a certain peerID"""
     groupsList = dict()
 
@@ -23,10 +39,10 @@ def sendGroups(thread, groups, peerID):
             groupsList[g.name] = g.getPublicInfo("","OTHER")
 
 
-    transmission.mySend(thread.client_sock, str(groupsList))
+    return str(groupsList)
 
 
-def restoreGroup(request, thread, groups, peerID):
+def restoreGroup(request, groups, peerID):
     """"make the user active in one of its group (already joined)"""
 
     groupName = request.split()[2]
@@ -42,9 +58,9 @@ def restoreGroup(request, thread, groups, peerID):
     else:
         answer = "ERROR - IT'S NOT POSSIBLE TO RESTORE GROUP {} - GROUP DOESN'T EXIST".format(groupName)
 
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
-def joinGroup(request, thread, groups, peerID):
+def joinGroup(request, groups, peerID):
     """"make the user active in a new group group
     choosing also the role as function of the token provided"""
 
@@ -66,9 +82,9 @@ def joinGroup(request, thread, groups, peerID):
     else:
         answer = "ERROR - IMPOSSIBLE TO JOIN GROUP {} - GROUP DOESN'T EXIST".format(groupName)
 
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
-def createGroup(request, thread, groups, peerID):
+def createGroup(request, groups, peerID):
     """This function allows a peer to create a new synchronization group
     specifying the groupName and the tokens. The creator peer become also the master
     of the new group."""
@@ -88,9 +104,9 @@ def createGroup(request, thread, groups, peerID):
     else:
         answer =  "ERROR - IMPOSSIBLE TO CREATE GROUP {} - GROUP ALREADY EXIST".format(newGroupName)
 
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
-def manageRole(request, thread, groups, groupsLock, peerID):
+def manageRole(request, groups, groupsLock, peerID):
 
     action = request.split()[1]
     modPeerID = request.split()[2]
@@ -126,9 +142,9 @@ def manageRole(request, thread, groups, groupsLock, peerID):
     else:
         answer = "ERROR - GROUP {} DOESN'T EXIST".format(groupName)
 
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
-def retrievePeers(request, thread, groups, peers, peerID):
+def retrievePeers(request, groups, peers, peerID):
     """"retrieve a list of peers (only active or all) for a specific group
     request format: "PEERS <GROUPNAME> <ACTIVE/ALL>"   """
 
@@ -154,9 +170,10 @@ def retrievePeers(request, thread, groups, peers, peerID):
         answer = str(peersList)
     else:
         answer = "ERROR - GROUP {} DOESN'T EXIST".format(groupName)
-    transmission.mySend(thread.client_sock, answer)
 
-def addFile(request, thread, groups, groupsLock, peerID):
+    return answer
+
+def addFile(request, groups, groupsLock, peerID):
     """request is ADD_FILE <groupname> <filename> <filesize> <timestamp>"""
 
     try:
@@ -184,9 +201,9 @@ def addFile(request, thread, groups, groupsLock, peerID):
     except IndexError:
         answer = "ERROR - INVALID REQUEST"
 
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
-def updateFile(request, thread, groups, groupsLock, peerID):
+def updateFile(request, groups, groupsLock, peerID):
     """request is UPDATE_FILE <groupname> <filename> <filesize> <timestamp>"""
 
     try:
@@ -214,9 +231,9 @@ def updateFile(request, thread, groups, groupsLock, peerID):
     except IndexError:
         answer = "ERROR - INVALID REQUEST"
 
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
-def removeFile(request, thread, groups, groupsLock, peerID):
+def removeFile(request, groups, groupsLock, peerID):
     """request is REMOVE_FILE <groupname> <filename>"""
 
     try:
@@ -242,9 +259,9 @@ def removeFile(request, thread, groups, groupsLock, peerID):
     except IndexError:
         answer = "ERROR - INVALID REQUEST"
 
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
-def getFiles(thread, groups, peerID):
+def getFiles(groups, peerID):
 
     fileList = dict()
 
@@ -255,24 +272,11 @@ def getFiles(thread, groups, peerID):
                 fileList[groupName+"_"+file.filename]=file.getFileInfo()
     answer = str(fileList)
 
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
-def imHere(request, thread, peers, peerID):
 
-    """store IP address and Port Number on which the peer can be contacted by other peers"""
 
-    if peerID not in peers:
-        """unknown peer"""
-        peers[peerID] = dict()
-
-    """unknown peer"""
-    peers[peerID]["peerIP"] = request.split()[1]
-    peers[peerID]["peerPort"] = request.split()[2]
-
-    answer = "PEER INFO UPDATED"
-    transmission.mySend(thread.client_sock, answer)
-
-def leaveGroup(thread, groups, groupsLock, groupName, peerID):
+def leaveGroup(groups, groupsLock, groupName, peerID):
     """remove the peer from the group"""
     groupsLock.acquire()
 
@@ -281,9 +285,9 @@ def leaveGroup(thread, groups, groupsLock, groupName, peerID):
     groupsLock.release()
 
     answer = "OK - GROUP LEFT"
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
-def disconnectGroup(thread, groups, groupsLock, groupName, peerID):
+def disconnectGroup(groups, groupsLock, groupName, peerID):
     """disconnect the peer from the group (active=False)"""
     groupsLock.acquire()
 
@@ -292,9 +296,9 @@ def disconnectGroup(thread, groups, groupsLock, groupName, peerID):
     groupsLock.release()
 
     answer = "OK - GROUP DISCONNECTED"
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
-def peerDisconnection(thread, groups, groupsLock, peers, peerID):
+def peerDisconnection(groups, groupsLock, peers, peerID):
     """Disconnect the peer from all the synchronization groups in which is active"""
 
     groupsLock.acquire()
@@ -309,5 +313,5 @@ def peerDisconnection(thread, groups, groupsLock, peers, peerID):
     del peers[peerID]
 
     answer = "OK - PEER DISCONNECTED"
-    transmission.mySend(thread.client_sock, answer)
+    return answer
 
