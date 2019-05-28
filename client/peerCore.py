@@ -14,36 +14,34 @@ import fileManagement
 import fileSharing
 import transmission
 
-"""Obtain script path and script name, it will be useful to manage filepaths"""
+# Obtain script path and script name, it will be useful to manage filepaths
 scriptPath, scriptName = os.path.split((os.path.abspath(__file__)))
 scriptPath += "/"
 
-"""Set session files' paths"""
+# Set session files' paths
 configurationFile = scriptPath + "sessionFiles/configuration.json"
 previousSessionFile = scriptPath + "sessionFiles/fileList.json"
 
-"""Initialize some global variables"""
+# Initialize some global variables
 peerID = None
 serverIP = None
 serverPort = None
 
-"""
-Main data structure for the groups handling.
-It's a dictionary with the following structure:
-    key: groupName
-    value: another dictionary containing group information
-            ex. status: can be ACTIVE or RESTORABLE or OTHER
-            ex. active -> number of active users in the group
-            ex. role -> role of the peer in the group
-"""
+# Main data structure for the groups handling.
+# It's a dictionary with the following structure:
+#    key: groupName
+#    value: another dictionary containing group information
+#           ex. status: can be ACTIVE or RESTORABLE or OTHER
+#           ex. active -> number of active users in the group
+#           ex. role -> role of the peer in the group
+
 groupsList = dict()
 
-"""
-Data structure that keeps track of the synchronized files.
-It's a dictionary with the following structure:
-    key: groupName_filename in order to uniquely identify a file
-    value: a File object (see fileManagement for class File)
-"""
+# Data structure that keeps track of the synchronized files.
+# It's a dictionary with the following structure:
+#    key: groupName_filename in order to uniquely identify a file
+#    value: a File object (see fileManagement for class File)
+
 localFileList = dict()
 
 
@@ -86,7 +84,7 @@ def findServer():
 
     global serverIP, serverPort
     try:
-        file = open(configurationFile, 'r')
+        file = open(configurationFile, "r")
         try:
             # Configuration file wrote in JSON format
             # json.load return a dictionary
@@ -144,7 +142,7 @@ def closeSocket(s):
     :return: void
     """
 
-    message = str(peerID)+ " " + "BYE"
+    message = str(peerID) + " " + "BYE"
     try:
         transmission.mySend(s, message)
         # get the answer into an "ignore" variable
@@ -154,7 +152,6 @@ def closeSocket(s):
 
     # close the socket anyway
     s.close()
-
 
 
 def retrieveGroups():
@@ -170,90 +167,139 @@ def retrieveGroups():
         return
 
     try:
-        message = str(peerID)+ " " + "SEND GROUPS"
+        message = str(peerID) + " " + "SEND GROUPS"
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
+        closeSocket(s)
     except (socket.timeout, RuntimeError):
         closeSocket(s)
         return False
 
+    # set the local groups list equals to the retrieved one
     groupsList = eval(answer)
-    closeSocket(s)
 
     return True
 
 
 def restoreGroup(groupName):
+    """
+    Restore a group by sending a request to the server.
+    In case of success update my local groups list setting the group status to ACTIVE.
+    :param groupName: is the name of the group that I want to restore
+    :return: boolean
+    """
 
     s = createSocket(serverIP, serverPort)
     if s is None:
         return False
 
-    message = str(peerID)+ " " + "RESTORE Group: {}".format(groupName)
-    transmission.mySend(s, message)
-
-    data = transmission.myRecv(s)
-
-    closeSocket(s)
+    try:
+        message = str(peerID) + " " + "RESTORE Group: {}".format(groupName)
+        transmission.mySend(s, message)
+        data = transmission.myRecv(s)
+        closeSocket(s)
+    except (socket.timeout, RuntimeError):
+        closeSocket(s)
+        return False
 
     if data.split()[0] == "ERROR":
+        # server replied with an error message: group not restored
+        print('Received from the server :', data)
         return False
     else:
+        # group successfully restored: set group status to ACTIVE
         groupsList[groupName]["status"] = "ACTIVE"
         return True
 
 
 def restoreAll():
+    """
+    Restore all the groups with status equals to RESTORABLE.
+    :return: a string containing the names of all the restored groups.
+    """
 
     restoredGroups = ""
 
     for group in groupsList.values():
         if group["status"] == "RESTORABLE":
-                    if restoreGroup(group["name"]):
-                        restoredGroups += group["name"]
-                        restoredGroups += ", "
+            if restoreGroup(group["name"]):
+                # group successfully restored
+                restoredGroups += group["name"]
+                restoredGroups += ", "
 
-    #delete last comma and space (if any)
     l = len(restoredGroups)
+    # return the string removing last comma and space (if present)
     return restoredGroups[0:l - 2]
 
 
 def joinGroup(groupName, token):
-    s = createSocket(serverIP, serverPort)
+    """
+    Join a group by sending a request to the server.
+    :param groupName: is the name of the group that I want to join
+    :param token: is the access token (password)
+    :return: boolean
+    """
 
+    s = createSocket(serverIP, serverPort)
+    if s is None:
+        return False
+
+    # encrypt the token using the md5 algorithm
     encryptedToken = hashlib.md5(token.encode())
 
-    message = str(peerID)+ " " + "JOIN Group: {} Token: {}".format(groupName, encryptedToken.hexdigest())
-    transmission.mySend(s, message)
-
-    data = transmission.myRecv(s)
-
-    closeSocket(s)
+    try:
+        message = str(peerID) + " " + "JOIN Group: {} Token: {}".format(groupName, encryptedToken.hexdigest())
+        transmission.mySend(s, message)
+        data = transmission.myRecv(s)
+        closeSocket(s)
+    except (socket.timeout, RuntimeError):
+        closeSocket(s)
+        return False
 
     if data.split()[0] == "ERROR":
+        # server replied with an error message: group not joined
+        print('Received from the server :', data)
         return False
     else:
+        # group successfully joined: set group status to ACTIVE
         groupsList[groupName]["status"] = "ACTIVE"
         return True
 
 
 def createGroup(groupName, groupTokenRW, groupTokenRO):
-    s = createSocket(serverIP, serverPort)
+    """
+    Create a new group by sending a request to the server with all the necessary information
+    :param groupName: name of the group
+    :param groupTokenRW: token for Read&Write access
+    :param groupTokenRO: token for ReadOnly access
+    :return: boolean
+    """
 
+    s = createSocket(serverIP, serverPort)
+    if s is None:
+        return False
+
+    # encrypt the two tokens using the md5 algorithm
     encryptedTokenRW = hashlib.md5(groupTokenRW.encode())
     encryptedTokenRO = hashlib.md5(groupTokenRO.encode())
 
-    message = str(peerID)+ " " + "CREATE Group: {} TokenRW: {} TokenRO: {}".format(groupName,
-                                                                encryptedTokenRW.hexdigest(),
-                                                                encryptedTokenRO.hexdigest())
-    transmission.mySend(s, message)
+    try:
+        message = str(peerID) + " " + "CREATE Group: {} TokenRW: {} TokenRO: {}".format(groupName,
+                                                                                encryptedTokenRW.hexdigest(),
+                                                                                encryptedTokenRO.hexdigest())
+        transmission.mySend(s, message)
+        data = transmission.myRecv(s)
+        closeSocket(s)
+    except (socket.timeout, RuntimeError):
+        closeSocket(s)
+        return False
 
-    data = transmission.myRecv(s)
-
-    closeSocket(s)
     if data.split()[0] == "ERROR":
+        # server replied with an error message: group not created
+        print('Received from the server :', data)
         return False
     else:
+        # group successfully created: add it to my local groups list
         groupsList[groupName] = dict()
         groupsList[groupName]["name"] = groupName
         groupsList[groupName]["status"] = "ACTIVE"
@@ -264,53 +310,78 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
 
 
 def changeRole(groupName, targetPeerID, action):
-    """this function addresses the management of the master and the management of roles by the master"""
+    """
+    Change the role of a peer in a group (Master peers only)
+    :param groupName: is the name of the group on which the change will be applied
+    :param targetPeerID: is the peerID of the peer target of the change
+    :param action: can be ADD_MASTER, CHANGE_MASTER, TO_RW, TO_RO
+    :return: boolean
+    """
     s = createSocket(serverIP, serverPort)
-
-    print(action.upper())
-
-    message = str(peerID)+ " " + "ROLE {} {} GROUP {}".format(action.upper(), targetPeerID, groupName)
-    transmission.mySend(s, message)
-
-    data = transmission.myRecv(s)
-    print('Received from the server :', data)
-
-    closeSocket(s)
+    if s is None:
+        return False
+    try:
+        message = str(peerID) + " " + "ROLE {} {} GROUP {}".format(action.upper(), targetPeerID, groupName)
+        transmission.mySend(s, message)
+        data = transmission.myRecv(s)
+        closeSocket(s)
+    except (socket.timeout, RuntimeError):
+        closeSocket(s)
+        return False
 
     if data.split()[0] == "ERROR":
+        # server replied with an error message: role not changed
+        print('Received from the server :', data)
         return False
     else:
+        # server successfully changed role
         if action.upper() == "CHANGE_MASTER":
+            # set the peer itself (former master) to RW
             groupsList[groupName]["role"] = "RW"
         return True
 
 
 def retrievePeers(groupName, selectAll):
+    """
+    Retrieve a list containg all the peers of a group.
+    If selectAll = False retrieve only ACTIVE peers
+    :param groupName: name of the group
+    :param selectAll: boolean value
+    :return: list of peers
+    """
+
     s = createSocket(serverIP, serverPort)
+    if s is None:
+        return False
 
     if selectAll:
         tmp = "ALL"
     else:
         tmp = "ACTIVE"
 
-    message = str(peerID)+ " " + "PEERS {} {} ".format(groupName, tmp)
-    transmission.mySend(s, message)
+    try:
+        message = str(peerID) + " " + "PEERS {} {} ".format(groupName, tmp)
+        transmission.mySend(s, message)
+        data = transmission.myRecv(s)
+        closeSocket(s)
+    except (socket.timeout, RuntimeError):
+        closeSocket(s)
+        return False
 
-    data = transmission.myRecv(s)
     if data.split()[0] == "ERROR":
+        # server replied with an error message
         print('Received from the server :', data)
         peersList = None
     else:
         peersList = eval(data)
 
-    closeSocket(s)
-
     return peersList
 
 
 def updateLocalFileList():
-
     s = createSocket(serverIP, serverPort)
+    if s is None:
+        return False
 
     message = str(peerID) + " " + "GET_FILES"
     transmission.mySend(s, message)
@@ -391,9 +462,11 @@ def updateLocalFileList():
 
 def updateFile(file):
     s = createSocket(serverIP, serverPort)
+    if s is None:
+        return False
 
-    message = str(peerID)+ " " + "UPDATE_FILE {} {} {} {}".format(file.groupName, file.filename,
-                                               file.filesize, file.timestamp)
+    message = str(peerID) + " " + "UPDATE_FILE {} {} {} {}".format(file.groupName, file.filename,
+                                                                   file.filesize, file.timestamp)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -416,7 +489,10 @@ def addFile(filepath, groupName):
 
     s = createSocket(serverIP, serverPort)
 
-    message = str(peerID)+ " " + "ADD_FILE {} {} {} {}".format(groupName, filename, filesize, timestamp)
+    if s is None:
+        return False
+
+    message = str(peerID) + " " + "ADD_FILE {} {} {} {}".format(groupName, filename, filesize, timestamp)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -436,7 +512,10 @@ def addFile(filepath, groupName):
 def removeFile(filename, groupName):
     s = createSocket(serverIP, serverPort)
 
-    message = str(peerID)+ " " + "REMOVE_FILE {} {}".format(groupName, filename)
+    if s is None:
+        return False
+
+    message = str(peerID) + " " + "REMOVE_FILE {} {}".format(groupName, filename)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -444,6 +523,7 @@ def removeFile(filename, groupName):
     closeSocket(s)
 
     if data.split()[0] == "ERROR":
+        print('Received from the server :', data)
         return False
     else:
         """remove file from the personal list for the group"""
@@ -454,7 +534,10 @@ def removeFile(filename, groupName):
 def leaveGroup(groupName):
     s = createSocket(serverIP, serverPort)
 
-    message = str(peerID)+ " " + "LEAVE Group: {}".format(groupName)
+    if s is None:
+        return False
+
+    message = str(peerID) + " " + "LEAVE Group: {}".format(groupName)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -462,6 +545,7 @@ def leaveGroup(groupName):
     closeSocket(s)
 
     if data.split()[0] == "ERROR":
+        print('Received from the server :', data)
         return False
     else:
         groupsList[groupName]["status"] = "OTHER"
@@ -471,7 +555,10 @@ def leaveGroup(groupName):
 def disconnectGroup(groupName):
     s = createSocket(serverIP, serverPort)
 
-    message = str(peerID)+ " " + "DISCONNECT Group: {}".format(groupName)
+    if s is None:
+        return False
+
+    message = str(peerID) + " " + "DISCONNECT Group: {}".format(groupName)
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -479,6 +566,7 @@ def disconnectGroup(groupName):
     closeSocket(s)
 
     if data.split()[0] == "ERROR":
+        print('Received from the server :', data)
         return False
     else:
         groupsList[groupName]["status"] = "RESTORABLE"
@@ -487,8 +575,10 @@ def disconnectGroup(groupName):
 
 def disconnectPeer():
     s = createSocket(serverIP, serverPort)
+    if s is None:
+        return False
 
-    message = str(peerID)+ " " + "PEER DISCONNECT"
+    message = str(peerID) + " " + "PEER DISCONNECT"
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
@@ -496,6 +586,7 @@ def disconnectPeer():
     closeSocket(s)
 
     if data.split()[0] == "ERROR":
+        print('Received from the server :', data)
         return False
     else:
         fileManagement.saveFileStatus(previousSessionFile, localFileList)
@@ -503,7 +594,6 @@ def disconnectPeer():
 
 
 def startSync():
-
     global localFileList
     localFileList = fileManagement.getPreviousFiles(previousSessionFile)
     if localFileList is None:
@@ -519,8 +609,10 @@ def startSync():
     server.start()
 
     s = createSocket(serverIP, serverPort)
+    if s is None:
+        return False
 
-    message = str(peerID)+ " " + "HERE {} {}".format(myIP, myPortNumber)
+    message = str(peerID) + " " + "HERE {} {}".format(myIP, myPortNumber)
 
     transmission.mySend(s, message)
 
