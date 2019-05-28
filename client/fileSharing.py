@@ -281,6 +281,8 @@ def getChunksList(file, peerIP, peerPort):
     key = file.groupName + "_" + file.filename
 
     s = peerCore.createSocket(peerIP, peerPort)
+    if s is None:
+        return None
 
     message = "CHUNKS_LIST {} {}".format(key, file.timestamp)
     transmission.mySend(s, message)
@@ -300,6 +302,8 @@ def getChunksList(file, peerIP, peerPort):
 
 def getChunk(file, chunksList, peerIP, peerPort):
     s = peerCore.createSocket(peerIP, peerPort)
+    if s is None:
+        return
 
     for chunkID in chunksList:
 
@@ -316,7 +320,7 @@ def getChunk(file, chunksList, peerIP, peerPort):
         answer = transmission.myRecv(s)
         if answer.split(" ")[0] == "ERROR":
             peerCore.closeSocket(s)
-            return False
+            continue
 
         data = transmission.recvChunk(s, chunkSize)
         # print('Received from the peer :', data)
