@@ -286,7 +286,7 @@ def manageRequest(self, request, peerID):
         transmission.mySend(self.client_sock, answer)
 
     elif request.split()[0] == "HERE":
-        answer = reqHandlers.imHere(request, self, peers, peerID)
+        answer = reqHandlers.imHere(request, peers, peerID)
         transmission.mySend(self.client_sock, answer)
 
     elif request.split()[0] == "LEAVE":
