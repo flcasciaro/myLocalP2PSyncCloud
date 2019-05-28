@@ -367,6 +367,7 @@ def updateLocalFileList():
                                                      filepath=filepath,
                                                      filesize=file["filesize"],
                                                      timestamp=file["timestamp"],
+                                                     previousChunks=list(),
                                                      status="D")
 
     for file in localFileList.values():
