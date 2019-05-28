@@ -11,13 +11,15 @@ BIGGEST_SMALL_FILE_SIZE = 32 * 1048576      #   32 MB
 
 class File:
 
-    def __init__(self, groupName, filename, filepath, filesize, timestamp, status):
+    def __init__(self, groupName, filename, filepath, filesize, timestamp, previousChunks, status):
         self.groupName = groupName
         self.filename = filename
         self.filepath = filepath
         self.filesize = int(filesize)
         self.timestamp = int(timestamp)
+        self.previousChunks = previousChunks
         self.status = status
+
 
         """properties useful for the file-sharing"""
         self.chunksSize = 0
@@ -66,8 +68,11 @@ class File:
         self.missingChunks = list()
         self.availableChunks = list()
         for i in range(0, self.chunksNumber):
-            self.missingChunks.append(i)
-        self.progress = 0
+            if i in self.previousChunks:
+                self.availableChunks.append(i)
+            else:
+                self.missingChunks.append(i)
+        self.setProgress()
 
     def iHaveIt(self):
         """initialize all the properties in order to work as a seed for the file"""
@@ -112,6 +117,7 @@ def getPreviousFiles(previousSessionFile):
                                  fileListJson[fileKey]["filepath"],
                                  fileListJson[fileKey]["filesize"],
                                  fileListJson[fileKey]["timestamp"],
+                                 fileListJson[fileKey]["previousChunks"],
                                  status = "")
     del fileListJson
 
@@ -129,6 +135,7 @@ def saveFileStatus(previousSessionFile, fileList):
         fileListJson[fileKey]["filepath"] = fileList[fileKey].filepath
         fileListJson[fileKey]["filesize"] = fileList[fileKey].filesize
         fileListJson[fileKey]["timestamp"] = fileList[fileKey].timestamp
+        fileListJson[fileKey]["previousChunks"] = fileList[fileKey].previousChunks
 
     try:
         f = open(previousSessionFile, 'w')
