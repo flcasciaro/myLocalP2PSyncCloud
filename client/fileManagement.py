@@ -51,7 +51,9 @@ class File:
             print("File not found")
 
     def setChunksSize(self):
-        if self.filesize <= BIGGEST_SMALL_FILE_SIZE:
+        if self.filesize <= SMALL_CHUNK_SIZE:
+            self.chunksSize = self.filesize
+        elif self.filesize <= BIGGEST_SMALL_FILE_SIZE:
             self.chunksSize = SMALL_CHUNK_SIZE
         else:
             self.chunksSize = BIG_CHUNK_SIZE
@@ -90,7 +92,6 @@ def getFileStat(filepath):
     """This function returnes filesize and lastModifiedTime of a parameter filepath"""
     try:
         st = os.stat(filepath)
-        print("type:", type(st[stat.ST_MTIME]))
         return st[stat.ST_SIZE], st[stat.ST_MTIME]
     except OSError:
         return None, None
