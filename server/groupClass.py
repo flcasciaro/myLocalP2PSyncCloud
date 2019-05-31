@@ -75,9 +75,10 @@ class FileInGroup:
         self.filesize = filesize
         self.timestamp = int(timestamp)
 
-    def getFileInfo(self):
+    def getFileInfo(self, groupName):
         fileInfo = dict()
         fileInfo["filename"] = self.filename
+        fileInfo["groupName"] = groupName
         fileInfo["filesize"] = self.filesize
         fileInfo["timestamp"] = self.timestamp
         return fileInfo

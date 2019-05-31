@@ -269,7 +269,7 @@ def getFiles(groups, peerID):
         groupName = g.name
         if peerID in g.peersInGroup:
             for file in groups[groupName].filesInGroup.values():
-                fileList[groupName+"_"+file.filename]=file.getFileInfo()
+                fileList[groupName+"_"+file.filename]=file.getFileInfo(groupName)
     answer = str(fileList)
 
     return answer
