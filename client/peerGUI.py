@@ -206,7 +206,10 @@ class myP2PSyncCloud(QMainWindow):
             while not ok:
                 coordinates, ok = QInputDialog.getText(self, 'Server coordinates',
                                                        'Enter Server IP Address and Server Port\nUse the format: serverIP:ServerPort')
-
+                if not ok:
+                    nrTry += 1
+                    if nrTry == MAX_TRY:
+                        exit()
             if peerCore.setServerCoordinates(coordinates):
                 serverReachable = peerCore.serverIsReachable()
             else:
@@ -236,7 +239,10 @@ class myP2PSyncCloud(QMainWindow):
 
         while True:
             for i in range(0, 10):
-                time.sleep(1)
+                if self.stopRefresh:
+                    return
+                else:
+                    time.sleep(1)
             self.signals.refreshEmit()
 
     def refreshAll(self):
@@ -253,7 +259,11 @@ class myP2PSyncCloud(QMainWindow):
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
+            self.stopRefresh = True
             peerCore.disconnectPeer()
+            timeout = 5
+            msgBox = TimerMessageBox(timeout, self)
+            msgBox.exec_()
             event.accept()
         else:
             event.ignore()
@@ -267,6 +277,7 @@ class myP2PSyncCloud(QMainWindow):
         self.fileListLabel.hide()
         self.fileList.hide()
         self.selectFile.hide()
+        self.selectDir.hide()
         self.removeFile.hide()
         self.syncButton.hide()
         self.syncAllButton.hide()
@@ -389,12 +400,14 @@ class myP2PSyncCloud(QMainWindow):
 
         if peerCore.groupsList[self.groupName]["role"].upper() == "RW":
             self.selectFile.show()
+            self.selectDir.show()
             self.removeFile.show()
             self.syncButton.show()
             self.syncAllButton.show()
 
         if peerCore.groupsList[self.groupName]["role"].upper() == "MASTER":
             self.selectFile.show()
+            self.selectDir.show()
             self.removeFile.show()
             self.syncButton.show()
             self.syncAllButton.show()
@@ -544,22 +557,31 @@ class myP2PSyncCloud(QMainWindow):
             return
         length = len(directory.split("/"))
         dirName = directory.split("/")[length - 1]
+        filepaths = list()
         for root, dirs, files in os.walk(directory):
             for name in files:
-                filepath = os.path.join(root, name).replace("\\", "/")
-                peerCore.addFile(filepath, self.groupName, directory.replace("\\", "/"))
+                filepaths.append(os.path.join(root, name).replace("\\", "/"))
+        peerCore.addDir(filepaths, self.groupName, directory.replace("\\", "/"))
+
         self.loadFileManager()
         self.addLogMessage("Directory {} added to group {}".format(dirName, self.groupName))
 
     def removeFileHandler(self):
 
         if self.fileList.currentItem() is not None:
-            filename = self.fileList.currentItem().text(0)
-            if peerCore.removeFile(filename, self.groupName):
-                self.addLogMessage("File {} removed from group {}".format(filename, self.groupName))
-                self.loadFileManager()
+            if self.fileList.currentItem().text(1) != "":
+                filename = self.fileList.currentItem().text(0)
+                parent = self.fileList.currentItem().parent()
+                while parent is not None:
+                    filename = parent.text(0) + "/" + filename
+                    parent = parent.parent()
+                if peerCore.removeFile(filename, self.groupName):
+                    self.addLogMessage("File {} removed from group {}".format(filename, self.groupName))
+                    self.loadFileManager()
+                else:
+                    QMessageBox.about(self, "Error", "Cannot remove the selected file!")
             else:
-                QMessageBox.about(self, "Error", "Cannot remove the selected file!")
+                QMessageBox.about(self, "Error", "You cannot delete a directory")
         else:
             QMessageBox.about(self, "Error", "You must select a file from the list")
 
@@ -644,6 +666,29 @@ class myP2PSyncCloud(QMainWindow):
             self.actionsList.addItem(modMessage)
         self.actionsList.sortItems(order=Qt.DescendingOrder)
         QMessageBox.about(self, "Notification", message)
+
+class TimerMessageBox(QMessageBox):
+    def __init__(self, timeout=3, parent=None):
+        super(TimerMessageBox, self).__init__(parent)
+        self.setWindowTitle("Wait")
+        self.setMinimumHeight(40)
+        self.setMinimumWidth(70)
+        self.time_to_wait = timeout
+        self.setText("Saving session status...")
+        self.setStandardButtons(QMessageBox.NoButton)
+        self.timer = QTimer(self)
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self.changeContent)
+        self.timer.start()
+
+    def changeContent(self):
+        self.time_to_wait -= 1
+        if self.time_to_wait <= 0:
+            self.close()
+
+    def closeEvent(self, event):
+        self.timer.stop()
+        event.accept()
 
 
 if __name__ == '__main__':
