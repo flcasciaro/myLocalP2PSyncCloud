@@ -51,9 +51,7 @@ class File:
             print("File not found")
 
     def setChunksSize(self):
-        if self.filesize <= SMALL_CHUNK_SIZE:
-            self.chunksSize = self.filesize
-        elif self.filesize <= BIGGEST_SMALL_FILE_SIZE:
+        if self.filesize <= BIGGEST_SMALL_FILE_SIZE:
             self.chunksSize = SMALL_CHUNK_SIZE
         else:
             self.chunksSize = BIG_CHUNK_SIZE
