@@ -3,6 +3,7 @@
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import datetime
+import os
 import sys
 import time
 from threading import Thread
@@ -17,6 +18,8 @@ import peerCore
 firstTip = "Double click an active group in order to access the group file manager"
 secondTip = "Double click a not active group in order to show information about the group"
 statusLabel = "ROLE: {} \t PEERS (ACTIVE/TOTAL): {}/{}"
+MAX_TRY = 3
+
 
 class myP2PSyncCloud(QMainWindow):
 
@@ -69,6 +72,7 @@ class myP2PSyncCloud(QMainWindow):
         self.fileList = QTreeWidget()
         self.addRemoveLayout = QHBoxLayout()
         self.selectFile = QPushButton("ADD FILE")
+        self.selectDir = QPushButton("ADD DIR")
         self.removeFile = QPushButton("REMOVE FILE")
         self.syncLayout = QHBoxLayout()
         self.syncButton = QPushButton("SYNC SELECTED FILE")
@@ -111,9 +115,9 @@ class myP2PSyncCloud(QMainWindow):
         self.groupManagerLayout.addSpacing(25)
 
         self.groupManagerLayout.addWidget(self.groupsLabel, alignment=Qt.AlignCenter)
-        self.groupsList.setHeaderLabels(["GroupName","Active/Total Peers","Role","Status"])
+        self.groupsList.setHeaderLabels(["GroupName", "Active/Total Peers", "Role", "Status"])
         self.groupsList.setAlternatingRowColors(True)
-        self.groupsList.setMinimumWidth(self.width*3/10)
+        self.groupsList.setMinimumWidth(self.width * 3 / 10)
         self.groupsList.setMinimumHeight(150)
         self.groupManagerLayout.addWidget(self.groupsList)
         self.groupManagerLayout.addSpacing(15)
@@ -151,6 +155,7 @@ class myP2PSyncCloud(QMainWindow):
         self.fileManagerLayout.addWidget(self.fileList)
         self.fileManagerLayout.addSpacing(20)
         self.addRemoveLayout.addWidget(self.selectFile)
+        self.addRemoveLayout.addWidget(self.selectDir)
         self.addRemoveLayout.addWidget(self.removeFile)
         self.fileManagerLayout.addLayout(self.addRemoveLayout)
         self.syncLayout.addWidget(self.syncButton)
@@ -178,6 +183,7 @@ class myP2PSyncCloud(QMainWindow):
         self.syncButton.clicked.connect(self.syncButtonHandler)
         self.syncAllButton.clicked.connect(self.syncAllButtonHandler)
         self.selectFile.clicked.connect(self.addFileHandler)
+        self.selectDir.clicked.connect(self.addDirHandler)
         self.removeFile.clicked.connect(self.removeFileHandler)
         self.changeRole.clicked.connect(self.changeRoleHandler)
         self.leaveButton.clicked.connect(self.leaveGroupHandler)
@@ -193,6 +199,7 @@ class myP2PSyncCloud(QMainWindow):
         self.loadInititalFileManager()
         self.show()
 
+        nrTry = 0
         while not serverReachable:
             """Create dialog box in order to set server coordinates"""
             ok = False
@@ -200,8 +207,13 @@ class myP2PSyncCloud(QMainWindow):
                 coordinates, ok = QInputDialog.getText(self, 'Server coordinates',
                                                        'Enter Server IP Address and Server Port\nUse the format: serverIP:ServerPort')
 
-            peerCore.setServerCoordinates(coordinates)
-            serverReachable = peerCore.serverIsReachable()
+            if peerCore.setServerCoordinates(coordinates):
+                serverReachable = peerCore.serverIsReachable()
+            else:
+                nrTry += 1
+                if nrTry == MAX_TRY:
+                    exit()
+                continue
             if not serverReachable:
                 QMessageBox.about(self, "Alert", "Server not reachable or coordinates not valid")
 
@@ -223,10 +235,9 @@ class myP2PSyncCloud(QMainWindow):
     def refreshHandler(self):
 
         while True:
-            for i in range(0,10):
+            for i in range(0, 10):
                 time.sleep(1)
             self.signals.refreshEmit()
-
 
     def refreshAll(self):
         print("REFRESHING ALL")
@@ -236,7 +247,6 @@ class myP2PSyncCloud(QMainWindow):
         if not self.fileList.isHidden():
             self.loadFileManager()
 
-        
     def closeEvent(self, event):
 
         reply = QMessageBox.question(self, 'Message', "Are you sure you want to quit?",
@@ -278,16 +288,16 @@ class myP2PSyncCloud(QMainWindow):
         for group in peerCore.groupsList.values():
             if group["status"] == "ACTIVE":
                 itemsActive.append(QTreeWidgetItem([group["name"],
-                                        str(group["active"]) + "/" + str(group["total"]),
-                                        group["role"], "ACTIVE"]))
+                                                    str(group["active"]) + "/" + str(group["total"]),
+                                                    group["role"], "ACTIVE"]))
             elif group["status"] == "RESTORABLE":
                 itemsRestorable.append(QTreeWidgetItem([group["name"],
-                                        str(group["active"]) + "/" + str(group["total"]),
-                                        group["role"], "RESTORABLE"]))
+                                                        str(group["active"]) + "/" + str(group["total"]),
+                                                        group["role"], "RESTORABLE"]))
             else:
                 itemsOther.append(QTreeWidgetItem([group["name"],
-                                        str(group["active"]) + "/" + str(group["total"]),
-                                        "/", "NOT JOINED"]))
+                                                   str(group["active"]) + "/" + str(group["total"]),
+                                                   "/", "NOT JOINED"]))
 
         for item in itemsActive:
             self.groupsList.addTopLevelItem(item)
@@ -295,8 +305,6 @@ class myP2PSyncCloud(QMainWindow):
             self.groupsList.addTopLevelItem(item)
         for item in itemsOther:
             self.groupsList.addTopLevelItem(item)
-
-
 
     def restoreAllHandler(self):
 
@@ -321,7 +329,6 @@ class myP2PSyncCloud(QMainWindow):
             else:
                 QMessageBox.about(self, "Alert", "You don't have joined groups that can be restored")
 
-
     def createGroupHandler(self):
 
         groupName = self.createGroupName.text()
@@ -330,7 +337,7 @@ class myP2PSyncCloud(QMainWindow):
         groupTokenRO = self.createTokenRO.text()
         groupTokenROConfirm = self.createTokenROConfirm.text()
 
-        if len(groupName) == 0 or  len(groupName.split()) != 1:
+        if len(groupName) == 0 or len(groupName.split()) != 1:
             QMessageBox.about(self, "Error", "Invalid group name!")
         elif len(groupTokenRW) == 0 or len(groupTokenRO) == 0 \
                 or groupTokenRW != groupTokenRWConfirm or groupTokenRO != groupTokenROConfirm:
@@ -345,7 +352,6 @@ class myP2PSyncCloud(QMainWindow):
             else:
                 QMessageBox.about(self, "Error", "Group creation failed!")
 
-
     def resetCreateHandler(self):
 
         self.createGroupName.setText("Enter single word GroupName")
@@ -353,7 +359,6 @@ class myP2PSyncCloud(QMainWindow):
         self.createTokenRWConfirm.clear()
         self.createTokenRO.clear()
         self.createTokenROConfirm.clear()
-
 
     def groupDoubleClicked(self, item):
         self.groupName = item.text(0)
@@ -371,10 +376,10 @@ class myP2PSyncCloud(QMainWindow):
 
         self.fileManagerLabel1.setText("FILE MANAGER GROUP {}".format(self.groupName))
         self.fileManagerLabel2.setText(statusLabel.format(
-                                        peerCore.groupsList[self.groupName]["role"],
-                                        peerCore.groupsList[self.groupName]["active"],
-                                        peerCore.groupsList[self.groupName]["total"]))
-        
+            peerCore.groupsList[self.groupName]["role"],
+            peerCore.groupsList[self.groupName]["active"],
+            peerCore.groupsList[self.groupName]["total"]))
+
         self.fileListLabel.show()
 
         "Fills the files list"
@@ -402,7 +407,6 @@ class myP2PSyncCloud(QMainWindow):
         self.leaveButton.show()
         self.disconnectButton.show()
 
-
     def fillPeersList(self):
 
         peersList = peerCore.retrievePeers(self.groupName, selectAll=True)
@@ -416,7 +420,6 @@ class myP2PSyncCloud(QMainWindow):
         else:
             QMessageBox.about(self, "Error", "Error while retrieving list of peers!")
 
-
     def fillFileList(self):
 
         self.fileList.clear()
@@ -428,10 +431,62 @@ class myP2PSyncCloud(QMainWindow):
                     syncStatus = "Not synchronized"
                 elif file.status == "D":
                     syncStatus = "Synchronizing: " + str(file.progress) + "%"
-                item = QTreeWidgetItem([file.filename, file.filepath, str(file.filesize),
-                                        file.getLastModifiedTime(), syncStatus])
-                self.fileList.addTopLevelItem(item)
 
+                if len(file.filename.split("/")) == 1:
+                    item = QTreeWidgetItem([file.filename, file.filepath, str(file.filesize),
+                                            file.getLastModifiedTime(), syncStatus])
+                    self.fileList.addTopLevelItem(item)
+                else:
+                    # file belongs to a directory
+                    # for each directory on the name:
+                    #       find the directory in the list (if not exist add it)
+                    parent = None
+                    dirTree = file.filename.split("/")
+                    length = len(dirTree) - 1
+
+                    for index in range(0, length):
+
+                        node = dirTree[index]
+
+                        item = QTreeWidgetItem([node, "", "", "", ""])
+
+                        items = self.fileList.findItems(node, Qt.MatchExactly | Qt.MatchRecursive, 0)
+                        if len(item) == 0:
+                            # directory is not listed yet: add it
+                            if parent is not None:
+                                parent.addChild(item)
+                            else:
+                                self.fileList.addTopLevelItem(item)
+                            parent = item
+                        else:
+                            # one or more items match: check if parents are right
+
+                            found = False
+
+                            for i in items:
+                                j = index - 1
+                                match = True
+                                dirToCheck = i.parent()
+                                while j >= 0:
+                                    if dirTree[j] != dirToCheck.text(0):
+                                        match = False
+                                        break
+                                if match:
+                                    found = True
+                                    parent = i
+                                    break
+
+                            if not found:
+                                if parent is not None:
+                                    parent.addChild(item)
+                                else:
+                                    self.fileList.addTopLevelItem(item)
+                                parent = item
+
+                    # add file to the directory item
+                    item = QTreeWidgetItem([file.filename, file.filepath, str(file.filesize),
+                                            file.getLastModifiedTime(), syncStatus])
+                    parent.addChild(item)
 
     def restoreHandler(self):
 
@@ -461,14 +516,37 @@ class myP2PSyncCloud(QMainWindow):
     def addFileHandler(self):
 
         dlg = QFileDialog()
-        file = dlg.getOpenFileName(self, 'Add file to the group', 'c:\\')
+        file = dlg.getOpenFileName(self, "Add file to the group", "/")
+        if file[0] == "":
+            # no file picked
+            return
         length = len(file[0].split("/"))
-        filename = file[0].split("/")[length-1]
+        filename = file[0].split("/")[length - 1]
+
+        # convert to a "UNIX-like" path
+        file[0] = file[0].replace("\\", "/")
+
         if peerCore.addFile(file[0], self.groupName):
             self.loadFileManager()
             self.addLogMessage("File {} added to group {}".format(filename, self.groupName))
         else:
             QMessageBox.about(self, "Error", "Cannot add the selected file!")
+
+    def addDirHandler(self):
+
+        dlg = QFileDialog()
+        directory = dlg.getExistingDirectory(self, "Add directory to the group", "/")
+        if directory == "":
+            # no directory picked
+            return
+        length = len(directory.split("/"))
+        dirName = directory.split("/")[length - 1]
+        for root, dirs, files in os.walk(directory):
+            for name in files:
+                filepath = os.path.join(root, name).replace("\\", "/")
+                peerCore.addFile(filepath, self.groupName, directory.replace("\\", "/"))
+        self.loadFileManager()
+        self.addLogMessage("Directory {} added to group {}".format(dirName, self.groupName))
 
     def removeFileHandler(self):
 
@@ -481,7 +559,6 @@ class myP2PSyncCloud(QMainWindow):
                 QMessageBox.about(self, "Error", "Cannot remove the selected file!")
         else:
             QMessageBox.about(self, "Error", "You must select a file from the list")
-
 
     def changeRoleHandler(self):
 
@@ -498,14 +575,13 @@ class myP2PSyncCloud(QMainWindow):
                 if peerCore.changeRole(self.groupName, targetPeerID, action.upper()):
                     self.addLogMessage("Role changed successfully in group {}".format(self.groupName))
                     self.loadFileManager()
-                    #if the targetPeer is active send it a message in order to make it able to refresh the window
+                    # if the targetPeer is active send it a message in order to make it able to refresh the window
                     if targetPeerStatus == "ACTIVE":
                         pass
                 else:
                     QMessageBox.about(self, "Error", "Something went wrong!")
         else:
             QMessageBox.about(self, "Error", "You must select a peer from the list")
-
 
     def leaveGroupHandler(self):
 
@@ -520,8 +596,6 @@ class myP2PSyncCloud(QMainWindow):
                 self.loadInititalFileManager()
             else:
                 QMessageBox.about(self, "Error", "Something went wrong!")
-
-
 
     def disconnectGroupHandler(self):
 
@@ -549,16 +623,13 @@ class myP2PSyncCloud(QMainWindow):
         else:
             QMessageBox.about(self, "Error", "You must select a file from the list")
 
-
     def syncAllButtonHandler(self):
         if self.fileList.count() == 0:
             QMessageBox.about(self, "Error", "There aren't files in the group!")
         else:
-            for i in range(0,self.fileList.count()):
+            for i in range(0, self.fileList.count()):
                 filename = self.fileList.item(i).text().split()[0]
-                peerCore.updateFile(filename,self.groupName)
-
-
+                peerCore.updateFile(filename, self.groupName)
 
     def addLogMessage(self, message):
         modMessage = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " >>> " + message
@@ -570,7 +641,6 @@ class myP2PSyncCloud(QMainWindow):
             self.actionsList.addItem(modMessage)
         self.actionsList.sortItems(order=Qt.DescendingOrder)
         QMessageBox.about(self, "Notification", message)
-
 
 
 if __name__ == '__main__':
