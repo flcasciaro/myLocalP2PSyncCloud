@@ -111,6 +111,8 @@ def sendChunk(message, thread, localFileList):
 def downloadFile(file):
     print("Starting synchronization of", file.filename)
 
+    key = file.groupName + "_" + file.filename
+
     file.syncLock.acquire()
 
     file.initDownload()
@@ -119,6 +121,15 @@ def downloadFile(file):
 
     # ask for the missing peers while the missing list is not empty
     while len(file.missingChunks) > 0 and unavailable < MAX_UNAVAILABLE:
+
+        peerCore.syncThreadsLock.acquire()
+        if peerCore.syncThreads[key]["stop"]:
+            peerCore.syncThreadsLock.release()
+            unavailable = MAX_UNAVAILABLE
+            break
+        else:
+            peerCore.syncThreadsLock.release()
+
 
         # retrieve the list of active peers for the file
         activePeers = peerCore.retrievePeers(file.groupName, selectAll=False)
@@ -262,6 +273,10 @@ def downloadFile(file):
         # save download current state in order to restart it at next sync
         file.previousChunks = file.availableChunks
         file.syncLock.release()
+        print("Synchronization of {} failed".format(file.filename))
+        peerCore.syncThreadsLock.acquire()
+        del peerCore.syncThreads[key]
+        peerCore.syncThreadsLock.release()
         return
 
     if mergeChunks(file):
@@ -272,7 +287,12 @@ def downloadFile(file):
         # if mergeChunks fails save the download current state
         file.previousChunks = file.availableChunks
 
+    peerCore.syncThreadsLock.acquire()
+    del peerCore.syncThreads[key]
+    peerCore.syncThreadsLock.release()
+
     file.syncLock.release()
+
 
 
 def getChunksList(file, peerIP, peerPort):
