@@ -433,7 +433,8 @@ class myP2PSyncCloud(QMainWindow):
                     syncStatus = "Synchronizing: " + str(file.progress) + "%"
 
                 if len(file.filename.split("/")) == 1:
-                    item = QTreeWidgetItem([file.filename, file.filepath, str(file.filesize),
+                    filename = file.filename.split("/")[-1]
+                    item = QTreeWidgetItem([filename, file.filepath, str(file.filesize),
                                             file.getLastModifiedTime(), syncStatus])
                     self.fileList.addTopLevelItem(item)
                 else:
@@ -451,12 +452,13 @@ class myP2PSyncCloud(QMainWindow):
                         item = QTreeWidgetItem([node, "", "", "", ""])
 
                         items = self.fileList.findItems(node, Qt.MatchExactly | Qt.MatchRecursive, 0)
-                        if len(item) == 0:
+                        if len(items) == 0:
                             # directory is not listed yet: add it
                             if parent is not None:
                                 parent.addChild(item)
                             else:
                                 self.fileList.addTopLevelItem(item)
+                            # item.setExpanded(True)
                             parent = item
                         else:
                             # one or more items match: check if parents are right
@@ -484,7 +486,8 @@ class myP2PSyncCloud(QMainWindow):
                                 parent = item
 
                     # add file to the directory item
-                    item = QTreeWidgetItem([file.filename, file.filepath, str(file.filesize),
+                    filename = file.filename.split("/")[-1]
+                    item = QTreeWidgetItem([filename, file.filepath, str(file.filesize),
                                             file.getLastModifiedTime(), syncStatus])
                     parent.addChild(item)
 
