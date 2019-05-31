@@ -109,8 +109,12 @@ def setServerCoordinates(coordinates):
     """
 
     global serverIP, serverPort
-    serverIP = coordinates.split(":")[0]
-    serverPort = coordinates.split(":")[1]
+    try:
+        serverIP = coordinates.split(":")[0]
+        serverPort = coordinates.split(":")[1]
+        return True
+    except IndexError:
+        return False
 
 
 def createSocket(ipAddress, port):
@@ -369,7 +373,7 @@ def retrievePeers(groupName, selectAll):
         return False
 
     if data.split()[0] == "ERROR":
-        # server replied with an error message
+        # server replied with an error message: return None
         print('Received from the server :', data)
         peersList = None
     else:
@@ -480,10 +484,17 @@ def updateFile(file):
         return True
 
 
-def addFile(filepath, groupName):
-    filePathFields = filepath.split('/')
-    """select just the effective filename, discard the path"""
-    filename = filePathFields[len(filePathFields) - 1]
+def addFile(filepath, groupName, dirName = ""):
+
+    if dirName == "":
+        filePathFields = filepath.split('/')
+        """select just the effective filename, discard the path"""
+        filename = filePathFields[len(filePathFields) - 1]
+
+    else:
+        path1, __ = os.path.split(dirName)
+
+        filename = filepath.replace(path1, "")[1:]
 
     filesize, timestamp = fileManagement.getFileStat(filepath)
 
@@ -505,7 +516,7 @@ def addFile(filepath, groupName):
         """add file to the personal list of files of the peer"""
         localFileList[groupName + "_" + filename] = fileManagement.File(groupName, filename,
                                                                         filepath, filesize,
-                                                                        timestamp, "S")
+                                                                        timestamp, list(), "S")
         return True
 
 
@@ -616,7 +627,8 @@ def startSync():
 
     transmission.mySend(s, message)
 
-    data = transmission.myRecv(s)
+    # get reply into an "ignore" variable
+    __ = transmission.myRecv(s)
 
     closeSocket(s)
 
