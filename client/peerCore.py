@@ -7,8 +7,9 @@ import json
 import os
 import select
 import socket
+import time
 import uuid
-from threading import Thread
+from threading import Thread, Lock
 
 import fileManagement
 import fileSharing
@@ -26,6 +27,14 @@ previousSessionFile = scriptPath + "sessionFiles/fileList.json"
 peerID = None
 serverIP = None
 serverPort = None
+
+# Data structure that keep tracks of synchronization threads
+# key : groupName_filename
+# values: dict()    ->      groupName
+#                           stop
+syncThreads = dict()
+syncThreadsLock = Lock()
+MAX_SYNC_THREAD = 5
 
 # Main data structure for the groups handling.
 # It's a dictionary with the following structure:
@@ -418,16 +427,18 @@ def updateLocalFileList():
                 """try to lock the file in order to update local stats
                 if it's not possible to acquire the lock (acquire return false)
                 there is a synchronization process already running"""
-                myFile.updateFileStat()
-                if myFile.timestamp == file["timestamp"]:
-                    myFile.status = "S"
-                    if myFile.availableChunks is None:
-                        myFile.iHaveIt()
-                elif myFile.timestamp < file["timestamp"]:
-                    myFile.timestamp = file["timestamp"]
-                    myFile.status = "D"
-                elif myFile.timestamp > file["timestamp"]:
-                    myFile.status = "U"
+                if myFile.status != "D":
+                    # check if my version is still the last one
+                    myFile.updateFileStat()
+                    if myFile.timestamp == file["timestamp"]:
+                        myFile.status = "S"
+                        if myFile.availableChunks is None:
+                            myFile.iHaveIt()
+                    elif myFile.timestamp < file["timestamp"]:
+                        myFile.timestamp = file["timestamp"]
+                        myFile.status = "D"
+                    elif myFile.timestamp > file["timestamp"]:
+                        myFile.status = "U"
                 myFile.syncLock.release()
 
         else:
@@ -442,8 +453,8 @@ def updateLocalFileList():
                                                      filepath=filepath,
                                                      filesize=file["filesize"],
                                                      timestamp=file["timestamp"],
-                                                     previousChunks=list(),
-                                                     status="D")
+                                                     status="D",
+                                                     previousChunks=list())
 
     for file in localFileList.values():
 
@@ -457,10 +468,16 @@ def updateLocalFileList():
                     file.status = "S"
             """
             # Automatically sync file
-            if file.status == "D":
+            syncThreadsLock.acquire()
+            if file.status == "D" and len(syncThreads) < MAX_SYNC_THREAD:
                 syncThread = Thread(target=fileSharing.downloadFile, args=(file,))
                 syncThread.daemon = True
+                key = file.groupName + "_" + file.filename
+                syncThreads[key] = dict()
+                syncThreads[key]["groupName"] = file.groupName
+                syncThreads[key]["stop"] = False
                 syncThread.start()
+            syncThreadsLock.release()
             file.syncLock.release()
 
 
@@ -484,17 +501,12 @@ def updateFile(file):
         return True
 
 
-def addFile(filepath, groupName, dirName = ""):
+def addFile(filepath, groupName):
 
-    if dirName == "":
-        filePathFields = filepath.split('/')
-        """select just the effective filename, discard the path"""
-        filename = filePathFields[len(filePathFields) - 1]
 
-    else:
-        path1, __ = os.path.split(dirName)
-
-        filename = filepath.replace(path1, "")[1:]
+    filePathFields = filepath.split('/')
+    """select just the effective filename, discard the path"""
+    filename = filePathFields[len(filePathFields) - 1]
 
     filesize, timestamp = fileManagement.getFileStat(filepath)
 
@@ -516,8 +528,37 @@ def addFile(filepath, groupName, dirName = ""):
         """add file to the personal list of files of the peer"""
         localFileList[groupName + "_" + filename] = fileManagement.File(groupName, filename,
                                                                         filepath, filesize,
-                                                                        timestamp, list(), "S")
+                                                                        timestamp, "S", list())
         return True
+
+def addDir(filepaths, groupName, dirName):
+
+
+    path1, __ = os.path.split(dirName)
+
+    s = createSocket(serverIP, serverPort)
+    if s is None:
+        return
+
+    for filepath in filepaths:
+        filename = filepath.replace(path1, "")[1:]
+
+        filesize, timestamp = fileManagement.getFileStat(filepath)
+
+        message = str(peerID) + " " + "ADD_FILE {} {} {} {}".format(groupName, filename, filesize, timestamp)
+        transmission.mySend(s, message)
+
+        data = transmission.myRecv(s)
+
+        if data.split()[0] == "ERROR":
+            break
+        else:
+            """add file to the personal list of files of the peer"""
+            localFileList[groupName + "_" + filename] = fileManagement.File(groupName, filename,
+                                                                            filepath, filesize,
+                                                                            timestamp, "S", list())
+
+    closeSocket(s)
 
 
 def removeFile(filename, groupName):
@@ -538,11 +579,19 @@ def removeFile(filename, groupName):
         return False
     else:
         """remove file from the personal list for the group"""
-        del localFileList[groupName + "_" + filename]
+        key = groupName + "_" + filename
+        del localFileList[key]
+
+        if key in syncThreads:
+            syncThreadsLock.acquire()
+            syncThreads[key]["stop"] = True
+            syncThreadsLock.release()
+
         return True
 
 
 def leaveGroup(groupName):
+
     s = createSocket(serverIP, serverPort)
 
     if s is None:
@@ -559,8 +608,15 @@ def leaveGroup(groupName):
         print('Received from the server :', data)
         return False
     else:
+        syncThreadsLock.acquire()
+        for thread in syncThreads.values():
+            if thread["groupName"] == groupName:
+                thread["stop"] = True
+        syncThreadsLock.release()
         groupsList[groupName]["status"] = "OTHER"
         return True
+
+
 
 
 def disconnectGroup(groupName):
@@ -580,7 +636,11 @@ def disconnectGroup(groupName):
         print('Received from the server :', data)
         return False
     else:
-        groupsList[groupName]["status"] = "RESTORABLE"
+        syncThreadsLock.acquire()
+        for thread in syncThreads.values():
+            if thread["groupName"] == groupName:
+                thread["stop"] = True
+        syncThreadsLock.release()
         return True
 
 
@@ -600,6 +660,11 @@ def disconnectPeer():
         print('Received from the server :', data)
         return False
     else:
+        syncThreadsLock.acquire()
+        for thread in syncThreads.values():
+            thread["stop"] = True
+        syncThreadsLock.release()
+        time.sleep(1)
         fileManagement.saveFileStatus(previousSessionFile, localFileList)
         return True
 
