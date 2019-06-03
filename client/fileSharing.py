@@ -194,9 +194,6 @@ def downloadFile(file):
         else:
             numThreads = len(activePeers)
 
-        print(chunksCounter)
-        print(chunks_peers)
-
         busyPeers = list()
         threadInfo = list()
 
@@ -252,6 +249,7 @@ def downloadFile(file):
                 else:
                     # the thread associate to the peer has reached MAX_CHUNKS_PER_THREAD size list
                     r = (r + 1) % len(chunks_peers[chunk])
+                    i += 1
 
         threads = list()
 
