@@ -169,6 +169,7 @@ def downloadFile(file):
             """
 
             chunksList = getChunksList(file, peer["peerIP"], peer["peerPort"])
+            print(chunksList)
 
             if chunksList is not None:
 
@@ -313,7 +314,14 @@ def downloadFile(file):
 
 
 def getChunksList(file, peerIP, peerPort):
-    chunksList = list()
+    """
+
+
+    :param file:
+    :param peerIP:
+    :param peerPort:
+    :return:
+    """
 
     key = file.groupName + "_" + file.filename
 
@@ -330,8 +338,7 @@ def getChunksList(file, peerIP, peerPort):
     peerCore.closeSocket(s)
 
     if str(data).split()[0] == "ERROR":
-        # return empty list
-        return chunksList
+        return None
     else:
         chunksList = eval(str(data))
         return chunksList
