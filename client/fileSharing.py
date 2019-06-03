@@ -263,7 +263,7 @@ def downloadFile(file):
             t.start()
 
         # wait for threads termination
-        for i in range(0, numThreads):
+        for i in range(0, busyThreads):
             threads[i].join()
 
         file.setProgress()
