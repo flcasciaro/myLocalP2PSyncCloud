@@ -510,8 +510,8 @@ class myP2PSyncCloud(QMainWindow):
                                      .format(self.groupName),
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
-            """call the restoreGroup function passing the self.groupName as parameter"""
-            if peerCore.restoreGroup(self.groupName, delete=True):
+            # call the restoreGroup function passing the self.groupName as parameter
+            if peerCore.restoreGroup(self.groupName):
                 self.fillGroupManager()
                 self.loadFileManager()
                 self.addLogMessage("Group {} restored".format(self.groupName))
