@@ -216,7 +216,7 @@ def downloadFile(file):
             # try to insert in one of the previous peer chunks list
             for i in range(0, busyThreads):
                 if threadInfo[i]["peer"] is None:
-                    continue
+                    break
                 if threadInfo[i]["peer"] in chunks_peers[chunk]:
                     if len(threadInfo[i]["chunksList"]) < MAX_CHUNKS_PER_THREAD:
                         threadInfo[i]["chunksList"].append(chunk)
@@ -261,6 +261,8 @@ def downloadFile(file):
             t = Thread(target=getChunk, args=(file, threadChunksList, peerIP, peerPort))
             threads.append(t)
             t.start()
+
+        print(busyThreads)
 
         # wait for threads termination
         for i in range(0, busyThreads):
@@ -321,6 +323,9 @@ def getChunksList(file, peerIP, peerPort):
 
 
 def getChunk(file, chunksList, peerIP, peerPort):
+
+    print(chunksList)
+
     s = peerCore.createSocket(peerIP, peerPort)
     if s is None:
         return
