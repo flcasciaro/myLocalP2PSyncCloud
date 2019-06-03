@@ -355,11 +355,9 @@ def getChunk(file, chunksList, peerIP, peerPort):
         message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        print(answer)
         if answer.split(" ")[0] == "ERROR":
             peerCore.closeSocket(s)
             continue
-        time.sleep(1)
         data = transmission.recvChunk(s, chunkSize)
         #print('Received from the peer :', data)
 
