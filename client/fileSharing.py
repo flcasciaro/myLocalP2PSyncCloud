@@ -169,7 +169,6 @@ def downloadFile(file):
             """
 
             chunksList = getChunksList(file, peer["peerIP"], peer["peerPort"])
-            print(chunksList)
 
             if chunksList is not None:
 
@@ -333,7 +332,7 @@ def getChunksList(file, peerIP, peerPort):
     transmission.mySend(s, message)
 
     data = transmission.myRecv(s)
-    # print('Received from the peer :', data)
+    print('Received from the peer :', data)
 
     peerCore.closeSocket(s)
 
