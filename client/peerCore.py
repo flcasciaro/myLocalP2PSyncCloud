@@ -298,8 +298,8 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
 
     try:
         message = str(peerID) + " " + "CREATE Group: {} TokenRW: {} TokenRO: {}".format(groupName,
-                                                                                encryptedTokenRW.hexdigest(),
-                                                                                encryptedTokenRO.hexdigest())
+                                                                                        encryptedTokenRW.hexdigest(),
+                                                                                        encryptedTokenRO.hexdigest())
         transmission.mySend(s, message)
         data = transmission.myRecv(s)
         closeSocket(s)
@@ -365,7 +365,7 @@ def retrievePeers(groupName, selectAll):
 
     s = createSocket(serverIP, serverPort)
     if s is None:
-        return False
+        return None
 
     if selectAll:
         tmp = "ALL"
@@ -379,7 +379,7 @@ def retrievePeers(groupName, selectAll):
         closeSocket(s)
     except (socket.timeout, RuntimeError):
         closeSocket(s)
-        return False
+        return None
 
     if data.split()[0] == "ERROR":
         # server replied with an error message: return None
@@ -392,23 +392,33 @@ def retrievePeers(groupName, selectAll):
 
 
 def updateLocalFileList():
+    """
+    Retrieve from the server the file list of all the active groups.
+    Delete from the local list removed file (if any).
+    For each file: compare local version with the server one,
+                    start synchronization thread for not updated files.
+    :return: void
+    """
+
     s = createSocket(serverIP, serverPort)
     if s is None:
-        return False
+        return
 
-    message = str(peerID) + " " + "GET_FILES"
-    transmission.mySend(s, message)
-
-    data = transmission.myRecv(s)
-
-    closeSocket(s)
+    try:
+        message = str(peerID) + " " + "GET_FILES"
+        transmission.mySend(s, message)
+        data = transmission.myRecv(s)
+        closeSocket(s)
+    except (socket.timeout, RuntimeError):
+        closeSocket(s)
+        return
 
     if data.split()[0] == "ERROR":
         return
     else:
         updatedFileList = eval(data)
 
-    """delete files removed from groups (if any)"""
+    # delete files removed from groups (if any)
     delete = dict()
     for key in localFileList:
         if key not in updatedFileList:
@@ -416,23 +426,25 @@ def updateLocalFileList():
     for key in delete:
         del localFileList[key]
 
-    """push updated files (if any)
-    download not-sync files (if any)"""
+    # compare local timestamp with server timestamp and mark file status
+    # as D (need to be synchronized), S (already synchronized) or
+    # U (peer must push its version to the server)
     for key, file in updatedFileList.items():
 
         if key in localFileList:
             myFile = localFileList[key]
             if myFile.syncLock.acquire(blocking=False):
 
-                """try to lock the file in order to update local stats
-                if it's not possible to acquire the lock (acquire return false)
-                there is a synchronization process already running"""
+                # try to lock the file in order to update local stats
+                # if it's not possible to acquire the lock (acquire return false)
+                # there is a synchronization process already running
                 if myFile.status != "D":
-                    # check if my version is still the last one
+                    # check if local version is still the last one
                     myFile.updateFileStat()
                     if myFile.timestamp == file["timestamp"]:
                         myFile.status = "S"
                         if myFile.availableChunks is None:
+                            # now the peer is able to upload chunks
                             myFile.iHaveIt()
                     elif myFile.timestamp < file["timestamp"]:
                         myFile.timestamp = file["timestamp"]
@@ -442,7 +454,7 @@ def updateLocalFileList():
                 myFile.syncLock.release()
 
         else:
-            """new file discovered"""
+            # new file discovered: add it to my local list
             path = scriptPath + "filesSync/" + file["groupName"]
             if not os.path.exists(path):
                 print("creating the path: " + path)
@@ -470,6 +482,8 @@ def updateLocalFileList():
             # Automatically sync file
             syncThreadsLock.acquire()
             if file.status == "D" and len(syncThreads) < MAX_SYNC_THREAD:
+                # start a new synchronization thread if there are less
+                # than MAX_SYNC_THREAD already active threads
                 syncThread = Thread(target=fileSharing.downloadFile, args=(file,))
                 syncThread.daemon = True
                 key = file.groupName + "_" + file.filename
@@ -482,28 +496,34 @@ def updateLocalFileList():
 
 
 def updateFile(file):
+    """
+    Update the version file in the server.
+    :param file: file object that have to be updated into the server
+    :return: boolean
+    """
     s = createSocket(serverIP, serverPort)
     if s is None:
         return False
 
-    message = str(peerID) + " " + "UPDATE_FILE {} {} {} {}".format(file.groupName, file.filename,
+    try:
+        message = str(peerID) + " " + "UPDATE_FILE {} {} {} {}".format(file.groupName, file.filename,
                                                                    file.filesize, file.timestamp)
-    transmission.mySend(s, message)
-
-    data = transmission.myRecv(s)
-
-    closeSocket(s)
+        transmission.mySend(s, message)
+        data = transmission.myRecv(s)
+        closeSocket(s)
+    except (socket.timeout, RuntimeError):
+        closeSocket(s)
+        return False
 
     if data.split()[0] == "ERROR":
         return False
     else:
+        # make the peer ready to upload chunks
         file.iHaveIt()
         return True
 
 
 def addFile(filepath, groupName):
-
-
     filePathFields = filepath.split('/')
     """select just the effective filename, discard the path"""
     filename = filePathFields[len(filePathFields) - 1]
@@ -531,9 +551,8 @@ def addFile(filepath, groupName):
                                                                         timestamp, "S", list())
         return True
 
+
 def addDir(filepaths, groupName, dirName):
-
-
     path1, __ = os.path.split(dirName)
 
     s = createSocket(serverIP, serverPort)
@@ -591,7 +610,6 @@ def removeFile(filename, groupName):
 
 
 def leaveGroup(groupName):
-
     s = createSocket(serverIP, serverPort)
 
     if s is None:
@@ -615,8 +633,6 @@ def leaveGroup(groupName):
         syncThreadsLock.release()
         groupsList[groupName]["status"] = "OTHER"
         return True
-
-
 
 
 def disconnectGroup(groupName):
