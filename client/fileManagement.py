@@ -5,7 +5,7 @@ import os
 import stat
 from threading import Lock
 
-SMALL_CHUNK_SIZE = 16 * 1024                #   16 KB
+SMALL_CHUNK_SIZE = 32 * 1024                #   32 KB
 BIG_CHUNK_SIZE = 2 * 1048576                #    2 MB
 BIGGEST_SMALL_FILE_SIZE = 32 * 1048576      #   32 MB
 
