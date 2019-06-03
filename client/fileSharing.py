@@ -108,6 +108,7 @@ def sendChunk(message, thread, localFileList):
         transmission.mySend(thread.client_sock, answer)
 
 
+
 def downloadFile(file):
     print("Starting synchronization of", file.filename)
 
@@ -352,7 +353,6 @@ def getChunk(file, chunksList, peerIP, peerPort):
 
         message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
         transmission.mySend(s, message)
-
         answer = transmission.myRecv(s)
         if answer.split(" ")[0] == "ERROR":
             peerCore.closeSocket(s)
@@ -382,6 +382,9 @@ def getChunk(file, chunksList, peerIP, peerPort):
             file.availableChunks.append(chunkID)
 
             file.fileLock.release()
+
+            time.sleep(1)
+
         except FileNotFoundError:
             file.fileLock.release()
 
