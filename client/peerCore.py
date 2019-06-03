@@ -441,6 +441,12 @@ def updateLocalFileList():
                 if myFile.status != "D":
                     # check if local version is still the last one
                     myFile.updateFileStat()
+
+                    print(myFile.timestamp)
+                    print(type(myFile.timestamp))
+                    print(file["filestamp"])
+                    print(type(file["filestamp"]))
+
                     if myFile.timestamp == file["timestamp"]:
                         myFile.status = "S"
                         if myFile.availableChunks is None:
