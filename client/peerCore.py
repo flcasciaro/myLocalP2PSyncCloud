@@ -680,7 +680,7 @@ def disconnectPeer():
         for thread in syncThreads.values():
             thread["stop"] = True
         syncThreadsLock.release()
-        time.sleep(5)
+        time.sleep(3)
         fileManagement.saveFileStatus(previousSessionFile, localFileList)
         return True
 
