@@ -555,6 +555,7 @@ def addFile(filepath, groupName):
         localFileList[groupName + "_" + filename] = fileManagement.File(groupName, filename,
                                                                         filepath, filesize,
                                                                         timestamp, "S", list())
+        localFileList[groupName + "_" + filename].iHaveIt()
         return True
 
 
@@ -582,6 +583,7 @@ def addDir(filepaths, groupName, dirName):
             localFileList[groupName + "_" + filename] = fileManagement.File(groupName, filename,
                                                                             filepath, filesize,
                                                                             timestamp, "S", list())
+            localFileList[groupName + "_" + filename].iHaveIt()
 
     closeSocket(s)
 
