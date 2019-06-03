@@ -14,7 +14,7 @@ import transmission
 MAX_UNAVAILABLE = 5
 
 MAX_THREADS = 5
-MAX_CHUNKS_PER_THREAD = 1
+MAX_CHUNKS_PER_THREAD = 20
 
 
 def sendChunksList(message, thread, localFileList):
@@ -339,11 +339,11 @@ def getChunk(file, chunksList, peerIP, peerPort):
 
     print(chunksList)
 
-    s = peerCore.createSocket(peerIP, peerPort)
-    if s is None:
-        return
-
     for chunkID in chunksList:
+
+        s = peerCore.createSocket(peerIP, peerPort)
+        if s is None:
+            return
 
         key = file.groupName + "_" + file.filename
 
@@ -361,7 +361,9 @@ def getChunk(file, chunksList, peerIP, peerPort):
             continue
         time.sleep(1)
         data = transmission.recvChunk(s, chunkSize)
-        print('Received from the peer :', data)
+        #print('Received from the peer :', data)
+
+        peerCore.closeSocket(s)
 
         tmpDirPath = getTmpDirPath(file)
 
@@ -388,7 +390,6 @@ def getChunk(file, chunksList, peerIP, peerPort):
         except FileNotFoundError:
             file.fileLock.release()
 
-    peerCore.closeSocket(s)
 
 
 
