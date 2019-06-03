@@ -299,6 +299,7 @@ def downloadFile(file):
     if mergeChunks(file):
         # if mergeChunks succeeds clean the download current state
         file.status = "S"
+        file.iHaveIt()
         file.previousChunks = list()
     else:
         # if mergeChunks fails save the download current state
