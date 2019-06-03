@@ -285,7 +285,6 @@ def downloadFile(file):
     if unavailable == MAX_UNAVAILABLE:
         # save download current state in order to restart it at next sync
         file.previousChunks = file.availableChunks
-        print("previous: ", file.previousChunks)
         file.syncLock.release()
         print("Synchronization of {} failed".format(file.filename))
         peerCore.syncThreadsLock.acquire()
@@ -354,12 +353,13 @@ def getChunk(file, chunksList, peerIP, peerPort):
         message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
+        print(answer)
         if answer.split(" ")[0] == "ERROR":
             peerCore.closeSocket(s)
             continue
 
         data = transmission.recvChunk(s, chunkSize)
-        # print('Received from the peer :', data)
+        print('Received from the peer :', data)
 
         tmpDirPath = getTmpDirPath(file)
 
@@ -394,7 +394,11 @@ def getChunk(file, chunksList, peerIP, peerPort):
 
 
 def mergeChunks(file):
-    print("*********Merging chunks*************")
+    """
+
+    :param file:
+    :return:
+    """
 
     newFilePath = getNewFilePath(file)
     tmpDirPath = getTmpDirPath(file)
@@ -422,16 +426,20 @@ def mergeChunks(file):
     # force timestamp to syncBeginningTime timestamp
     os.utime(file.filepath, (file.timestamp, file.timestamp))
 
+    print("Chunks of {} successfully merged".format(file.filename))
+
 
 def getNewFilePath(file):
     """
-        build the newFilePath
+    Build the newFilePath
            ex.
            file.filepath = home/prova.txt
            filenameWE = prova
            fileExtension = splitFilename[1] = txt
            dirPath = home/
            newFilePath = home/prova_new.txt
+    :param file: File object
+    :return: string representing the path
     """
 
     # split filepath into directorypath and filename
@@ -453,14 +461,16 @@ def getNewFilePath(file):
 
 def getTmpDirPath(file):
     """
-            build the new temporary paths
+    Build the new temporary directory paths
                ex.
                file.filepath = home/prova.txt
                filenameWE = prova
                fileExtension = splitFilename[1] = txt
                dirPath = home/
                tmpDirPath = home/prova_new_tmp/
-        """
+    :param file: File object
+    :return: string representing the path
+    """
 
     # split filepath into directorypath and filename
     (dirPath, filename) = os.path.split(file.filepath)
