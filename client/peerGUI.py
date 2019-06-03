@@ -27,7 +27,7 @@ class myP2PSyncCloud(QMainWindow):
         super().__init__()
         """Window properties definition"""
         self.title = "myP2PSyncCloud"
-        self.left = 300
+        self.left = 200
         self.top = 40
         self.width = 1000
         self.height = 500
