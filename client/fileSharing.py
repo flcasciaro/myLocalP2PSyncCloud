@@ -67,6 +67,7 @@ def sendChunk(message, thread, localFileList):
 
                         answer = "OK - I'M SENDING IT"
                         transmission.mySend(thread.client_sock, answer)
+                        time.sleep(1)
                         transmission.sendChunk(thread.client_sock, dataChunk, chunkSize)
 
                         f.close()
@@ -89,6 +90,7 @@ def sendChunk(message, thread, localFileList):
 
                         answer = "OK - I'M SENDING IT"
                         transmission.mySend(thread.client_sock, answer)
+                        time.sleep(1)
                         transmission.sendChunk(thread.client_sock, dataChunk, chunkSize)
 
                         f.close()
@@ -357,7 +359,7 @@ def getChunk(file, chunksList, peerIP, peerPort):
         if answer.split(" ")[0] == "ERROR":
             peerCore.closeSocket(s)
             continue
-
+        time.sleep(1)
         data = transmission.recvChunk(s, chunkSize)
         print('Received from the peer :', data)
 
@@ -382,8 +384,6 @@ def getChunk(file, chunksList, peerIP, peerPort):
             file.availableChunks.append(chunkID)
 
             file.fileLock.release()
-
-            time.sleep(1)
 
         except FileNotFoundError:
             file.fileLock.release()
