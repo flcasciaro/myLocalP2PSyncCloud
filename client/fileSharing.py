@@ -236,7 +236,7 @@ def downloadFile(file):
             r = randint(0, len(chunks_peers[chunk]) - 1)
             i = 0
 
-            while i < (len(chunks_peers[chunk]) - 1):
+            while i <= (len(chunks_peers[chunk]) - 1):
                 selectedPeer = chunks_peers[chunk][r]
                 if selectedPeer not in busyPeers:
                     threadInfo[busyThreads]["peer"] = selectedPeer
