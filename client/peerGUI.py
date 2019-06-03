@@ -540,9 +540,9 @@ class myP2PSyncCloud(QMainWindow):
         filename = file[0].split("/")[length - 1]
 
         # convert to a "UNIX-like" path
-        file[0] = file[0].replace("\\", "/")
+        filepath = file[0].replace("\\", "/")
 
-        if peerCore.addFile(file[0], self.groupName):
+        if peerCore.addFile(filepath, self.groupName):
             self.loadFileManager()
             self.addLogMessage("File {} added to group {}".format(filename, self.groupName))
         else:
