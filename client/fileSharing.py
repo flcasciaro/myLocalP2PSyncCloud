@@ -13,8 +13,8 @@ import transmission
 
 MAX_UNAVAILABLE = 5
 
-MAX_THREADS = 1
-MAX_CHUNKS_PER_THREAD = 1
+MAX_THREADS =
+MAX_CHUNKS_PER_THREAD = 2
 
 
 def sendChunksList(message, thread, localFileList):
@@ -284,6 +284,7 @@ def downloadFile(file):
     if unavailable == MAX_UNAVAILABLE:
         # save download current state in order to restart it at next sync
         file.previousChunks = file.availableChunks
+        print("previous: ", file.previousChunks)
         file.syncLock.release()
         print("Synchronization of {} failed".format(file.filename))
         peerCore.syncThreadsLock.acquire()
