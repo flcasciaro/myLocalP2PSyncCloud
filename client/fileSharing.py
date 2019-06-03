@@ -120,6 +120,8 @@ def downloadFile(file):
 
     unavailable = 0
 
+    threshold = 0.5
+
     # ask for the missing peers while the missing list is not empty
     while len(file.missingChunks) > 0 and unavailable < MAX_UNAVAILABLE:
 
@@ -168,12 +170,12 @@ def downloadFile(file):
 
             chunksList = getChunksList(file, peer["peerIP"], peer["peerPort"])
 
-            # clean the list from already available chunks
-            for chunk in file.availableChunks:
-                if chunk in chunksList:
-                    chunksList.remove(chunk)
-
             if chunksList is not None:
+
+                # clean the list from already available chunks
+                for chunk in file.availableChunks:
+                    if chunk in chunksList:
+                        chunksList.remove(chunk)
 
                 for chunk in chunksList:
                     if chunk in chunksCounter:
@@ -195,6 +197,9 @@ def downloadFile(file):
         else:
             numThreads = len(activePeers)
 
+        print(chunksCounter)
+        print(chunks_peers)
+
         busyPeers = list()
         threadInfo = list()
 
@@ -206,7 +211,6 @@ def downloadFile(file):
             threadInfo[i]["peer"] = None
             threadInfo[i]["chunksList"] = list()
 
-        threshold = 0.5
 
         for chunk in sorted(chunksCounter, key=chunksCounter.get):
 
@@ -469,7 +473,7 @@ def getTmpDirPath(file):
     :return: string representing the path
     """
 
-    # split filepath into directorypath and filename
+    # split filepath into directoryPath and filename
     (dirPath, filename) = os.path.split(file.filepath)
     # remove extension from the filename (if any)
     # WoE stands for Without Extension
