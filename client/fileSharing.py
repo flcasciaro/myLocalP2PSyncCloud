@@ -13,7 +13,7 @@ import transmission
 
 MAX_UNAVAILABLE = 5
 
-MAX_THREADS =
+MAX_THREADS = 1
 MAX_CHUNKS_PER_THREAD = 2
 
 
