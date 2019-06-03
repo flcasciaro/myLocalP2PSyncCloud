@@ -13,8 +13,8 @@ import transmission
 
 MAX_UNAVAILABLE = 5
 
-MAX_THREADS = 5
-MAX_CHUNKS_PER_THREAD = 20
+MAX_THREADS = 1
+MAX_CHUNKS_PER_THREAD = 1
 
 
 def sendChunksList(message, thread, localFileList):
