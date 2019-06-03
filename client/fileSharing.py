@@ -201,7 +201,7 @@ def downloadFile(file):
         chunksReady = 0
 
         for i in range(0, numThreads):
-            threadInfo[i] = dict()
+            threadInfo.append(dict())
             threadInfo[i]["peer"] = None
             threadInfo[i]["chunksList"] = list()
 
