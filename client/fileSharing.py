@@ -13,7 +13,7 @@ import transmission
 
 MAX_UNAVAILABLE = 5
 
-MAX_THREADS = 5
+MAX_THREADS = 1
 MAX_CHUNKS_PER_THREAD = 20
 
 
@@ -262,8 +262,6 @@ def downloadFile(file):
             t = Thread(target=getChunk, args=(file, threadChunksList, peerIP, peerPort))
             threads.append(t)
             t.start()
-
-        print(busyThreads)
 
         # wait for threads termination
         for i in range(0, busyThreads):
