@@ -89,7 +89,7 @@ def sendChunk(message, thread, localFileList):
 
                         answer = "OK - I'M SENDING IT"
                         transmission.mySend(thread.client_sock, answer)
-                        transmission.sendChunk(thread.client_sock, dataChunk)
+                        transmission.sendChunk(thread.client_sock, dataChunk, chunkSize)
 
                         f.close()
                         file.fileLock.release()
