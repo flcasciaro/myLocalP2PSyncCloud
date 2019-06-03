@@ -5,7 +5,7 @@
 import os
 import shutil
 import time
-from random import randint
+from random import randint, random
 from threading import Thread
 
 import peerCore
@@ -13,7 +13,7 @@ import transmission
 
 MAX_UNAVAILABLE = 5
 
-MAX_THREADS = 1
+MAX_THREADS = 5
 MAX_CHUNKS_PER_THREAD = 20
 
 
@@ -89,7 +89,7 @@ def sendChunk(message, thread, localFileList):
 
                         answer = "OK - I'M SENDING IT"
                         transmission.mySend(thread.client_sock, answer)
-                        transmission.mySend(thread.client_sock, dataChunk)
+                        transmission.sendChunk(thread.client_sock, dataChunk)
 
                         f.close()
                         file.fileLock.release()
@@ -205,7 +205,16 @@ def downloadFile(file):
             threadInfo[i]["peer"] = None
             threadInfo[i]["chunksList"] = list()
 
+        threshold = 0.5
+
         for chunk in sorted(chunksCounter, key=chunksCounter.get):
+
+            #generate a value between 0 and 1
+            p = random()
+
+            if p > threshold:
+                # randomly discard this chunk
+                continue
 
             if chunksReady == (numThreads * MAX_CHUNKS_PER_THREAD):
                 # all the chunk lists have been filled completely
@@ -266,6 +275,8 @@ def downloadFile(file):
         # wait for threads termination
         for i in range(0, busyThreads):
             threads[i].join()
+
+        threshold += 0.1
 
         file.setProgress()
 
