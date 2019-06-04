@@ -437,7 +437,7 @@ def updateLocalFileList():
         if key in localFileList:
             myFile = localFileList[key]
             if myFile.syncLock.acquire(blocking=False):
-
+                print("here")
                 # try to lock the file in order to update local stats
                 # if it's not possible to acquire the lock (acquire return false)
                 # there is a synchronization process already running

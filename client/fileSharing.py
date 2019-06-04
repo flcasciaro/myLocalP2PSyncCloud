@@ -466,6 +466,7 @@ def mergeChunks(file, tmpDirPath):
     st = os.stat(file.filepath)
     print(st[stat.ST_MTIME])
     print(file.timestamp)
+    time.sleep(30)
 
     print("Chunks of {} successfully merged".format(file.filename))
     return True
