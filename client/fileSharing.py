@@ -310,11 +310,11 @@ def downloadFile(file):
     if mergeChunks(file, tmpDirPath):
         # if mergeChunks succeeds clean the download current state
         file.status = "S"
-        "before ihaveit"
+        print("before ihaveit")
         st = os.stat(file.filepath)
         print(st[stat.ST_MTIME])
         file.iHaveIt()
-        "after ihaveit"
+        print("after ihaveit")
         st = os.stat(file.filepath)
         print(st[stat.ST_MTIME])
         file.previousChunks = list()
