@@ -311,6 +311,8 @@ def downloadFile(file):
         # if mergeChunks succeeds clean the download current state
         file.status = "S"
         file.iHaveIt()
+        st = os.stat(file.filepath)
+        print(st[stat.ST_MTIME])
         file.previousChunks = list()
     else:
         # if mergeChunks fails save the download current state
@@ -458,15 +460,7 @@ def mergeChunks(file, tmpDirPath):
     shutil.rmtree(tmpDirPath)
 
     # force timestamp to syncBeginningTime timestamp
-    print("in merge")
-    print(file.timestamp)
-    st = os.stat(file.filepath)
-    print(st[stat.ST_MTIME])
     os.utime(file.filepath, (file.timestamp, file.timestamp))
-    st = os.stat(file.filepath)
-    print(st[stat.ST_MTIME])
-    print(file.timestamp)
-    time.sleep(30)
 
     print("Chunks of {} successfully merged".format(file.filename))
     return True
