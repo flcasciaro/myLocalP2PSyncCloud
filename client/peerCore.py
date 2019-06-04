@@ -442,21 +442,19 @@ def updateLocalFileList():
                     # check if local version is still the last one
                     myFile.updateFileStat()
 
-                    print(myFile.timestamp)
-                    print(type(myFile.timestamp))
-                    print(file["timestamp"])
-                    print(type(file["timestamp"]))
-
                     if myFile.timestamp == file["timestamp"]:
                         myFile.status = "S"
                         if myFile.availableChunks is None:
                             # now the peer is able to upload chunks
                             myFile.iHaveIt()
+
                     elif myFile.timestamp < file["timestamp"]:
                         myFile.timestamp = file["timestamp"]
                         myFile.status = "D"
+
                     elif myFile.timestamp > file["timestamp"]:
                         myFile.status = "U"
+
                 myFile.syncLock.release()
 
         else:
