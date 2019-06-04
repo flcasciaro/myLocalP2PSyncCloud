@@ -452,6 +452,8 @@ def updateLocalFileList():
 
                     elif myFile.timestamp < file["timestamp"]:
                         myFile.timestamp = file["timestamp"]
+                        myFile.filesize = file["filesize"]
+                        myFile.previousChunks = list()
                         myFile.status = "D"
 
                     elif myFile.timestamp > file["timestamp"]:
