@@ -369,7 +369,7 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
     :return:
     """
 
-    print(chunksList)
+    #print(chunksList)
 
     s = peerCore.createSocket(peerIP, peerPort)
     if s is None:
