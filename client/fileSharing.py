@@ -25,9 +25,13 @@ def sendChunksList(message, thread):
 
     if key in peerCore.localFileList:
         if peerCore.localFileList[key].timestamp == timestamp:
-
-            answer = str(peerCore.localFileList[key].availableChunks)
-
+            if peerCore.localFileList[key].availableChunks is not None:
+                if len(peerCore.localFileList[key].availableChunks) != 0:
+                    answer = str(peerCore.localFileList[key].availableChunks)
+                else:
+                    answer = "ERROR - EMPTY LIST"
+            else:
+                answer = "ERROR - NONE LIST"
         else:
             answer = "ERROR - DIFFERENT VERSION"
     else:
@@ -337,7 +341,6 @@ def getChunksList(file, peerIP, peerPort):
         message = "CHUNKS_LIST {} {}".format(key, file.timestamp)
         transmission.mySend(s, message)
         data = transmission.myRecv(s)
-        # print('Received from the peer :', data)
         peerCore.closeSocket(s)
     except (socket.timeout, RuntimeError):
         print("Error while getting chunks list")
@@ -345,6 +348,7 @@ def getChunksList(file, peerIP, peerPort):
         return None
 
     if str(data).split()[0] == "ERROR":
+        print('Received from the peer :', data)
         return None
     else:
         chunksList = eval(str(data))
