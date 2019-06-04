@@ -458,6 +458,7 @@ def mergeChunks(file, tmpDirPath):
 
     # force timestamp to syncBeginningTime timestamp
     import stat
+
     st = os.stat(file.filepath)
     print(st[stat.ST_MTIME])
     os.utime(file.filepath, (file.timestamp, file.timestamp))
