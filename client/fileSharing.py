@@ -459,12 +459,13 @@ def mergeChunks(file, tmpDirPath):
 
     # force timestamp to syncBeginningTime timestamp
 
-
+    print(file.timestamp)
     st = os.stat(file.filepath)
     print(st[stat.ST_MTIME])
     os.utime(file.filepath, (file.timestamp, file.timestamp))
     st = os.stat(file.filepath)
     print(st[stat.ST_MTIME])
+    print(file.timestamp)
 
     print("Chunks of {} successfully merged".format(file.filename))
     return True
