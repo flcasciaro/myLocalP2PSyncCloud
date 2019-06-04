@@ -456,7 +456,11 @@ def mergeChunks(file, tmpDirPath):
     shutil.rmtree(tmpDirPath)
 
     # force timestamp to syncBeginningTime timestamp
+    st = os.stat(file.filepath)
+    print(st[os.stat.ST_MTIME])
     os.utime(file.filepath, (file.timestamp, file.timestamp))
+    st = os.stat(file.filepath)
+    print(st[os.stat.ST_MTIME])
 
     print("Chunks of {} successfully merged".format(file.filename))
     return True
