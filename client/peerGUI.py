@@ -87,6 +87,7 @@ class myP2PSyncCloud(QMainWindow):
         self.disconnectButton = QPushButton("DISCONNECT")
 
         self.signals = mySignals.mySig()
+        self.server = None
         self.groupName = ""
         self.refreshThread = Thread(target=self.refreshHandler, args=())
         self.stopRefresh = False
@@ -227,7 +228,8 @@ class myP2PSyncCloud(QMainWindow):
 
         self.restoreAllHandler()
 
-        if not peerCore.startSync():
+        self.server = peerCore.startSync()
+        if self.server is None:
             exit(-1)
 
         peerCore.updateLocalFileList()
@@ -246,7 +248,8 @@ class myP2PSyncCloud(QMainWindow):
             self.signals.refreshEmit()
 
     def refreshAll(self):
-        print("REFRESHING ALL")
+
+        # print("REFRESHING ALL")
         peerCore.retrieveGroups()
         self.fillGroupManager()
         peerCore.updateLocalFileList()
@@ -259,11 +262,13 @@ class myP2PSyncCloud(QMainWindow):
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
-            self.stopRefresh = True
             timeout = 5
             msgBox = TimerMessageBox(timeout, self)
             msgBox.exec_()
+            self.stopRefresh = True
+            self.server.stopServer()
             peerCore.disconnectPeer()
+            time.sleep(1)
             event.accept()
         else:
             event.ignore()
@@ -584,6 +589,25 @@ class myP2PSyncCloud(QMainWindow):
                 QMessageBox.about(self, "Error", "You cannot delete a directory")
         else:
             QMessageBox.about(self, "Error", "You must select a file from the list")
+
+    def removeDirHandler(self):
+
+        if self.fileList.currentItem() is not None:
+            if self.fileList.currentItem().text(1) == "":
+                filename = self.fileList.currentItem().text(0)
+                parent = self.fileList.currentItem().parent()
+                while parent is not None:
+                    filename = parent.text(0) + "/" + filename
+                    parent = parent.parent()
+                if peerCore.removeFile(filename, self.groupName):
+                    self.addLogMessage("File {} removed from group {}".format(filename, self.groupName))
+                    self.loadFileManager()
+                else:
+                    QMessageBox.about(self, "Error", "Cannot remove the selected file!")
+            else:
+                QMessageBox.about(self, "Error", "You've selected a file instead of a directory")
+        else:
+            QMessageBox.about(self, "Error", "You must select a dir from the list")
 
     def changeRoleHandler(self):
 
