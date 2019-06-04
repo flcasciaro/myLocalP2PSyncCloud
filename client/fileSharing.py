@@ -224,11 +224,12 @@ def downloadFile(file):
 
         for chunk in sorted(chunksCounter, key=chunksCounter.get):
 
-            # generate a value between 0 and 1
-            p = random()
-
-            if p > threshold:
-                # randomly discard this chunk
+            # if the number of missing chunks plus the number of already assigned chunks
+            # is smaller of half the total number of chunks:
+            #       generate a value between 0 and 1 and compare with threshold
+            #       if the random value is bigger discard the current chunk
+            if len(file.missingChunks) + chunksReady > file.chunksNumber / 2 and random() > threshold:
+                # discard this chunk
                 continue
 
             if chunksReady == (numThreads * MAX_CHUNKS_PER_THREAD):
@@ -456,11 +457,12 @@ def mergeChunks(file, tmpDirPath):
     shutil.rmtree(tmpDirPath)
 
     # force timestamp to syncBeginningTime timestamp
+    import stat
     st = os.stat(file.filepath)
-    print(st[os.stat.ST_MTIME])
+    print(st[stat.ST_MTIME])
     os.utime(file.filepath, (file.timestamp, file.timestamp))
     st = os.stat(file.filepath)
-    print(st[os.stat.ST_MTIME])
+    print(st[stat.ST_MTIME])
 
     print("Chunks of {} successfully merged".format(file.filename))
     return True
