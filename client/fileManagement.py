@@ -40,15 +40,11 @@ class File:
 
 
     def updateFileStat(self):
-        print("in update")
-        print(self.timestamp)
 
         try:
             st = os.stat(self.filepath)
-
             self.filesize = st[stat.ST_SIZE]
             self.timestamp = st[stat.ST_MTIME]
-            print(self.timestamp)
         except OSError:
             print("File not found")
 
@@ -92,6 +88,7 @@ class File:
         self.setChunksSize()
         self.chunksNumber = math.ceil(self.filesize / self.chunksSize)
         self.lastChunkSize = self.filesize % self.chunksSize
+        self.previousChunks = list()
         self.missingChunks = list()
         self.availableChunks = list()
         for i in range(0, self.chunksNumber):
