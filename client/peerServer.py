@@ -68,7 +68,7 @@ class SocketServerThread(Thread):
         self.__stop = False
 
     def run(self):
-        print("[Thr {}] SocketServerThread starting with peer {}".format(self.number, self.client_addr))
+        # print("[Thr {}] SocketServerThread starting with peer {}".format(self.number, self.client_addr))
 
         while not self.__stop:
             if self.client_sock:
@@ -102,13 +102,13 @@ class SocketServerThread(Thread):
     def close(self):
         """ Close connection with the client socket. """
         if self.client_sock:
-            print('[Thr {}] Closing connection with {}'.format(self.number, self.client_addr))
+            # print('[Thr {}] Closing connection with {}'.format(self.number, self.client_addr))
             self.client_sock.close()
 
 
 def manageRequest(self, message):
     """Serves the client request"""
-    print('[Thr {}] Received {}'.format(self.number, message))
+    # print('[Thr {}] Received {}'.format(self.number, message))
 
     if message.split()[0] == "CHUNKS_LIST":
         fileSharing.sendChunksList(message, self)
