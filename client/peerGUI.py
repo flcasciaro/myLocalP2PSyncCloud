@@ -444,14 +444,14 @@ class myP2PSyncCloud(QMainWindow):
         for file in peerCore.localFileList.values():
             if file.groupName == self.groupName:
 
-                if file.filesize >= 1024:
-                    filesize = str(file.filesize / 1024) + " KB"
-                elif file.filesize >= 1048576:
-                    filesize = str(file.filesize / 1048576) + " MB"
-                elif file.filesize >= 1024 * 1048576:
-                    filesize = str(file.filesize / (1024 * 1048576)) + " GB"
-                else:
+                if file.filesize < 1024:
                     filesize = str(file.filesize) + " B"
+                elif file.filesize < 1048576:
+                    filesize = str(int(file.filesize / 1024)) + " KB"
+                elif file.filesize < 1024 * 1048576:
+                    filesize = str(int(file.filesize / 1048576)) + " MB"
+                else:
+                    filesize = str(file.filesize / (1024 * 1048576)) + " GB"
 
                 if file.status == "S":
                     syncStatus = "Synchronized"
