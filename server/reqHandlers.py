@@ -268,7 +268,7 @@ def getFiles(groups, peerID):
     for g in groups.values():
         groupName = g.name
         if peerID in g.peersInGroup:
-            if g.peersInGroup[peerID].status == "ACTIVE":
+            if g.peersInGroup[peerID].active:
                 for file in groups[groupName].filesInGroup.values():
                     fileList[groupName+"_"+file.filename]=file.getFileInfo(groupName)
     answer = str(fileList)
