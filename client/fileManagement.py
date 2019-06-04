@@ -5,7 +5,7 @@ import os
 import stat
 from threading import Lock
 
-SMALL_CHUNK_SIZE = 32 * 1024                #   32 KB
+SMALL_CHUNK_SIZE = 256 * 1024               #  256 KB
 BIG_CHUNK_SIZE = 2 * 1048576                #    2 MB
 BIGGEST_SMALL_FILE_SIZE = 32 * 1048576      #   32 MB
 
@@ -19,8 +19,6 @@ class File:
         self.timestamp = int(timestamp)
         self.status = status
         self.previousChunks = previousChunks
-
-
 
         """properties useful for the file-sharing"""
         self.chunksSize = 0
