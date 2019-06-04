@@ -40,12 +40,15 @@ class File:
 
 
     def updateFileStat(self):
+        print("in update")
+        print(self.timestamp)
+
         try:
             st = os.stat(self.filepath)
 
             self.filesize = st[stat.ST_SIZE]
             self.timestamp = st[stat.ST_MTIME]
-
+            print(self.timestamp)
         except OSError:
             print("File not found")
 

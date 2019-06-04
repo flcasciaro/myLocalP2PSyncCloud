@@ -458,7 +458,7 @@ def mergeChunks(file, tmpDirPath):
     shutil.rmtree(tmpDirPath)
 
     # force timestamp to syncBeginningTime timestamp
-
+    print("in merge")
     print(file.timestamp)
     st = os.stat(file.filepath)
     print(st[stat.ST_MTIME])
