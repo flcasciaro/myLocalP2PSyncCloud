@@ -4,6 +4,7 @@
 
 import os
 import shutil
+import socket
 import time
 from random import randint, random
 from threading import Thread
@@ -13,7 +14,7 @@ import transmission
 
 MAX_UNAVAILABLE = 5
 
-MAX_THREADS = 1
+MAX_THREADS = 5
 MAX_CHUNKS_PER_THREAD = 20
 
 
@@ -32,17 +33,19 @@ def sendChunksList(message, thread, localFileList):
     else:
         answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
 
-    # print("asking with my chunk list: " + answer)
-    transmission.mySend(thread.client_sock, answer)
-
+    try:
+        transmission.mySend(thread.client_sock, answer)
+    except (socket.timeout, RuntimeError):
+        return
 
 def sendChunk(message, thread, localFileList):
+
     messageFields = message.split()
     key = messageFields[1]
     timestamp = int(messageFields[2])
     chunkID = int(messageFields[3])
 
-    answer = None
+    error = True
 
     if key in localFileList:
         file = localFileList[key]
@@ -58,28 +61,32 @@ def sendChunk(message, thread, localFileList):
                     """peer has the whole file -> open and send it"""
 
                     try:
-                        file.fileLock.acquire()
+                        # file.fileLock.acquire()
                         f = open(file.filepath, 'rb')
                         offset = chunkID * file.chunksSize
                         f.seek(offset)
 
                         dataChunk = f.read(chunkSize)
 
-                        answer = "OK - I'M SENDING IT"
-                        transmission.mySend(thread.client_sock, answer)
-                        transmission.sendChunk(thread.client_sock, dataChunk, chunkSize)
+                        try:
+                            error = False
+                            answer = "OK - I'M SENDING IT"
+                            transmission.mySend(thread.client_sock, answer)
+                            transmission.sendChunk(thread.client_sock, dataChunk, chunkSize)
+                        except (socket.timeout, RuntimeError):
+                            print("Error while sending chunk {}".format(chunkID))
 
                         f.close()
-                        file.fileLock.release()
+                        # file.fileLock.release()
                     except FileNotFoundError:
                         answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
-                        file.fileLock.release()
+                        # file.fileLock.release()
 
                 if file.status == "D":
                     """peer is still downloading the file -> send chunk from tmp file"""
 
                     try:
-                        file.fileLock.acquire()
+                        # file.fileLock.acquire()
 
                         chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
 
@@ -87,15 +94,19 @@ def sendChunk(message, thread, localFileList):
 
                         dataChunk = f.read(chunkSize)
 
-                        answer = "OK - I'M SENDING IT"
-                        transmission.mySend(thread.client_sock, answer)
-                        transmission.sendChunk(thread.client_sock, dataChunk, chunkSize)
+                        try:
+                            error = False
+                            answer = "OK - I'M SENDING IT"
+                            transmission.mySend(thread.client_sock, answer)
+                            transmission.sendChunk(thread.client_sock, dataChunk, chunkSize)
+                        except (socket.timeout, RuntimeError):
+                            print("Error while sending chunk {}".format(chunkID))
 
                         f.close()
-                        file.fileLock.release()
+                        # file.fileLock.release()
                     except FileNotFoundError:
                         answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
-                        file.fileLock.release()
+                        # file.fileLock.release()
             else:
                 answer = "ERROR - UNAVAILABLE CHUNK"
         else:
@@ -103,13 +114,20 @@ def sendChunk(message, thread, localFileList):
     else:
         answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
 
-    if answer is not None:
-        # print("asking with: " + answer)
+    if error:
+        # send error answer
         transmission.mySend(thread.client_sock, answer)
 
 
 
 def downloadFile(file):
+    """
+
+
+    :param file:
+    :return:
+    """
+
     print("Starting synchronization of", file.filename)
 
     key = file.groupName + "_" + file.filename
@@ -119,8 +137,9 @@ def downloadFile(file):
     file.initDownload()
 
     unavailable = 0
-
     threshold = 0.5
+
+    tmpDirPath = getTmpDirPath(file)
 
     # ask for the missing peers while the missing list is not empty
     while len(file.missingChunks) > 0 and unavailable < MAX_UNAVAILABLE:
@@ -273,7 +292,7 @@ def downloadFile(file):
             peerIP = threadInfo[i]["peer"]["peerIP"]
             peerPort = threadInfo[i]["peer"]["peerPort"]
 
-            t = Thread(target=getChunk, args=(file, threadChunksList, peerIP, peerPort))
+            t = Thread(target=getChunks, args=(file, threadChunksList, peerIP, peerPort, tmpDirPath))
             threads.append(t)
             t.start()
 
@@ -296,7 +315,7 @@ def downloadFile(file):
         peerCore.syncThreadsLock.release()
         return
 
-    if mergeChunks(file):
+    if mergeChunks(file, tmpDirPath):
         # if mergeChunks succeeds clean the download current state
         file.status = "S"
         file.iHaveIt()
@@ -329,13 +348,16 @@ def getChunksList(file, peerIP, peerPort):
     if s is None:
         return None
 
-    message = "CHUNKS_LIST {} {}".format(key, file.timestamp)
-    transmission.mySend(s, message)
-
-    data = transmission.myRecv(s)
-    print('Received from the peer :', data)
-
-    peerCore.closeSocket(s)
+    try:
+        message = "CHUNKS_LIST {} {}".format(key, file.timestamp)
+        transmission.mySend(s, message)
+        data = transmission.myRecv(s)
+        #print('Received from the peer :', data)
+        peerCore.closeSocket(s)
+    except (socket.timeout, RuntimeError):
+        print("Error while getting chunks list")
+        peerCore.closeSocket(s)
+        return None
 
     if str(data).split()[0] == "ERROR":
         return None
@@ -344,15 +366,24 @@ def getChunksList(file, peerIP, peerPort):
         return chunksList
 
 
-def getChunk(file, chunksList, peerIP, peerPort):
+def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
+    """
+
+    :param file:
+    :param chunksList:
+    :param peerIP:
+    :param peerPort:
+    :param tmpDirPath:
+    :return:
+    """
 
     print(chunksList)
 
-    for chunkID in chunksList:
+    s = peerCore.createSocket(peerIP, peerPort)
+    if s is None:
+        return
 
-        s = peerCore.createSocket(peerIP, peerPort)
-        if s is None:
-            return
+    for chunkID in chunksList:
 
         key = file.groupName + "_" + file.filename
 
@@ -361,18 +392,23 @@ def getChunk(file, chunksList, peerIP, peerPort):
         else:
             chunkSize = file.chunksSize
 
-        message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
-        transmission.mySend(s, message)
-        answer = transmission.myRecv(s)
-        if answer.split(" ")[0] == "ERROR":
-            peerCore.closeSocket(s)
+        try:
+            message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
+            transmission.mySend(s, message)
+            answer = transmission.myRecv(s)
+        except (socket.timeout, RuntimeError):
+            print("Error receiving chunk {}".format(chunkID))
             continue
-        data = transmission.recvChunk(s, chunkSize)
-        #print('Received from the peer :', data)
 
-        peerCore.closeSocket(s)
+        if answer.split(" ")[0] == "ERROR":
+            continue
 
-        tmpDirPath = getTmpDirPath(file)
+        try:
+           data = transmission.recvChunk(s, chunkSize)
+        except (socket.timeout, RuntimeError):
+            print("Error receiving chunk {}".format(chunkID))
+            continue
+
 
         try:
             file.fileLock.acquire()
@@ -396,20 +432,21 @@ def getChunk(file, chunksList, peerIP, peerPort):
 
         except FileNotFoundError:
             file.fileLock.release()
+            continue
+
+    peerCore.closeSocket(s)
 
 
 
-
-
-def mergeChunks(file):
+def mergeChunks(file, tmpDirPath):
     """
 
     :param file:
+    :param tmpDirPath:
     :return:
     """
 
     newFilePath = getNewFilePath(file)
-    tmpDirPath = getTmpDirPath(file)
 
     # merge chunks writing each chunks in the new file
     try:
