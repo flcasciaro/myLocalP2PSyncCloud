@@ -443,6 +443,16 @@ class myP2PSyncCloud(QMainWindow):
         self.fileList.clear()
         for file in peerCore.localFileList.values():
             if file.groupName == self.groupName:
+
+                if file.filesize >= 1024:
+                    filesize = str(file.filesize / 1024) + " KB"
+                elif file.filesize >= 1048576:
+                    filesize = str(file.filesize / 1048576) + " MB"
+                elif file.filesize >= 1024 * 1048576:
+                    filesize = str(file.filesize / (1024 * 1048576)) + " GB"
+                else:
+                    filesize = str(file.filesize) + " B"
+
                 if file.status == "S":
                     syncStatus = "Synchronized"
                 elif file.status == "U":
@@ -452,7 +462,7 @@ class myP2PSyncCloud(QMainWindow):
 
                 if len(file.filename.split("/")) == 1:
                     filename = file.filename.split("/")[-1]
-                    item = QTreeWidgetItem([filename, file.filepath, str(file.filesize),
+                    item = QTreeWidgetItem([filename, file.filepath, filesize,
                                             file.getLastModifiedTime(), syncStatus])
                     self.fileList.addTopLevelItem(item)
                 else:
@@ -505,7 +515,7 @@ class myP2PSyncCloud(QMainWindow):
 
                     # add file to the directory item
                     filename = file.filename.split("/")[-1]
-                    item = QTreeWidgetItem([filename, file.filepath, str(file.filesize),
+                    item = QTreeWidgetItem([filename, file.filepath, filesize,
                                             file.getLastModifiedTime(), syncStatus])
                     parent.addChild(item)
 
