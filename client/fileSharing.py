@@ -38,8 +38,8 @@ def sendChunksList(message, thread, localFileList):
     except (socket.timeout, RuntimeError):
         return
 
-def sendChunk(message, thread, localFileList):
 
+def sendChunk(message, thread, localFileList):
     messageFields = message.split()
     key = messageFields[1]
     timestamp = int(messageFields[2])
@@ -119,7 +119,6 @@ def sendChunk(message, thread, localFileList):
         transmission.mySend(thread.client_sock, answer)
 
 
-
 def downloadFile(file):
     """
 
@@ -152,7 +151,6 @@ def downloadFile(file):
         else:
             peerCore.syncThreadsLock.release()
 
-
         # retrieve the list of active peers for the file
         activePeers = peerCore.retrievePeers(file.groupName, selectAll=False)
 
@@ -162,30 +160,23 @@ def downloadFile(file):
             time.sleep(1)
             continue
 
-
         if len(activePeers) == 0:
             # Empty list retrieved: no active peers for that group
             unavailable += 1
             time.sleep(1)
             continue
 
-        """
-        chunks_peers is a dictionary where key is the chunkID and
-        value is the list of peer which have that chunk
-        """
+        # chunks_peers is a dictionary where key is the chunkID and
+        # value is the list of peer which have that chunk
         chunks_peers = dict()
 
-        """
-        chunksCounter is a dictionary where key is the chunkID and
-        value is the number of peers having that chunk
-        """
+        # chunksCounter is a dictionary where key is the chunkID and
+        # value is the number of peers having that chunk
         chunksCounter = dict()
 
         for peer in activePeers:
-            """
-            ask each peer which chunks it has and collect informations
-            in order to apply the rarest-first approach
-            """
+            # ask each peer which chunks it has and collect informations
+            # in order to apply the rarest-first approach
 
             chunksList = getChunksList(file, peer["peerIP"], peer["peerPort"])
 
@@ -216,9 +207,6 @@ def downloadFile(file):
         else:
             numThreads = len(activePeers)
 
-        print(chunksCounter)
-        print(chunks_peers)
-
         busyPeers = list()
         threadInfo = list()
 
@@ -230,10 +218,9 @@ def downloadFile(file):
             threadInfo[i]["peer"] = None
             threadInfo[i]["chunksList"] = list()
 
-
         for chunk in sorted(chunksCounter, key=chunksCounter.get):
 
-            #generate a value between 0 and 1
+            # generate a value between 0 and 1
             p = random()
 
             if p > threshold:
@@ -304,7 +291,6 @@ def downloadFile(file):
 
         file.setProgress()
 
-
     if unavailable == MAX_UNAVAILABLE:
         # save download current state in order to restart it at next sync
         file.previousChunks = file.availableChunks
@@ -331,7 +317,6 @@ def downloadFile(file):
     file.syncLock.release()
 
 
-
 def getChunksList(file, peerIP, peerPort):
     """
 
@@ -352,7 +337,7 @@ def getChunksList(file, peerIP, peerPort):
         message = "CHUNKS_LIST {} {}".format(key, file.timestamp)
         transmission.mySend(s, message)
         data = transmission.myRecv(s)
-        #print('Received from the peer :', data)
+        # print('Received from the peer :', data)
         peerCore.closeSocket(s)
     except (socket.timeout, RuntimeError):
         print("Error while getting chunks list")
@@ -404,11 +389,10 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
             continue
 
         try:
-           data = transmission.recvChunk(s, chunkSize)
+            data = transmission.recvChunk(s, chunkSize)
         except (socket.timeout, RuntimeError):
             print("Error receiving chunk {}".format(chunkID))
             continue
-
 
         try:
             file.fileLock.acquire()
@@ -437,13 +421,12 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
     peerCore.closeSocket(s)
 
 
-
 def mergeChunks(file, tmpDirPath):
     """
 
     :param file:
     :param tmpDirPath:
-    :return:
+    :return: boolean
     """
 
     newFilePath = getNewFilePath(file)
@@ -472,6 +455,7 @@ def mergeChunks(file, tmpDirPath):
     os.utime(file.filepath, (file.timestamp, file.timestamp))
 
     print("Chunks of {} successfully merged".format(file.filename))
+    return True
 
 
 def getNewFilePath(file):
