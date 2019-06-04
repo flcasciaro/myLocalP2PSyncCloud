@@ -5,6 +5,7 @@
 import os
 import shutil
 import socket
+import stat
 import time
 from random import randint, random
 from threading import Thread
@@ -457,7 +458,7 @@ def mergeChunks(file, tmpDirPath):
     shutil.rmtree(tmpDirPath)
 
     # force timestamp to syncBeginningTime timestamp
-    import stat
+
 
     st = os.stat(file.filepath)
     print(st[stat.ST_MTIME])
