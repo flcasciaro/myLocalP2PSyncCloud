@@ -444,8 +444,8 @@ def updateLocalFileList():
 
                     print(myFile.timestamp)
                     print(type(myFile.timestamp))
-                    print(file["filestamp"])
-                    print(type(file["filestamp"]))
+                    print(file["timestamp"])
+                    print(type(file["timestamp"]))
 
                     if myFile.timestamp == file["timestamp"]:
                         myFile.status = "S"
@@ -479,12 +479,6 @@ def updateLocalFileList():
         # if the file is not already in sync
         if file.syncLock.acquire(blocking=False):
 
-            # Automatically update the file
-            """
-            if file.status == "U":
-                if updateFile(file):
-                    file.status = "S"
-            """
             # Automatically sync file
             syncThreadsLock.acquire()
             if file.status == "D" and len(syncThreads) < MAX_SYNC_THREAD:
@@ -515,13 +509,15 @@ def updateFile(file):
         message = str(peerID) + " " + "UPDATE_FILE {} {} {} {}".format(file.groupName, file.filename,
                                                                    file.filesize, file.timestamp)
         transmission.mySend(s, message)
-        data = transmission.myRecv(s)
+        answer = transmission.myRecv(s)
         closeSocket(s)
     except (socket.timeout, RuntimeError):
         closeSocket(s)
         return False
 
-    if data.split()[0] == "ERROR":
+    if answer.split()[0] == "ERROR":
+        # server replied with an error message: return False
+        print('Received from the server :', answer)
         return False
     else:
         # make the peer ready to upload chunks
@@ -530,6 +526,14 @@ def updateFile(file):
 
 
 def addFile(filepath, groupName):
+    """
+
+
+    :param filepath:
+    :param groupName:
+    :return:
+    """
+
     filePathFields = filepath.split('/')
     """select just the effective filename, discard the path"""
     filename = filePathFields[len(filePathFields) - 1]
@@ -560,6 +564,14 @@ def addFile(filepath, groupName):
 
 
 def addDir(filepaths, groupName, dirName):
+    """
+
+
+    :param filepaths:
+    :param groupName:
+    :param dirName:
+    :return:
+    """
     path1, __ = os.path.split(dirName)
 
     s = createSocket(serverIP, serverPort)
@@ -589,6 +601,12 @@ def addDir(filepaths, groupName, dirName):
 
 
 def removeFile(filename, groupName):
+    """
+
+    :param filename:
+    :param groupName:
+    :return:
+    """
     s = createSocket(serverIP, serverPort)
 
     if s is None:
@@ -618,6 +636,12 @@ def removeFile(filename, groupName):
 
 
 def leaveGroup(groupName):
+    """
+
+
+    :param groupName:
+    :return:
+    """
     s = createSocket(serverIP, serverPort)
 
     if s is None:
