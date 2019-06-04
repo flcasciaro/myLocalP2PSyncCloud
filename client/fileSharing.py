@@ -15,18 +15,18 @@ import transmission
 MAX_UNAVAILABLE = 5
 
 MAX_THREADS = 5
-MAX_CHUNKS_PER_THREAD = 20
+MAX_CHUNKS_PER_THREAD = 50
 
 
-def sendChunksList(message, thread, localFileList):
+def sendChunksList(message, thread):
     messageFields = message.split()
     key = messageFields[1]
     timestamp = int(messageFields[2])
 
-    if key in localFileList:
-        if localFileList[key].timestamp == timestamp:
+    if key in peerCore.localFileList:
+        if peerCore.localFileList[key].timestamp == timestamp:
 
-            answer = str(localFileList[key].availableChunks)
+            answer = str(peerCore.localFileList[key].availableChunks)
 
         else:
             answer = "ERROR - DIFFERENT VERSION"
@@ -39,7 +39,7 @@ def sendChunksList(message, thread, localFileList):
         return
 
 
-def sendChunk(message, thread, localFileList):
+def sendChunk(message, thread):
     messageFields = message.split()
     key = messageFields[1]
     timestamp = int(messageFields[2])
@@ -47,8 +47,8 @@ def sendChunk(message, thread, localFileList):
 
     error = True
 
-    if key in localFileList:
-        file = localFileList[key]
+    if key in peerCore.localFileList:
+        file = peerCore.localFileList[key]
         if file.timestamp == timestamp:
             if chunkID in file.availableChunks:
 
