@@ -5,7 +5,6 @@
 import os
 import shutil
 import socket
-import stat
 import time
 from random import randint, random
 from threading import Thread
@@ -308,12 +307,11 @@ def downloadFile(file):
         return
 
     if mergeChunks(file, tmpDirPath):
-        # if mergeChunks succeeds clean the download current state
-        print("after merge")
-        st = os.stat(file.filepath)
-        print(st[stat.ST_MTIME])
         file.status = "S"
+        # force timestamp to syncBeginningTime timestamp
+        os.utime(file.filepath, (file.timestamp, file.timestamp))
         file.iHaveIt()
+        # clean the download current state
         file.previousChunks = list()
     else:
         # if mergeChunks fails save the download current state
@@ -460,13 +458,7 @@ def mergeChunks(file, tmpDirPath):
     # remove chunks directory
     shutil.rmtree(tmpDirPath)
 
-    # force timestamp to syncBeginningTime timestamp
-    os.utime(file.filepath, (file.timestamp, file.timestamp))
-
     print("Chunks of {} successfully merged".format(file.filename))
-
-    st = os.stat(file.filepath)
-    print(st[stat.ST_MTIME])
 
     return True
 
