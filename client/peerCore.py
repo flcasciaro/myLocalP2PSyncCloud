@@ -577,11 +577,13 @@ def addDir(filepaths, groupName, dirName):
     :param dirName:
     :return:
     """
+    errors = 0
+
     path1, __ = os.path.split(dirName)
 
     s = createSocket(serverIP, serverPort)
     if s is None:
-        return
+        return -1
 
     for filepath in filepaths:
         filename = filepath.replace(path1, "")[1:]
@@ -594,7 +596,9 @@ def addDir(filepaths, groupName, dirName):
         data = transmission.myRecv(s)
 
         if data.split()[0] == "ERROR":
-            break
+            print('Received from the server :', data)
+            errors += 1
+            continue
         else:
             """add file to the personal list of files of the peer"""
             localFileList[groupName + "_" + filename] = fileManagement.File(groupName, filename,
@@ -603,6 +607,8 @@ def addDir(filepaths, groupName, dirName):
             localFileList[groupName + "_" + filename].iHaveIt()
 
     closeSocket(s)
+
+    return errors
 
 
 def removeFile(filename, groupName):
@@ -639,6 +645,47 @@ def removeFile(filename, groupName):
 
         return True
 
+
+def removeDir(filepaths, groupName):
+    """
+
+
+    :param filepaths:
+    :param groupName:
+    :param dirName:
+    :return:
+    """
+    errors = 0
+
+    s = createSocket(serverIP, serverPort)
+    if s is None:
+        return -1
+
+    for filename in filepaths:
+
+        message = str(peerID) + " " + "REMOVE_FILE {} {}".format(groupName, filename)
+        transmission.mySend(s, message)
+
+        data = transmission.myRecv(s)
+
+        if data.split()[0] == "ERROR":
+            print('Received from the server :', data)
+            errors += 1
+            continue
+        else:
+            """remove file from the personal list for the group"""
+            key = groupName + "_" + filename
+            del localFileList[key]
+
+            if key in syncThreads:
+                syncThreadsLock.acquire()
+                syncThreads[key]["stop"] = True
+                syncThreadsLock.release()
+
+
+    closeSocket(s)
+
+    return errors
 
 def leaveGroup(groupName):
     """
