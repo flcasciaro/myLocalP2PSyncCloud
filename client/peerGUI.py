@@ -526,7 +526,7 @@ class myP2PSyncCloud(QMainWindow):
                                 parent.addChild(item)
                             else:
                                 self.fileList.addTopLevelItem(item)
-                            # item.setExpanded(True)
+                            item.setExpanded(True)
                             parent = item
                         else:
                             # one or more items match: check if parents are right
@@ -572,14 +572,17 @@ class myP2PSyncCloud(QMainWindow):
         length = len(file[0].split("/"))
         filename = file[0].split("/")[length - 1]
 
-        # convert to a "UNIX-like" path
-        filepath = file[0].replace("\\", "/")
+        if len(filename.split(" ")) == 1:
+            # convert to a "UNIX-like" path
+            filepath = file[0].replace("\\", "/")
 
-        if peerCore.addFile(filepath, self.groupName):
-            self.loadFileManager()
-            self.addLogMessage("File {} added to group {}".format(filename, self.groupName))
+            if peerCore.addFile(filepath, self.groupName):
+                self.loadFileManager()
+                self.addLogMessage("File {} added to group {}".format(filename, self.groupName))
+            else:
+                QMessageBox.about(self, "Error", "Cannot add the selected file!")
         else:
-            QMessageBox.about(self, "Error", "Cannot add the selected file!")
+            QMessageBox.about(self, "Error", "Cannot add the selected file..filename contains at least a space!")
 
     def addDirHandler(self):
 
@@ -590,19 +593,28 @@ class myP2PSyncCloud(QMainWindow):
             return
         length = len(directory.split("/"))
         dirName = directory.split("/")[length - 1]
-        filepaths = list()
-        for root, dirs, files in os.walk(directory):
-            for name in files:
-                filepaths.append(os.path.join(root, name).replace("\\", "/"))
-        errors = peerCore.addDir(filepaths, self.groupName, directory.replace("\\", "/"))
-        self.loadFileManager()
 
-        if errors == 0:
-            self.addLogMessage("Directory {} added to group {}".format(dirName, self.groupName))
-        elif errors == -1:
-            QMessageBox.about(self, "Error", "It was not possible to add the directory {}".format(dirName))
+        if len(dirName.split(" ")) == 1:
+            filepaths = list()
+            for root, dirs, files in os.walk(directory):
+                for name in files:
+
+                    # build the filepath and check that it doesn't contain space/s
+                    filepath = os.path.join(root, name).replace("\\", "/")
+                    if len(filepath.split(" ")) == 1:
+                        filepaths.append(filepath)
+
+            errors = peerCore.addDir(filepaths, self.groupName, directory.replace("\\", "/"))
+            self.loadFileManager()
+
+            if errors == 0:
+                self.addLogMessage("Directory {} added to group {}".format(dirName, self.groupName))
+            elif errors == -1:
+                QMessageBox.about(self, "Error", "It was not possible to add the directory {}".format(dirName))
+            else:
+                QMessageBox.about(self, "Error", "{} Errors occurred!".format(errors))
         else:
-            QMessageBox.about(self, "Error", "{} Errors occurred!".format(errors))
+            QMessageBox.about(self, "Error", "Cannot add the selected directory..name contains at least a space!")
 
 
     def removeFileHandler(self):
@@ -636,12 +648,10 @@ class myP2PSyncCloud(QMainWindow):
                     dirName = parent.text(0) + "/" + dirName
                     parent = parent.parent()
 
-                filepaths = list()
-                self.getDirFilepaths(self.fileList.currentItem(), dirName, filepaths)
+                filenames = list()
+                getDirFilenames(self.fileList.currentItem(), dirName, filenames)
 
-                print(filepaths)
-
-                errors = peerCore.removeDir(filepaths, self.groupName)
+                errors = peerCore.removeDir(filenames, self.groupName)
                 self.loadFileManager()
 
                 if errors == 0:
@@ -657,46 +667,78 @@ class myP2PSyncCloud(QMainWindow):
             QMessageBox.about(self, "Error", "You must select a dir from the list")
 
 
-    def getDirFilepaths(self, item, dirName, filepaths):
-
-        for i in range(0, item.childCount()):
-            if item.child(i).text(1) == "":
-                # is a directory
-                self.getDirFilepaths(item.child(i), dirName + "/" + item.child(i).text(0), filepaths)
-            else:
-                # is a file
-                filepaths.append(dirName + "/" + item.child(i).text(0))
-
-
 
     def syncFileHandler(self):
+
         if self.fileList.currentItem() is not None:
             filename = self.fileList.currentItem().text(0)
             file = peerCore.localFileList[self.groupName + "_" + filename]
             if file.status == "U":
-                if peerCore.updateFile(file):
+                if peerCore.syncFile(file):
                     self.addLogMessage("File {} synchronized".format(filename))
                 else:
                     QMessageBox.about(self, "Error", "It was not possible to synchronize the file")
         else:
             QMessageBox.about(self, "Error", "You must select a file from the list")
 
+
     def syncDirHandler(self):
-        if self.fileList.count() == 0:
-            QMessageBox.about(self, "Error", "There aren't files in the group!")
+
+        if self.fileList.currentItem() is not None:
+            if self.fileList.currentItem().text(1) == "":
+
+                dirName = self.fileList.currentItem().text(0)
+                parent = self.fileList.currentItem().parent()
+
+                while parent is not None:
+                    dirName = parent.text(0) + "/" + dirName
+                    parent = parent.parent()
+
+                filenames = list()
+                getDirFilenames(self.fileList.currentItem(), dirName, filenames)
+
+                for filename in filenames:
+                    file = peerCore.localFileList[self.groupName + "_" + filename]
+                    if file.status == "U":
+                        if peerCore.syncFile(file):
+                            self.addLogMessage("File {} synchronized".format(filename))
+                        else:
+                            QMessageBox.about(self, "Error", "It was not possible to synchronize the file")
+
+                self.loadFileManager()
+
+            else:
+                QMessageBox.about(self, "Error", "You've selected a file instead of a directory")
         else:
-            for i in range(0, self.fileList.count()):
-                filename = self.fileList.item(i).text().split()[0]
-                peerCore.updateFile(filename, self.groupName)
+            QMessageBox.about(self, "Error", "You must select a directory from the list")
 
 
     def syncAllHandler(self):
         if self.fileList.count() == 0:
             QMessageBox.about(self, "Error", "There aren't files in the group!")
         else:
-            for i in range(0, self.fileList.count()):
-                filename = self.fileList.item(i).text().split()[0]
-                peerCore.updateFile(filename, self.groupName)
+            for i in range(0, self.fileList.topLevelItemCount()):
+
+                item = self.fileList.topLevelItem(i)
+                filenames = list()
+
+                if item.text(1) == "":
+                    # item is a directory: look for nested files and collect their filenames
+                    getDirFilenames(item, item.text(0), filenames)
+                else:
+                    # item is a file: append to filenames and try to synchronize
+                    filenames.append(item.text(0))
+
+                for filename in filenames:
+                    file = peerCore.localFileList[self.groupName + "_" + filename]
+                    if file.status == "U":
+                        if peerCore.syncFile(file):
+                            self.addLogMessage("File {} synchronized".format(filename))
+                        else:
+                            QMessageBox.about(self, "Error", "It was not possible to synchronize the file")
+
+            self.loadFileManager()
+
 
     def changeRoleHandler(self):
 
@@ -784,6 +826,16 @@ class TimerMessageBox(QMessageBox):
     def closeEvent(self, event):
         self.timer.stop()
         event.accept()
+
+def getDirFilenames(item, dirName, filenames):
+
+    for i in range(0, item.childCount()):
+        if item.child(i).text(1) == "":
+            # is a directory
+            getDirFilenames(item.child(i), dirName + "/" + item.child(i).text(0), filenames)
+        else:
+            # is a file
+            filenames.append(dirName + "/" + item.child(i).text(0))
 
 
 if __name__ == '__main__':
