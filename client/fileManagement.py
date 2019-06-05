@@ -86,8 +86,12 @@ class File:
     def iHaveIt(self):
         """initialize all the properties in order to work as a seed for the file"""
         self.setChunksSize()
-        self.chunksNumber = math.ceil(self.filesize / self.chunksSize)
-        self.lastChunkSize = self.filesize % self.chunksSize
+        try:
+            self.chunksNumber = math.ceil(self.filesize / self.chunksSize)
+            self.lastChunkSize = self.filesize % self.chunksSize
+        except ZeroDivisionError:
+            self.chunksNumber = 0
+            self.lastChunkSize = 0
         self.previousChunks = list()
         self.missingChunks = list()
         self.availableChunks = list()
