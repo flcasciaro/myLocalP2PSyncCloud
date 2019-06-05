@@ -500,7 +500,7 @@ def updateLocalFileList():
             file.syncLock.release()
 
 
-def updateFile(file):
+def syncFile(file):
     """
     Update the version file in the server.
     :param file: file object that have to be updated into the server
@@ -646,7 +646,7 @@ def removeFile(filename, groupName):
         return True
 
 
-def removeDir(filepaths, groupName):
+def removeDir(filenames, groupName):
     """
 
 
@@ -661,7 +661,7 @@ def removeDir(filepaths, groupName):
     if s is None:
         return -1
 
-    for filename in filepaths:
+    for filename in filenames:
 
         message = str(peerID) + " " + "REMOVE_FILE {} {}".format(groupName, filename)
         transmission.mySend(s, message)
