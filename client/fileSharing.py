@@ -441,12 +441,15 @@ def mergeChunks(file, tmpDirPath):
     # merge chunks writing each chunks in the new file
     try:
         f1 = open(newFilePath, 'wb')
-        for chunkID in range(0, file.chunksNumber):
-            chunkPath = tmpDirPath + "chunk" + str(chunkID)
-            with open(chunkPath, 'rb') as f2:
-                f1.write(f2.read())
+        if file.filesize > 0:
+            for chunkID in range(0, file.chunksNumber):
+                chunkPath = tmpDirPath + "chunk" + str(chunkID)
+                with open(chunkPath, 'rb') as f2:
+                    f1.write(f2.read())
+        f1.close()
     except FileNotFoundError:
         print("Error while creating the new file")
+        f1.close()
         return False
 
     # remove previous version of the file (if any)
@@ -456,7 +459,8 @@ def mergeChunks(file, tmpDirPath):
     os.rename(newFilePath, file.filepath)
 
     # remove chunks directory
-    shutil.rmtree(tmpDirPath)
+    if file.filesize > 0:
+        shutil.rmtree(tmpDirPath)
 
     print("Chunks of {} successfully merged".format(file.filename))
 
