@@ -134,6 +134,8 @@ def getPreviousFiles(previousSessionFile):
                                  fileListJson[fileKey]["previousChunks"])
     del fileListJson
 
+    print("Previous session information successfully retrieved")
+
     return fileList
 
 
@@ -150,6 +152,8 @@ def saveFileStatus(previousSessionFile, fileList):
         fileListJson[fileKey]["timestamp"] = fileList[fileKey].timestamp
         fileListJson[fileKey]["status"] = fileList[fileKey].status
         fileListJson[fileKey]["previousChunks"] = fileList[fileKey].previousChunks
+
+    print("Session information successfully saved")
 
 
     try:
