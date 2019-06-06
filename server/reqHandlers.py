@@ -18,7 +18,7 @@ def imHere(request, peers, peerID):
     peers[peerID]["peerIP"] = request.split()[1]
     peers[peerID]["peerPort"] = request.split()[2]
 
-    answer = "PEER INFO UPDATED"
+    answer = "OK - PEER INFO UPDATED"
     return answer
 
 
@@ -173,15 +173,12 @@ def retrievePeers(request, groups, peers, peerID):
 
     return answer
 
-def addFile(request, groups, groupsLock, peerID):
-    """request is ADD_FILE <groupname> <filename> <filesize> <timestamp>"""
-
+def addFiles(request, groups, groupsLock, peerID):
+    """request is ADD_FILES <groupname> <filesInfo>"""
     try:
-        requestFields = request.split()
+        requestFields = request.split(" ", 2)
         groupName = requestFields[1]
-        filename = requestFields[2]
-        filesize = requestFields[3]
-        timestamp = int(requestFields[4])
+        filesInfo = eval(requestFields[2])
 
         groupsLock.acquire()
 
@@ -190,8 +187,9 @@ def addFile(request, groups, groupsLock, peerID):
                 if groups[groupName].peersInGroup[peerID].role.upper() == "RO":
                     answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
                 else:
-                    groups[groupName].addFile(filename, filesize, timestamp)
-                    answer = "OK - FILE ADDED TO THE GROUP"
+                    for fileInfo in filesInfo:
+                        groups[groupName].addFile(fileInfo["filename"], fileInfo["filesize"], fileInfo["timestamp"])
+                    answer = "OK - FILES SUCCESSFULLY ADDED"
             else:
                 answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"
         else:
@@ -203,15 +201,14 @@ def addFile(request, groups, groupsLock, peerID):
 
     return answer
 
-def updateFile(request, groups, groupsLock, peerID):
-    """request is UPDATE_FILE <groupname> <filename> <filesize> <timestamp>"""
+
+def removeFiles(request, groups, groupsLock, peerID):
+    """request is REMOVE_FILES <groupname> <filesInfo>"""
 
     try:
-        requestFields = request.split()
+        requestFields = request.split(" ", 2)
         groupName = requestFields[1]
-        filename = requestFields[2]
-        filesize = requestFields[3]
-        timestamp = int(requestFields[4])
+        filenames = eval(requestFields[2])
 
         groupsLock.acquire()
 
@@ -220,8 +217,9 @@ def updateFile(request, groups, groupsLock, peerID):
                 if groups[groupName].peersInGroup[peerID].role.upper() == "RO":
                     answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
                 else:
-                    groups[groupName].updateFile(filename, filesize, timestamp)
-                    answer = "OK - FILE ADDED TO THE GROUP"
+                    for filename in filenames:
+                        groups[groupName].removeFile(filename)
+                    answer = "OK - FILES REMOVED FROM THE GROUP"
             else:
                 answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"
         else:
@@ -233,23 +231,25 @@ def updateFile(request, groups, groupsLock, peerID):
 
     return answer
 
-def removeFile(request, groups, groupsLock, peerID):
-    """request is REMOVE_FILE <groupname> <filename>"""
+
+def updateFiles(request, groups, groupsLock, peerID):
+    """request is UPDATE_FILES <groupname> <filesInfo>"""
 
     try:
-        requestFields = request.split()
+        requestFields = request.split(" ", 2)
         groupName = requestFields[1]
-        filename = requestFields[2]
+        filesInfo = eval(requestFields[2])
 
         groupsLock.acquire()
 
         if groupName in groups:
             if peerID in groups[groupName].peersInGroup:
                 if groups[groupName].peersInGroup[peerID].role.upper() == "RO":
-                    answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
+                    answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGES"
                 else:
-                    groups[groupName].removeFile(filename)
-                    answer = "OK - FILE REMOVED FROM THE GROUP"
+                    for fileInfo in filesInfo:
+                        groups[groupName].updateFile(fileInfo["filename"], fileInfo["filesize"], fileInfo["timestamp"])
+                    answer = "OK - FILES SUCCESSFULLY UPDATED"
             else:
                 answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"
         else:

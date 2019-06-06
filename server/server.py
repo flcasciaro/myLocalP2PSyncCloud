@@ -269,16 +269,16 @@ def manageRequest(self, request, peerID):
         answer = reqHandlers.retrievePeers(request, groups, peers, peerID)
         transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "ADD_FILE":
-        answer = reqHandlers.addFile(request, groups, groupsLock, peerID)
+    elif request.split()[0] == "ADD_FILES":
+        answer = reqHandlers.addFiles(request, groups, groupsLock, peerID)
         transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "UPDATE_FILE":
-        answer = reqHandlers.updateFile(request, groups, groupsLock, peerID)
+    elif request.split()[0] == "UPDATE_FILES":
+        answer = reqHandlers.updateFiles(request, groups, groupsLock, peerID)
         transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "REMOVE_FILE":
-        answer = reqHandlers.removeFile(request, groups, groupsLock, peerID)
+    elif request.split()[0] == "REMOVE_FILES":
+        answer = reqHandlers.removeFiles(request, groups, groupsLock, peerID)
         transmission.mySend(self.client_sock, answer)
 
     elif request.split()[0] == "GET_FILES":
