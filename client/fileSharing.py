@@ -404,9 +404,11 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
         try:
             file.fileLock.acquire()
 
+            peerCore.pathCreationLock.acquire()
             if not os.path.exists(tmpDirPath):
-                print("creating the path: " + tmpDirPath)
+                print("Creating the path: " + tmpDirPath)
                 os.makedirs(tmpDirPath)
+            peerCore.pathCreationLock.release()
 
             chunkPath = tmpDirPath + "chunk" + str(chunkID)
 
@@ -440,6 +442,14 @@ def mergeChunks(file, tmpDirPath):
 
     # merge chunks writing each chunks in the new file
     try:
+
+        dirPath, __ = os.path.split(newFilePath)
+        peerCore.pathCreationLock.acquire()
+        if not os.path.exists(dirPath):
+            print("Creating the path: " + dirPath)
+            os.makedirs(dirPath)
+        peerCore.pathCreationLock.release()
+
         f1 = open(newFilePath, 'wb')
         if file.filesize > 0:
             for chunkID in range(0, file.chunksNumber):
@@ -449,7 +459,6 @@ def mergeChunks(file, tmpDirPath):
         f1.close()
     except FileNotFoundError:
         print("Error while creating the new file")
-        f1.close()
         return False
 
     # remove previous version of the file (if any)
