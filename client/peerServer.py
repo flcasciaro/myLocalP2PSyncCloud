@@ -7,33 +7,51 @@ import transmission
 
 
 class Server(Thread):
-    def __init__(self, host, port, max_clients=5):
+    """
+    Multithread server class that will manage incoming connections.
+    For each incoming connection it will create a thread.
+    This thread will manage the request and terminate.
+    The server runs until the property __stop is equals to False.
+    The port on which the server will listen is choosen among available ports.
+    """
+
+    def __init__(self, host, max_clients=5):
         Thread.__init__(self)
-        """ Initialize the server with a host and port to listen to.
-        Provide a list of functions that will be used when receiving specific data """
         self.host = host
-        self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.sock.bind((host, port))
+
+        # using port = 0 the server will start on an available port
+        self.sock.bind((host, 0))
+
+        # retrieve selected port
+        self.port = self.sock.getsockname()[1]
+
         self.sock.listen(max_clients)
         self.sock_threads = []
         self.counter = 0  # Will be used to give a number to each thread, can be improved (re-assigning free number)
         self.__stop = False
+        self.serverStart = False
 
     def run(self):
-        """ Accept an incoming connection.
-        Start a new SocketServerThread that will handle the communication. """
+        """
+        Accept an incoming connection.
+        Start a new SocketServerThread that will handle the communication.
+        """
+
         print('Starting socket server (host {}, port {})'.format(self.host, self.port))
+        self.serverStart = True
 
         while not self.__stop:
             self.sock.settimeout(1)
             try:
+                # accept an incoming connection
                 client_sock, client_addr = self.sock.accept()
             except socket.timeout:
                 client_sock = None
 
             if client_sock:
+                # create and start a thread that will handle the communication
                 client_thr = SocketServerThread(client_sock, client_addr, self.counter)
                 self.counter += 1
                 self.sock_threads.append(client_thr)
@@ -43,9 +61,13 @@ class Server(Thread):
         self.closeServer()
 
     def closeServer(self):
-        """ Close the client socket threads and server socket if they exists. """
+        """
+        Close the client socket threads and server socket if they exists.
+        """
+
         print('Closing server socket (host {}, port {})'.format(self.host, self.port))
 
+        # wait for running thread termination
         for thr in self.sock_threads:
             thr.stop()
             thr.join()
@@ -54,7 +76,10 @@ class Server(Thread):
             self.sock.close()
 
     def stopServer(self):
-        """This function will be called in order to stop the server (example using the X on the GUI or a signal)"""
+        """
+        This function will be called in order to stop the server
+        """
+
         self.__stop = True
 
 
@@ -107,7 +132,12 @@ class SocketServerThread(Thread):
 
 
 def manageRequest(self, message):
-    """Serves the client request"""
+    """
+
+    :param self:
+    :param message:
+    :return:
+    """
     # print('[Thr {}] Received {}'.format(self.number, message))
 
     if message.split()[0] == "CHUNKS_LIST":
