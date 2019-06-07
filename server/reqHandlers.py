@@ -14,7 +14,6 @@ def imHere(request, peers, peerID):
         """unknown peer"""
         peers[peerID] = dict()
 
-    """unknown peer"""
     peers[peerID]["peerIP"] = request.split()[1]
     peers[peerID]["peerPort"] = request.split()[2]
 
@@ -311,7 +310,6 @@ def peerDisconnection(groups, groupsLock, peers, peerID):
 
     groupsLock.release()
 
-    del peers[peerID]
 
     answer = "OK - PEER DISCONNECTED"
     return answer
