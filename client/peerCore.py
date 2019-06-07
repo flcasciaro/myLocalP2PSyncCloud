@@ -849,7 +849,7 @@ def disconnectPeer():
         syncThreadsLock.release()
         
         # wait for thread termination
-        time.sleep(3)
+        time.sleep(4)
         
         # save session status
         fileManagement.saveFileStatus(previousSessionFile, localFileList)

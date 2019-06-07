@@ -11,6 +11,7 @@ from threading import Thread
 
 import peerCore
 import transmission
+from fileManagement import CHUNK_SIZE
 
 MAX_UNAVAILABLE = 5
 
@@ -59,15 +60,14 @@ def sendChunk(message, thread):
                 if chunkID == file.chunksNumber - 1:
                     chunkSize = file.lastChunkSize
                 else:
-                    chunkSize = file.chunksSize
+                    chunkSize = CHUNK_SIZE
 
                 if file.status == "S":
                     """peer has the whole file -> open and send it"""
 
                     try:
-                        # file.fileLock.acquire()
                         f = open(file.filepath, 'rb')
-                        offset = chunkID * file.chunksSize
+                        offset = chunkID * CHUNK_SIZE
                         f.seek(offset)
 
                         dataChunk = f.read(chunkSize)
@@ -81,17 +81,13 @@ def sendChunk(message, thread):
                             print("Error while sending chunk {}".format(chunkID))
 
                         f.close()
-                        # file.fileLock.release()
                     except FileNotFoundError:
                         answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
-                        # file.fileLock.release()
 
                 if file.status == "D":
                     """peer is still downloading the file -> send chunk from tmp file"""
 
                     try:
-                        # file.fileLock.acquire()
-
                         chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
 
                         f = open(chunkPath, 'rb')
@@ -107,10 +103,8 @@ def sendChunk(message, thread):
                             print("Error while sending chunk {}".format(chunkID))
 
                         f.close()
-                        # file.fileLock.release()
                     except FileNotFoundError:
                         answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
-                        # file.fileLock.release()
             else:
                 answer = "ERROR - UNAVAILABLE CHUNK"
         else:
@@ -136,17 +130,15 @@ def downloadFile(file):
     key = file.groupName + "_" + file.filename
 
     file.syncLock.acquire()
-
     file.initDownload()
 
     unavailable = 0
-    threshold = 0.7
-
     tmpDirPath = getTmpDirPath(file)
 
     # ask for the missing peers while the missing list is not empty
     while len(file.missingChunks) > 0 and unavailable < MAX_UNAVAILABLE:
 
+        # check thread termination status
         peerCore.syncThreadsLock.acquire()
         if peerCore.syncThreads[key]["stop"]:
             peerCore.syncThreadsLock.release()
@@ -210,6 +202,13 @@ def downloadFile(file):
             numThreads = MAX_THREADS
         else:
             numThreads = len(activePeers)
+
+        if file.chunksNumber <= numThreads * MAX_CHUNKS_PER_THREAD:
+            # don't use random discard
+            threshold = 1
+        else:
+            # use random discard
+            threshold = 0.7
 
         busyPeers = list()
         threadInfo = list()
@@ -275,6 +274,17 @@ def downloadFile(file):
                     # the thread associate to the peer has reached MAX_CHUNKS_PER_THREAD size list
                     r = (r + 1) % len(chunks_peers[chunk])
                     i += 1
+
+
+        # check again thread termination status
+        peerCore.syncThreadsLock.acquire()
+        if peerCore.syncThreads[key]["stop"]:
+            peerCore.syncThreadsLock.release()
+            unavailable = MAX_UNAVAILABLE
+            break
+        else:
+            peerCore.syncThreadsLock.release()
+
 
         threads = list()
 
@@ -382,7 +392,7 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
         if chunkID == file.chunksNumber - 1:
             chunkSize = file.lastChunkSize
         else:
-            chunkSize = file.chunksSize
+            chunkSize = CHUNK_SIZE
 
         try:
             message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
@@ -402,8 +412,6 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
             continue
 
         try:
-            file.fileLock.acquire()
-
             peerCore.pathCreationLock.acquire()
             if not os.path.exists(tmpDirPath):
                 print("Creating the path: " + tmpDirPath)
@@ -421,10 +429,7 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
             file.missingChunks.remove(chunkID)
             file.availableChunks.append(chunkID)
 
-            file.fileLock.release()
-
         except FileNotFoundError:
-            file.fileLock.release()
             continue
 
     peerCore.closeSocket(s)

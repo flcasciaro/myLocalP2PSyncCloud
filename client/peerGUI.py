@@ -268,13 +268,16 @@ class myP2PSyncCloud(QMainWindow):
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
+            self.server.stopServer()
+            t = Thread(target=peerCore.disconnectPeer, args=())
+            t.daemon = True
+            t.start()
+
             timeout = 5
             msgBox = TimerMessageBox(timeout, self)
             msgBox.exec_()
             self.stopRefresh = True
-            self.server.stopServer()
-            peerCore.disconnectPeer()
-            time.sleep(1)
+
             event.accept()
         else:
             event.ignore()
