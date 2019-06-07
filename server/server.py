@@ -12,16 +12,15 @@ import reqHandlers
 import transmission
 from groupClass import Group
 
-"""Main data structure for groups management
-It's a dictionary where the key is the GroupName and the value is
-a Group object containing information about the group e.g. tokens, peers"""
+# Main data structure for groups management.
+# It's a dictionary where the key is the GroupName and the value is
+# a Group object containing information about the group e.g. tokens, peers
 groups = dict()
 groupsLock = Lock()
 
-
-"""Secondary data structures for peers information.
-It's a dictionary where the key is the peerID and the value is
-another dictionary containing information about the peer e.g. peerIP and peerPort"""
+# Secondary data structures for peers information.
+# It's a dictionary where the key is the peerID and the value is
+# another dictionary containing information about the peer e.g. peerIP and peerPort
 peers = dict()
 
 scriptPath, scriptName = os.path.split((os.path.abspath(__file__)))
@@ -30,6 +29,7 @@ scriptPath += "/"
 groupsInfoFile = scriptPath + 'sessionFiles/groupsInfo.json'
 groupsPeersFile = scriptPath + 'sessionFiles/groupsPeers.json'
 groupsFilesFile = scriptPath + 'sessionFiles/groupsFiles.json'
+
 
 def initServer():
     """Initialize server data structures
@@ -133,9 +133,21 @@ def saveState():
         del filesJson
 
 
+# Multithread server class that will manage incoming connections.
+# For each incoming connection it will create a thread.
+# This thread will manage the request and terminate.
+# The server runs until the property __stop is equals to False.
+# The port on which the server will listen is choosen among available ports.
 class Server:
 
-    def __init__(self, host, port, max_clients = 5):
+    def __init__(self, host, port, max_clients=5):
+        """
+        Initialize server.
+        :param host: IP address on which the server will be reachable
+        :param port: port number on which the server will be reachable
+        :param max_clients: maximum number of incoming connections.
+        :return: void
+        """
 
         """ Initialize the server with a host and port to listen to.
         Provide a list of functions that will be used when receiving specific data """
@@ -144,7 +156,7 @@ class Server:
         self.sock.bind((host, port))
         self.sock.listen(max_clients)
         self.sock_threads = []
-        self.counter = 0 # Will be used to give a number to each thread, can be improved (re-assigning free number)
+        self.counter = 0  # Will be used to give a number to each thread, can be improved (re-assigning free number)
         self.__stop = False
 
         """ Accept an incoming connection.
@@ -207,7 +219,7 @@ class SocketServerThread(Thread):
                 try:
                     rdy_read, rdy_write, sock_err = select.select([self.client_sock, ], [self.client_sock, ], [], 5)
                 except select.error:
-                    print('[Thr {}] Select() failed on socket with {}'.format(self.number,self.client_addr))
+                    print('[Thr {}] Select() failed on socket with {}'.format(self.number, self.client_addr))
                     self.stop()
                     return
 
@@ -224,7 +236,7 @@ class SocketServerThread(Thread):
                         messageFields = message.split(' ', 1)
                         peerID = messageFields[0]
                         request = messageFields[1]
-                        manageRequest(self, request, peerID)
+                        self.manageRequest(request, peerID)
             else:
                 print("[Thr {}] No client is connected, SocketServer can't receive data".format(self.number))
                 self.stop()
@@ -240,75 +252,74 @@ class SocketServerThread(Thread):
             self.client_sock.close()
 
 
-def manageRequest(self, request, peerID):
+    def manageRequest(self, request, peerID):
+        """Serves the different client requests"""
+        print('[Thr {}] Received {}'.format(self.number, request))
 
-    """Serves the different client requests"""
-    print('[Thr {}] Received {}'.format(self.number, request))
+        if request == "SEND GROUPS":
+            answer = reqHandlers.sendGroups(groups, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    if request == "SEND GROUPS":
-        answer = reqHandlers.sendGroups(groups, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "RESTORE":
+            answer = reqHandlers.restoreGroup(request, groups, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "RESTORE":
-        answer = reqHandlers.restoreGroup(request, groups, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "JOIN":
+            answer = reqHandlers.joinGroup(request, groups, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "JOIN":
-        answer = reqHandlers.joinGroup(request, groups, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "CREATE":
+            answer = reqHandlers.createGroup(request, groups, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "CREATE":
-        answer = reqHandlers.createGroup(request, groups, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "ROLE":
+            answer = reqHandlers.manageRole(request, groups, groupsLock, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "ROLE":
-        answer = reqHandlers.manageRole(request, groups, groupsLock, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "PEERS":
+            answer = reqHandlers.retrievePeers(request, groups, peers, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "PEERS":
-        answer = reqHandlers.retrievePeers(request, groups, peers, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "ADD_FILES":
+            answer = reqHandlers.addFiles(request, groups, groupsLock, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "ADD_FILES":
-        answer = reqHandlers.addFiles(request, groups, groupsLock, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "UPDATE_FILES":
+            answer = reqHandlers.updateFiles(request, groups, groupsLock, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "UPDATE_FILES":
-        answer = reqHandlers.updateFiles(request, groups, groupsLock, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "REMOVE_FILES":
+            answer = reqHandlers.removeFiles(request, groups, groupsLock, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "REMOVE_FILES":
-        answer = reqHandlers.removeFiles(request, groups, groupsLock, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "GET_FILES":
+            answer = reqHandlers.getFiles(groups, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "GET_FILES":
-        answer = reqHandlers.getFiles(groups, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "HERE":
+            answer = reqHandlers.imHere(request, peers, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "HERE":
-        answer = reqHandlers.imHere(request, peers, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "LEAVE":
+            answer = reqHandlers.leaveGroup(groups, groupsLock, request.split()[2], peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "LEAVE":
-        answer = reqHandlers.leaveGroup(groups, groupsLock, request.split()[2], peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request.split()[0] == "DISCONNECT":
+            answer = reqHandlers.disconnectGroup(groups, groupsLock, request.split()[2], peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request.split()[0] == "DISCONNECT":
-        answer = reqHandlers.disconnectGroup(groups, groupsLock, request.split()[2], peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request == "PEER DISCONNECT":
+            answer = reqHandlers.peerDisconnection(groups, groupsLock, peers, peerID)
+            transmission.mySend(self.client_sock, answer)
 
-    elif request == "PEER DISCONNECT":
-        answer = reqHandlers.peerDisconnection(groups, groupsLock, peers, peerID)
-        transmission.mySend(self.client_sock, answer)
+        elif request == "BYE":
+            answer = "OK - BYE PEER"
+            transmission.mySend(self.client_sock, answer)
+            self.stop()
 
-    elif request == "BYE":
-        answer = "OK - BYE PEER"
-        transmission.mySend(self.client_sock, answer)
-        self.stop()
-
-    else:
-        answer = "ERROR - UNEXPECTED REQUEST"
-        transmission.mySend(self.client_sock, answer)
+        else:
+            answer = "ERROR - UNEXPECTED REQUEST"
+            transmission.mySend(self.client_sock, answer)
 
 
 if __name__ == '__main__':
@@ -317,4 +328,4 @@ if __name__ == '__main__':
 
     myIP = socket.gethostbyname(socket.gethostname())
     port = 45154
-    server = Server(myIP,port)
+    server = Server(myIP, port)
