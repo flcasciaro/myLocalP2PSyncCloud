@@ -12,7 +12,6 @@ import qdarkgraystyle
 from PyQt5.QtCore import *
 from PyQt5.QtWidgets import *
 
-import mySignals
 import peerCore
 
 firstTip = "Double click an active group in order to access the group file manager"
@@ -88,7 +87,7 @@ class myP2PSyncCloud(QMainWindow):
         self.leaveButton = QPushButton("LEAVE GROUP")
         self.disconnectButton = QPushButton("DISCONNECT")
 
-        self.signals = mySignals.mySig()
+        self.signals = mySig()
         self.server = None
         self.groupName = ""
         self.refreshThread = Thread(target=self.refreshHandler, args=())
@@ -862,6 +861,16 @@ class TimerMessageBox(QMessageBox):
     def closeEvent(self, event):
         self.timer.stop()
         event.accept()
+
+class mySig(QObject):
+
+    refresh = pyqtSignal()
+
+    def __init__(self):
+        QObject.__init__(self)
+
+    def refreshEmit(self):
+        self.refresh.emit()
 
 def getDirFilenames(item, dirName, filenames):
 
