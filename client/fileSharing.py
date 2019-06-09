@@ -323,6 +323,7 @@ def downloadFile(file):
         file.iHaveIt()
         # clean the download current state
         file.previousChunks = list()
+        print("Synchronization of {} successfully terminated".format(file.filename))
     else:
         # if mergeChunks fails save the download current state
         file.previousChunks = file.availableChunks
