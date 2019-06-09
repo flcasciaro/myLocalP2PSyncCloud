@@ -1,6 +1,5 @@
-"""Peer core code of myP2PSyncCLoud"""
-
-"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""Peer core code of myP2PSyncCLoud.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import hashlib
 import json
@@ -133,8 +132,7 @@ def findServer():
     Read server coordinates (IP, Port) from the configuration file.
     If any problem happens reading the file (e.g. file not exists)
     return false. If the file exist and the reading operation is successfull
-    return serverIsReachable() value (this function try to reach the server
-    and return True/False whether the server is reachable or not).
+    return True.
     :return: boolean (True for success, False for any error)
     """
 
@@ -154,7 +152,7 @@ def findServer():
     except FileNotFoundError:
         return False
     file.close()
-    return serverIsReachable()
+    return True
 
 
 def setServerCoordinates(coordinates):
