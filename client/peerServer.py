@@ -1,3 +1,6 @@
+"""This code handles the server functions of a peer in myP2PSyncCLoud.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+
 import select
 import socket
 from threading import Thread

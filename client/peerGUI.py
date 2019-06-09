@@ -1,6 +1,5 @@
-"""Peer GUI code of myLocalP2PSyncCLoud"""
-
-"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""This code handles the client GUI of myP2PSyncCLoud peers.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import datetime
 import os
@@ -17,32 +16,40 @@ import peerCore
 firstTip = "Double click an active group in order to access the group file manager"
 secondTip = "Double click a not active group in order to show information about the group"
 statusLabel = "ROLE: {} \t PEERS (ACTIVE/TOTAL): {}/{}"
+
+#  defines the maximum number of attempts to reach the tracker server
 MAX_TRY = 3
+
+# define the number of seconds among two GUI refresh operation
 REFRESHING_TIME = 15
 
+
 class myP2PSyncCloud(QMainWindow):
+    """
+    This class represents the whole GUI and all its handlers.
+    """
 
     def __init__(self):
         super().__init__()
-        """Window properties definition"""
+        # Window properties definition
         self.title = "myP2PSyncCloud"
         self.left = 200
         self.top = 40
         self.width = 1000
         self.height = 500
 
-        """Window main structure definition"""
+        # Window main structure definition
         self.verticalSplitter = QSplitter(Qt.Vertical)
         self.horizontalSplitter = QSplitter()
         self.groupManager = QWidget()
         self.fileManager = QWidget()
         self.actionsList = QListWidget()
 
-        """Define a vertical box layout for the two main parts of the window"""
+        # Define a vertical box layout for the two main parts of the window
         self.groupManagerLayout = QVBoxLayout()
         self.fileManagerLayout = QVBoxLayout()
 
-        """Declaration of UI object in the groupManager frame"""
+        # Declaration of UI objects in the groupManager frame
         self.peerLabel = QLabel()
         self.serverLabel = QLabel()
 
@@ -64,7 +71,7 @@ class myP2PSyncCloud(QMainWindow):
         self.createGroupButton = QPushButton("CREATE GROUP")
         self.resetCreateButton = QPushButton("RESET")
 
-        """Declaration of UI object in the fileManager frame"""
+        # Declaration of UI objects in the fileManager frame
         self.fileManagerLabel1 = QLabel(firstTip)
         self.fileManagerLabel2 = QLabel(firstTip)
         self.fileListLabel = QLabel("FILES LIST")
@@ -90,12 +97,17 @@ class myP2PSyncCloud(QMainWindow):
         self.signals = mySig()
         self.server = None
         self.groupName = ""
-        self.refreshThread = Thread(target=self.refreshHandler, args=())
+
+        self.refreshThread = Thread(target=self.backgroundRefresh, args=())
         self.stopRefresh = False
 
         self.initUI()
 
     def initUI(self):
+        """
+        Initialize the GUI
+        """
+
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
         self.setCentralWidget(self.verticalSplitter)
@@ -112,10 +124,10 @@ class myP2PSyncCloud(QMainWindow):
         self.groupManager.setLayout(self.groupManagerLayout)
         self.fileManager.setLayout(self.fileManagerLayout)
 
+        # initialize groupManager
         self.groupManagerLayout.addWidget(self.peerLabel, alignment=Qt.AlignCenter)
         self.groupManagerLayout.addWidget(self.serverLabel, alignment=Qt.AlignCenter)
         self.groupManagerLayout.addSpacing(25)
-
         self.groupManagerLayout.addWidget(self.groupsLabel, alignment=Qt.AlignCenter)
         self.groupsList.setHeaderLabels(["GroupName", "Active/Total Peers", "Role", "Status"])
         self.groupsList.setAlternatingRowColors(True)
@@ -126,11 +138,11 @@ class myP2PSyncCloud(QMainWindow):
         self.groupManagerLayout.addWidget(self.restoreAllButton)
         self.groupManagerLayout.addSpacing(25)
 
+        # initialize Create Group form
         self.createTokenRW.setEchoMode(QLineEdit.Password)
         self.createTokenRWConfirm.setEchoMode(QLineEdit.Password)
         self.createTokenRO.setEchoMode(QLineEdit.Password)
         self.createTokenROConfirm.setEchoMode(QLineEdit.Password)
-
         self.createGroupLayout.addRow(self.createGroupLabel, self.createGroupName)
         self.createGroupLayout.addRow(self.tokenRWLabel, self.createTokenRW)
         self.createGroupLayout.addRow(self.tokenRWLabelConfirm, self.createTokenRWConfirm)
@@ -140,11 +152,7 @@ class myP2PSyncCloud(QMainWindow):
         self.groupManagerLayout.addLayout(self.createGroupLayout)
         self.groupManagerLayout.addSpacing(10)
 
-        self.selectRole.addItem("CHANGE MASTER")
-        self.selectRole.addItem("ADD MASTER")
-        self.selectRole.addItem("MAKE IT RW")
-        self.selectRole.addItem("MAKE IT RO")
-
+        # initialize fileManager
         self.fileManagerLayout.addWidget(self.fileManagerLabel1, alignment=Qt.AlignCenter)
         self.fileManagerLayout.addSpacing(5)
         self.fileManagerLayout.addWidget(self.fileManagerLabel2, alignment=Qt.AlignCenter)
@@ -172,6 +180,10 @@ class myP2PSyncCloud(QMainWindow):
         self.peersList.setMinimumWidth(self.width / 2)
         self.peersList.setMinimumHeight(100)
         self.fileManagerLayout.addWidget(self.peersList)
+        self.selectRole.addItem("CHANGE MASTER")
+        self.selectRole.addItem("ADD MASTER")
+        self.selectRole.addItem("MAKE IT RW")
+        self.selectRole.addItem("MAKE IT RO")
         self.changeRoleLayout.addWidget(self.selectRole)
         self.changeRoleLayout.addWidget(self.changeRole)
         self.fileManagerLayout.addLayout(self.changeRoleLayout)
@@ -180,6 +192,7 @@ class myP2PSyncCloud(QMainWindow):
         self.leaveDisconnectLayout.addWidget(self.disconnectButton)
         self.fileManagerLayout.addLayout(self.leaveDisconnectLayout)
 
+        # connect actions on widgets to handlers
         self.restoreAllButton.clicked.connect(self.restoreAllHandler)
         self.createGroupButton.clicked.connect(self.createGroupHandler)
         self.resetCreateButton.clicked.connect(self.resetCreateHandler)
@@ -195,23 +208,29 @@ class myP2PSyncCloud(QMainWindow):
         self.leaveButton.clicked.connect(self.leaveGroupHandler)
         self.disconnectButton.clicked.connect(self.disconnectGroupHandler)
 
-        self.signals.refresh.connect(self.refreshAll)
+        # connect the refresh signal signal to its handler
+        self.signals.refresh.connect(self.refreshHandler)
 
+        # set and show peerID
         peerCore.setPeerID()
-        serverReachable = peerCore.findServer()
-
         self.peerLabel.setText("Personal peerID is {}".format(peerCore.peerID))
+
+        # try to obtain server coordinates
+        if peerCore.findServer():
+            serverReachable = peerCore.serverIsReachable()
+        else:
+            serverReachable = False
 
         self.loadInititalFileManager()
         self.show()
 
         nrTry = 0
         while not serverReachable:
-            """Create dialog box in order to set server coordinates"""
+            # Show a dialog box where user can set server coordinates
             ok = False
             while not ok:
-                coordinates, ok = QInputDialog.getText(self, 'Server coordinates',
-                                                       'Enter Server IP Address and Server Port\nUse the format: serverIP:ServerPort')
+                coordinates, ok = QInputDialog.getText(self, "Server coordinates",
+                                                       "Enter Server IP Address and Server Port\nUse the format: serverIP:ServerPort")
                 if not ok:
                     nrTry += 1
                     if nrTry == MAX_TRY:
@@ -228,21 +247,31 @@ class myP2PSyncCloud(QMainWindow):
 
         self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverIP, peerCore.serverPort))
 
+        # retrieve groups info from the server and update windows
         peerCore.retrieveGroups()
         self.fillGroupManager()
 
+        # show to the user the possibility to restore all the groups
         self.restoreAllHandler()
 
+        # start the peerServer and register peer coordinates on the tracker
         self.server = peerCore.startSync()
         if self.server is None:
             exit(-1)
 
+        # obtain files information fro active groups from the tracker
         peerCore.updateLocalFileList()
 
+        # start the background refreshing thread
         self.refreshThread.daemon = True
         self.refreshThread.start()
 
-    def refreshHandler(self):
+    def backgroundRefresh(self):
+        """
+        These function is executed for all the time the client is running
+        by a secondary thread. Every second the thread check if the client is
+        still running and every REFRESHING_TIME seconds emits a refresh signal.
+        """
 
         while True:
             for i in range(0, REFRESHING_TIME):
@@ -252,9 +281,11 @@ class myP2PSyncCloud(QMainWindow):
                     time.sleep(1)
             self.signals.refreshEmit()
 
-    def refreshAll(self):
+    def refreshHandler(self):
+        """
+        Refresh groupManager and fileManager
+        """
 
-        # print("REFRESHING ALL")
         peerCore.retrieveGroups()
         self.fillGroupManager()
         peerCore.updateLocalFileList()
@@ -262,31 +293,49 @@ class myP2PSyncCloud(QMainWindow):
             self.loadFileManager()
 
     def closeEvent(self, event):
+        """
+        Handler for the closing operation (after a click on the 'X' in the window)
+        :param event: the closing event generated
+        """
 
+        # confirm message box
         reply = QMessageBox.question(self, 'Message', "Are you sure you want to quit?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
 
         if reply == QMessageBox.Yes:
+            # stop the peer server
             self.server.stopServer()
+
+            # handles the peer disconnection
             t = Thread(target=peerCore.disconnectPeer, args=())
             t.daemon = True
             t.start()
 
-            timeout = 5
-            msgBox = TimerMessageBox(timeout, self)
-            msgBox.exec_()
+            # stop the background refreshing thread
             self.stopRefresh = True
+
+            # show a pop-up message
+            timeout = 5
+            msgBox = TimerMessageBox("Saving session status...", timeout, self)
+            msgBox.exec_()
 
             event.accept()
         else:
             event.ignore()
 
     def loadInititalFileManager(self):
+        """
+        Load the empty fileManager
+        """
+
         self.fileManagerLabel1.setText(firstTip)
         self.fileManagerLabel2.setText(secondTip)
         self.hideFileManager()
 
     def hideFileManager(self):
+        """
+        Hide all the fileManager components
+        """
         self.fileListLabel.hide()
         self.fileList.hide()
         self.selectFile.hide()
@@ -304,6 +353,9 @@ class myP2PSyncCloud(QMainWindow):
         self.disconnectButton.hide()
 
     def fillGroupManager(self):
+        """
+        Fill the groupManager with groups information
+        """
 
         self.groupsList.clear()
 
@@ -333,7 +385,11 @@ class myP2PSyncCloud(QMainWindow):
             self.groupsList.addTopLevelItem(item)
 
     def restoreAllHandler(self):
+        """
+        Allows the user to restore all the restorable groups
+        """
 
+        # show a message box
         reply = QMessageBox.question(self, 'Message', "Do you want to restore all the groups?",
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.Yes:
@@ -356,19 +412,26 @@ class myP2PSyncCloud(QMainWindow):
                 QMessageBox.about(self, "Alert", "You don't have joined groups that can be restored")
 
     def createGroupHandler(self):
+        """
+        Collect and verify all the inputs in the createGroup form and
+        in case everything is ok create the group
+        """
 
+        # collects inputs
         groupName = self.createGroupName.text()
         groupTokenRW = self.createTokenRW.text()
         groupTokenRWConfirm = self.createTokenRWConfirm.text()
         groupTokenRO = self.createTokenRO.text()
         groupTokenROConfirm = self.createTokenROConfirm.text()
 
+        # check inputs
         if len(groupName) == 0 or len(groupName.split()) != 1:
             QMessageBox.about(self, "Error", "Invalid group name!")
         elif len(groupTokenRW) == 0 or len(groupTokenRO) == 0 \
                 or groupTokenRW != groupTokenRWConfirm or groupTokenRO != groupTokenROConfirm:
             QMessageBox.about(self, "Error", "Invalid tokens!")
         else:
+            # create groups and reload windows in case of success
             if peerCore.createGroup(groupName, groupTokenRW, groupTokenRO):
                 self.fillGroupManager()
                 self.resetCreateHandler()
@@ -379,7 +442,9 @@ class myP2PSyncCloud(QMainWindow):
                 QMessageBox.about(self, "Error", "Group creation failed!")
 
     def resetCreateHandler(self):
-
+        """
+        Reset the crreateGroup form
+        """
         self.createGroupName.setText("Enter single word GroupName")
         self.createTokenRW.clear()
         self.createTokenRWConfirm.clear()
@@ -387,6 +452,10 @@ class myP2PSyncCloud(QMainWindow):
         self.createTokenROConfirm.clear()
 
     def groupDoubleClicked(self, item):
+        """
+        Handle the double-clicking action on a group in the groupManager
+        """
+
         self.groupName = item.text(0)
         status = item.text(3).upper()
         if status == "ACTIVE":
@@ -397,12 +466,17 @@ class myP2PSyncCloud(QMainWindow):
             self.joinHandler()
 
     def restoreHandler(self):
+        """
+        Restore a restorable group and reload the window
+        """
 
+        # confirm message box
         reply = QMessageBox.question(self, 'Message', "Are you sure you want to restore the group {} ?"
                                      .format(self.groupName),
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
             # call the restoreGroup function passing the self.groupName as parameter
+            # in case of success reload the window
             if peerCore.restoreGroup(self.groupName):
                 self.fillGroupManager()
                 self.loadFileManager()
@@ -411,9 +485,14 @@ class myP2PSyncCloud(QMainWindow):
                 QMessageBox.about(self, "Error", "Something went wrong!")
 
     def joinHandler(self):
+        """
+        Handler for the join group action (triggered by clicking on an active group)
+        """
 
+        # show a form where the user can insert a token
         token, okPressed = QInputDialog.getText(self, "Get token", "Your token:", QLineEdit.Password, "")
         if okPressed and token != '':
+            # try to join the group: in case of success reload the window
             if peerCore.joinGroup(self.groupName, token):
                 self.fillGroupManager()
                 self.loadFileManager()
@@ -422,23 +501,29 @@ class myP2PSyncCloud(QMainWindow):
                 QMessageBox.about(self, "Error", "Wrong token!")
 
     def loadFileManager(self):
+        """
+        Fills the fileManager part of the GUI.
+        The set of information and buttons showed is related to the role
+        of the peer.
+        """
 
+        # hide all the components
         self.hideFileManager()
 
+        # set group information for all users
         self.fileManagerLabel1.setText("FILE MANAGER GROUP {}".format(self.groupName))
         self.fileManagerLabel2.setText(statusLabel.format(
             peerCore.groupsList[self.groupName]["role"],
             peerCore.groupsList[self.groupName]["active"],
             peerCore.groupsList[self.groupName]["total"]))
 
+        # Fills the files list and show it to all users
         self.fileListLabel.show()
-
-        "Fills the files list"
-
         self.fileList.show()
         self.fillFileList()
 
-        if peerCore.groupsList[self.groupName]["role"].upper() == "RW":
+        if peerCore.groupsList[self.groupName]["role"].upper() != "RO":
+            # show only to RW and Master
             self.selectFile.show()
             self.selectDir.show()
             self.removeFile.show()
@@ -451,19 +536,14 @@ class myP2PSyncCloud(QMainWindow):
             self.peersList.show()
 
         if peerCore.groupsList[self.groupName]["role"].upper() == "MASTER":
-            self.selectFile.show()
-            self.selectDir.show()
-            self.removeFile.show()
-            self.removeDir.show()
-            self.syncFileButton.show()
-            self.syncDirButton.show()
-            self.syncAllButton.show()
-            self.peersListLabel.show()
-            self.fillPeersList()
-            self.peersList.show()
+            # show only to Master
             self.selectRole.show()
             self.changeRole.show()
 
+        # show to all users
+        self.peersListLabel.show()
+        self.fillPeersList()
+        self.peersList.show()
         self.leaveButton.show()
         self.disconnectButton.show()
 
@@ -563,7 +643,6 @@ class myP2PSyncCloud(QMainWindow):
                                             file.getLastModifiedTime(), syncStatus])
                     parent.addChild(item)
 
-
     def addFileHandler(self):
 
         dlg = QFileDialog()
@@ -617,7 +696,6 @@ class myP2PSyncCloud(QMainWindow):
         else:
             QMessageBox.about(self, "Error", "Cannot add the selected directory.. name cannot contains spaces!")
 
-
     def removeFileHandler(self):
 
         if self.fileList.currentItem() is not None:
@@ -667,8 +745,6 @@ class myP2PSyncCloud(QMainWindow):
         else:
             QMessageBox.about(self, "Error", "You must select a dir from the list")
 
-
-
     def syncFileHandler(self):
 
         if self.fileList.currentItem() is not None:
@@ -699,7 +775,6 @@ class myP2PSyncCloud(QMainWindow):
                 QMessageBox.about(self, "Error", "You've selected a directory instead of a file")
         else:
             QMessageBox.about(self, "Error", "You must select a file from the list")
-
 
     def syncDirHandler(self):
 
@@ -738,7 +813,6 @@ class myP2PSyncCloud(QMainWindow):
         else:
             QMessageBox.about(self, "Error", "You must select a directory from the list")
 
-
     def syncAllHandler(self):
 
         if self.fileList.topLevelItemCount() == 0:
@@ -772,8 +846,6 @@ class myP2PSyncCloud(QMainWindow):
                     self.addLogMessage("It was not possible to synchronize all the files")
             else:
                 QMessageBox.about(self, "Info", "All files are already synchronized")
-
-
 
     def changeRoleHandler(self):
 
@@ -826,27 +898,39 @@ class myP2PSyncCloud(QMainWindow):
             else:
                 QMessageBox.about(self, "Error", "Something went wrong!")
 
-
     def addLogMessage(self, message):
+        """
+        Add a message in the actionsList box
+        :param message: text that will be added
+        """
+
+        # add current time to the message
         modMessage = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " >>> " + message
-        """keep track of just the last 5 messages"""
+
+        # keep track of just the last 5 messages
         if self.actionsList.count() == 5:
             item = self.actionsList.item(4)
             item.setText(modMessage)
         else:
             self.actionsList.addItem(modMessage)
         self.actionsList.sortItems(order=Qt.DescendingOrder)
+
+        # show message into a pop-up window
         QMessageBox.about(self, "Notification", message)
 
 
 class TimerMessageBox(QMessageBox):
-    def __init__(self, timeout=3, parent=None):
+    """
+    Custom class for a message box auto-expiring after <timeout> seconds.
+    """
+
+    def __init__(self, text, timeout=3, parent=None):
         super(TimerMessageBox, self).__init__(parent)
         self.setWindowTitle("Wait")
         self.setMinimumHeight(40)
         self.setMinimumWidth(70)
         self.time_to_wait = timeout
-        self.setText("Saving session status...")
+        self.setText(text)
         self.setStandardButtons(QMessageBox.NoButton)
         self.timer = QTimer(self)
         self.timer.setInterval(1000)
@@ -862,30 +946,52 @@ class TimerMessageBox(QMessageBox):
         self.timer.stop()
         event.accept()
 
-class mySig(QObject):
 
+class mySig(QObject):
+    """
+    Class for my refresh signal
+    """
+
+    # declare the signal
     refresh = pyqtSignal()
 
     def __init__(self):
         QObject.__init__(self)
 
     def refreshEmit(self):
+        # emit the signal
         self.refresh.emit()
 
-def getDirFilenames(item, dirName, filenames):
 
+def getDirFilenames(item, dirName, filenames):
+    """
+    Recursive function for traversing a QTreeWidget item
+    while setting all the filenames discovered into a filepaths list.
+    :param item: is a QTreeWidgetItem object, which can have childs or not
+    :param dirName: name of the parent directory
+    :param filenames: filenames list
+    :return: void
+    """
+    # for each child of the item
     for i in range(0, item.childCount()):
         if item.child(i).text(1) == "":
-            # is a directory
+            # is a directory: call again the function recursively into the directory
             getDirFilenames(item.child(i), dirName + "/" + item.child(i).text(0), filenames)
         else:
-            # is a file
+            # is a file: append the filename to the list
             filenames.append(dirName + "/" + item.child(i).text(0))
 
 
 if __name__ == '__main__':
+    # declare the GUI application
     app = QApplication([])
+
+    # apply the qdarkgraystyle
     darkgray_stylesheet = qdarkgraystyle.load_stylesheet()
     app.setStyleSheet(darkgray_stylesheet)
+
+    # create the window object
     window = myP2PSyncCloud()
+
+    # start the application
     sys.exit(app.exec_())
