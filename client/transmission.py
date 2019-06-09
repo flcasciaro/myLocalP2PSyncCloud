@@ -1,3 +1,6 @@
+"""Code for the transmission of messages and data over socket connection in myP2PSyncCLoud.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+
 import socket
 
 BUFSIZE = 4096
@@ -6,27 +9,34 @@ SIZE_LENGTH = 16
 TIMEOUT = 3.0
 
 def mySend(sock, data):
-    """wrapper for the send function"""
+    """
+    Send a message on the socket
+    :param sock: socket connection object
+    :param data: data that will be sent
+    :return: void
+    """
 
+    # check socket object
     if sock is None:
         return
 
+    # set a timeout
     sock.settimeout(TIMEOUT)
 
-    "data is a string message"
+    # data is a string message: it needs to be converted to bytes
     data = str(data).encode('utf-8')
+
+    # get size of the message
     size = len(data)
 
-    # print("data: ", data)
-    # print("size: ", size)
 
-    """put size on a 16 byte string"""
+    # put size on a 16 byte string
     strSize = str(size).zfill(SIZE_LENGTH)
     strSize = strSize.encode('utf-8')
 
     # print("strSize: ", strSize)
 
-    """send the size of the following data"""
+    # send the size of the following data
     totalSent = 0
     while totalSent < SIZE_LENGTH:
         try:
@@ -37,9 +47,8 @@ def mySend(sock, data):
             raise RuntimeError("sock connection broken")
         totalSent = totalSent + sent
 
-    # print("strSize sent")
 
-    """send data"""
+    # send data
     totalSent = 0
     while totalSent < size:
         try:
@@ -50,18 +59,22 @@ def mySend(sock, data):
             raise RuntimeError("sock connection broken")
         totalSent = totalSent + sent
 
-    # print("data sent")
-
 
 def myRecv(sock):
-    """wrapper for the recv function"""
+    """
+    Wrapper for the recv function
+    :param sock: socket connection object
+    :return: data received
+    """
 
+    # check socket object
     if sock is None:
         return None
 
+    # set a timeout
     sock.settimeout(TIMEOUT)
 
-    """read the 16 byte string representing the data size"""
+    # read the 16 byte string representing the data size
     chunks = []
     bytesRec = 0
     while bytesRec < SIZE_LENGTH:
@@ -74,10 +87,10 @@ def myRecv(sock):
         bytesRec += len(chunk)
         chunks.append(chunk.decode('utf-8'))
 
+    # eventually join chunks
     dataSize = int(''.join(chunks))
-    # print("datasize", dataSize)
 
-    """read data"""
+    # read data until dataSize bytes have been received
     chunks = []
     bytesRec = 0
     while bytesRec < dataSize:
@@ -88,23 +101,32 @@ def myRecv(sock):
 
         if chunk == '':
             raise RuntimeError("sock connection broken")
-        # print(chunk)
         bytesRec += len(chunk)
         chunks.append(chunk.decode('utf-8'))
 
+    # eventually join chunks
     data = ''.join(chunks)
-    # print("data", data)
+
     return str(data)
 
 
 def sendChunk(sock, chunk, chunkSize):
+    """
+    Send a file chunk over a socket connection.
+    :param sock: socket connection object
+    :param chunk: bytes that will be sent
+    :param chunkSize: number of bytes that will be sent
+    :return: void
+    """
 
+    # check socket object
     if sock is None:
         return
 
+    # set a timeout
     sock.settimeout(TIMEOUT)
 
-    """send data"""
+    # send data until chunkSize bytes have been sent
     totalSent = 0
     while totalSent < chunkSize:
         try:
@@ -118,9 +140,17 @@ def sendChunk(sock, chunk, chunkSize):
 
 
 def recvChunk(sock, chunkSize):
-    """read data"""
+    """
+    Receive a file chunk over a socket connection.
+    :param sock: socket connection object
+    :param chunkSize: number of bytes that will be received
+    :return: data received representing the file chunk
+    """
+
     pieces = []
     bytesRec = 0
+
+    # read on the socket until chunkSize bytes have been received
     while bytesRec < chunkSize:
         try:
             piece = sock.recv(min(chunkSize - bytesRec, BUFSIZE))
@@ -129,11 +159,10 @@ def recvChunk(sock, chunkSize):
 
         if piece == b'':
             raise RuntimeError("sock connection broken")
-        # print(chunk)
         bytesRec += len(piece)
         pieces.append(piece)
 
+    # join chunk pieces
     chunk =  b''.join(pieces)
-    # print("data", data)
 
     return chunk
