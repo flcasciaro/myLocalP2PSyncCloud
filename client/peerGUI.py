@@ -24,7 +24,7 @@ MAX_TRY = 3
 REFRESHING_TIME = 15
 
 
-class myP2PSyncCloud(QMainWindow):
+class myP2PSync(QMainWindow):
     """
     This class represents the whole GUI and all its handlers.
     """
@@ -32,7 +32,7 @@ class myP2PSyncCloud(QMainWindow):
     def __init__(self):
         super().__init__()
         # Window properties definition
-        self.title = "myP2PSyncCloud"
+        self.title = "myP2PSync"
         self.left = 200
         self.top = 40
         self.width = 1000
@@ -991,7 +991,7 @@ if __name__ == '__main__':
     app.setStyleSheet(darkgray_stylesheet)
 
     # create the window object
-    window = myP2PSyncCloud()
+    window = myP2PSync()
 
     # start the application
     sys.exit(app.exec_())
