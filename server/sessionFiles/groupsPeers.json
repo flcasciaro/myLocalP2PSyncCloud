@@ -1,22 +1,22 @@
 [
     {
-        "groupName": "ITDepartment",
         "peerID": "52232004257",
+        "groupName": "ITDepartment",
         "role": "RW"
     },
     {
-        "groupName": "ITDepartment",
         "peerID": "48658634008192",
+        "groupName": "ITDepartment",
         "role": "RW"
     },
     {
-        "groupName": "ITDepartment",
         "peerID": "132098950711908",
+        "groupName": "ITDepartment",
         "role": "Master"
     },
     {
-        "groupName": "ITDepartment",
         "peerID": "52240940766",
+        "groupName": "ITDepartment",
         "role": "RW"
     }
 ]

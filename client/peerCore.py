@@ -1,4 +1,4 @@
-"""Peer core code of myP2PSyncCLoud.
+"""Peer core code of myP2PSync.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import hashlib

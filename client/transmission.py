@@ -1,4 +1,4 @@
-"""Code for the transmission of messages and data over socket connection in myP2PSyncCLoud.
+"""Code for the transmission of messages and data over socket connection in myP2PSync.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import socket

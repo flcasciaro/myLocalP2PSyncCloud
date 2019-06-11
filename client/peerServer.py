@@ -1,4 +1,4 @@
-"""This code handles the server functions of a peer in myP2PSyncCLoud.
+"""This code handles the server functions of a peer in myP2PSync.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import select

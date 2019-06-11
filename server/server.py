@@ -1,4 +1,4 @@
-"""Server for the group management of myLocalP2PSyncCLoud"""
+"""Server for the group management of myLocalP2PSync"""
 
 """@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 

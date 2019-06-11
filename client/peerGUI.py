@@ -1,4 +1,4 @@
-"""This code handles the client GUI of myP2PSyncCLoud peers.
+"""This code handles the client GUI of myP2PSync peers.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import datetime
