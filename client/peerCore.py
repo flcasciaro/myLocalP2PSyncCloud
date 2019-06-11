@@ -1,4 +1,4 @@
-"""Peer core code of myP2PSync.
+"""This code manages all the main functions of myP2PSync clients.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import hashlib

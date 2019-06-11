@@ -1,7 +1,6 @@
-""""This script contains function that will be invoked by the server's thread in order
-to serve clients request"""
-
-"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+""""This code contains functions that will be invoked by the server's threads in order
+to serve clients request.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 from groupClass import Group
 

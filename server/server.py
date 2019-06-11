@@ -1,6 +1,5 @@
-"""Server for the group management of myLocalP2PSync"""
-
-"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""This code handles the tracking server management.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import json
 import os

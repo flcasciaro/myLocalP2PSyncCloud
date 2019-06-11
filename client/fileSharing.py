@@ -1,6 +1,5 @@
-"""This file contains all the code necessary to handle the files-sharing"""
-
-"""@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""This code handles file-sharing operations in myP2PSync peers.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import os
 import shutil
