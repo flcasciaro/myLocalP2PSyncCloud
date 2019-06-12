@@ -297,7 +297,7 @@ def disconnectGroup(groups, groupsLock, groupName, peerID):
     answer = "OK - GROUP DISCONNECTED"
     return answer
 
-def peerDisconnection(groups, groupsLock, peers, peerID):
+def peerExit(groups, groupsLock, peerID):
     """Disconnect the peer from all the synchronization groups in which is active"""
 
     groupsLock.acquire()

@@ -813,7 +813,7 @@ def disconnectGroup(groupName):
         return True
 
 
-def disconnectPeer():
+def peerExit():
     """
     Disconnect peer from all the active groups by sending a request to the server.
     Furthermore, stop all the working synchronization thread.
@@ -827,7 +827,7 @@ def disconnectPeer():
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "PEER DISCONNECT"
+        message = str(peerID) + " " + "EXIT"
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
         closeSocket(s)

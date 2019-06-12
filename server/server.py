@@ -132,12 +132,14 @@ def saveState():
         del filesJson
 
 
-# Multithread server class that will manage incoming connections.
-# For each incoming connection it will create a thread.
-# This thread will manage the request and terminate.
-# The server runs until the property __stop is equals to False.
-# The port on which the server will listen is choosen among available ports.
 class Server:
+    """
+    Multithread server class that will manage incoming connections.
+    For each incoming connection it will create a thread.
+    This thread will manage the request and terminate.
+    The server runs until the property __stop is equals to False.
+    The port on which the server will listen is choosen among available ports.
+    """
 
     def __init__(self, host, port, max_clients=5):
         """
@@ -250,9 +252,11 @@ class SocketServerThread(Thread):
             print('[Thr {}] Closing connection with {}'.format(self.number, self.client_addr))
             self.client_sock.close()
 
-
     def manageRequest(self, request, peerID):
-        """Serves the different client requests"""
+        """
+        Serves the different client requests
+        """
+
         print('[Thr {}] Received {}'.format(self.number, request))
 
         if request == "SEND GROUPS":
@@ -307,8 +311,8 @@ class SocketServerThread(Thread):
             answer = reqHandlers.disconnectGroup(groups, groupsLock, request.split()[2], peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request == "PEER DISCONNECT":
-            answer = reqHandlers.peerDisconnection(groups, groupsLock, peers, peerID)
+        elif request == "EXIT":
+            answer = reqHandlers.peerExit(groups, groupsLock, peerID)
             transmission.mySend(self.client_sock, answer)
 
         elif request == "BYE":
@@ -322,9 +326,11 @@ class SocketServerThread(Thread):
 
 
 if __name__ == '__main__':
-    """main function, starts the server"""
+    # read session files and initialize server
     initServer()
 
     myIP = socket.gethostbyname(socket.gethostname())
     port = 45154
+
+    # run the server until CTRL+C interrupt
     server = Server(myIP, port)

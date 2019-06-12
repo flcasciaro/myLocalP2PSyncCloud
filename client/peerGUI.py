@@ -307,7 +307,7 @@ class myP2PSync(QMainWindow):
             self.server.stopServer()
 
             # handles the peer disconnection
-            t = Thread(target=peerCore.disconnectPeer, args=())
+            t = Thread(target=peerCore.peerExit, args=())
             t.daemon = True
             t.start()
 
