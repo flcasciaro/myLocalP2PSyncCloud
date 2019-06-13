@@ -4,7 +4,7 @@
 
 class Group:
 
-    def __init__(self, name, tokenRW, tokenRO):
+    def __init__(self, name, tokenRW, tokenRO, root):
         self.name = name
         self.tokenRW = tokenRW
         self.tokenRO = tokenRO
@@ -12,7 +12,7 @@ class Group:
         self.totalPeers = 0
         self.nrFiles = 0
         self.peersInGroup = dict()
-        self.filesInGroup = dict()
+        self.filesInGroup = root
 
     def addPeer(self, peerID, active, role):
         p = PeerInGroup(peerID, active, role)
@@ -74,10 +74,9 @@ class FileInGroup:
         self.filesize = filesize
         self.timestamp = int(timestamp)
 
-    def getFileInfo(self, groupName):
+    def getFileInfo(self):
         fileInfo = dict()
         fileInfo["filename"] = self.filename
-        fileInfo["groupName"] = groupName
         fileInfo["filesize"] = self.filesize
         fileInfo["timestamp"] = self.timestamp
         return fileInfo
