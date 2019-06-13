@@ -184,13 +184,16 @@ class SocketServerThread(Thread):
             fileSharing.sendChunk(message, self)
 
         elif message.split()[0] == "ADDED_FILES":
-            syncScheduler.addedFiles(message)
+            answer = syncScheduler.addedFiles(message)
+            transmission.mySend(self.client_sock, answer)
 
         elif message.split()[0] == "REMOVED_FILES":
-            syncScheduler.removedFiles(message)
+            answer = syncScheduler.removedFiles(message)
+            transmission.mySend(self.client_sock, answer)
 
         elif message.split()[0] == "UPDATED_FILES":
-            syncScheduler.updatedFiles(message)
+            answer = syncScheduler.updatedFiles(message)
+            transmission.mySend(self.client_sock, answer)
 
         elif message == "BYE":
             answer = "BYE PEER"
