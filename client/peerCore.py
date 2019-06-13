@@ -1,7 +1,6 @@
 """This code manages all the main functions of myP2PSync clients.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
-import datetime
 import hashlib
 import json
 import os
@@ -13,8 +12,8 @@ from threading import Thread, Lock
 import fileManagement
 import fileSystem
 import peerServer
+import syncScheduler
 import transmission
-from syncScheduler import scheduler, syncThreads, syncThreadsLock
 
 # Obtain script path and script name, it will be useful to manage filepaths
 scriptPath, scriptName = os.path.split((os.path.abspath(__file__)))
@@ -457,7 +456,7 @@ def startSync():
         closeSocket(s)
         return None
 
-    schedulerThread = Thread(target=scheduler, args=())
+    schedulerThread = Thread(target=syncScheduler.scheduler, args=())
     schedulerThread.daemon = True
     schedulerThread.start()
 
@@ -534,8 +533,10 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
 
             if myFile.timestamp == fileInfo["timestamp"] and myFile.status == "D":
                 myFile.status = "D"
-                task = "SYNC {} {}".format(treePath, datetime.datetime.now())
-                queue.put(task)
+                task = "SYNC {} {}".format(treePath, groupName)
+                syncScheduler.queueLock.acquire()
+                syncScheduler.queue.put(task)
+                syncScheduler.queueLock.release()
 
             elif myFile.timestamp < fileInfo["timestamp"]:
                 # my file version is not the last one
@@ -543,8 +544,10 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
                 myFile.filesize = int(fileInfo["filesize"])
                 myFile.previousChunks = list()
                 myFile.status = "D"
-                task = "SYNC {} {}".format(treePath, datetime.datetime.now())
-                queue.put(task)
+                task = "SYNC {} {}".format(groupName, treePath)
+                syncScheduler.queueLock.acquire()
+                syncScheduler.queue.put(task)
+                syncScheduler.queueLock.release()
 
         else:
             # file not found locally, add it
@@ -567,8 +570,10 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
 
             localGroupTree.addNode(treePath, file)
 
-            task = "SYNC {} {}".format(treePath, datetime.datetime.now())
-            queue.put(task)
+            task = "SYNC {} {}".format(groupName, treePath)
+            syncScheduler.queueLock.acquire()
+            syncScheduler.queue.put(task)
+            syncScheduler.queueLock.release()
 
     # check if there are removed files
     localTreePaths = localGroupTree.getTreePaths()
@@ -638,7 +643,7 @@ def addFiles(groupName, filepaths, directory):
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "ADD_FILES {} {}".format(groupName, str(filesInfoWFP))
+        message = str(peerID) + " " + "ADDED_FILES {} {}".format(groupName, str(filesInfoWFP))
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
         closeSocket(s)
@@ -677,7 +682,7 @@ def addFiles(groupName, filepaths, directory):
 
             try:
                 # send request message and wait for the answer, then close the socket
-                message = "ADD_FILES {} {}".format(groupName, str(filesInfoWFP))
+                message = "ADDED_FILES {} {}".format(groupName, str(filesInfoWFP))
                 transmission.mySend(s, message)
                 __ = transmission.myRecv(s)
                 closeSocket(s)
@@ -702,7 +707,7 @@ def removeFiles(groupName, filenames):
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "REMOVE_FILES {} {}".format(groupName, str(filenames))
+        message = str(peerID) + " " + "REMOVED_FILES {} {}".format(groupName, str(filenames))
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
         closeSocket(s)
@@ -848,11 +853,11 @@ def leaveGroup(groupName):
         return False
     else:
         # stop every synchronization thread working on file of the group
-        syncThreadsLock.acquire()
-        for thread in syncThreads.values():
+        syncScheduler.syncThreadsLock.acquire()
+        for thread in syncScheduler.syncThreads.values():
             if thread["groupName"] == groupName:
                 thread["stop"] = True
-        syncThreadsLock.release()
+        syncScheduler.syncThreadsLock.release()
         
         groupsList[groupName]["status"] = "OTHER"
         
@@ -886,11 +891,11 @@ def disconnectGroup(groupName):
         return False
     else:
         # stop every synchronization thread working on file of the group
-        syncThreadsLock.acquire()
-        for thread in syncThreads.values():
+        syncScheduler.syncThreadsLock.acquire()
+        for thread in syncScheduler.syncThreads.values():
             if thread["groupName"] == groupName:
                 thread["stop"] = True
-        syncThreadsLock.release()
+        syncScheduler.syncThreadsLock.release()
 
         groupsList[groupName]["status"] = "RESTORABLE"
         
@@ -925,15 +930,14 @@ def peerExit():
         return False
     else:
 
-        # stop syncScheduler
-        global syncStop
-        syncStop = True
+        # stop scheduler
+        syncScheduler.stopScheduler()
 
         # stop every working synchronization thread
-        syncThreadsLock.acquire()
-        for thread in syncThreads.values():
+        syncScheduler.syncThreadsLock.acquire()
+        for thread in syncScheduler.syncThreads.values():
             thread["stop"] = True
-        syncThreadsLock.release()
+        syncScheduler.syncThreadsLock.release()
         
         # wait for thread termination
         time.sleep(4)
