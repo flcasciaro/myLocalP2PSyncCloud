@@ -1,1 +1,55 @@
-[]
+[
+    {
+        "nodeName": "ShazList",
+        "isDir": true,
+        "childs": [],
+        "info": {}
+    },
+    {
+        "nodeName": "ITDepartment",
+        "isDir": true,
+        "childs": [
+            {
+                "nodeName": "prova",
+                "isDir": true,
+                "childs": [
+                    {
+                        "nodeName": "ccc.txt",
+                        "isDir": false,
+                        "childs": [],
+                        "info": {
+                            "filename": "ccc.txt",
+                            "filesize": 25,
+                            "timestamp": 1559842681
+                        }
+                    },
+                    {
+                        "nodeName": "provaInprova",
+                        "isDir": true,
+                        "childs": [
+                            {
+                                "nodeName": "dvdv.txt",
+                                "isDir": false,
+                                "childs": [],
+                                "info": {
+                                    "filename": "dvdv.txt",
+                                    "filesize": 10,
+                                    "timestamp": 1559842418
+                                }
+                            }
+                        ],
+                        "info": {}
+                    }
+                ],
+                "info": {}
+            }
+        ],
+        "info": {}
+    },
+    {
+        "nodeName": "Telecom",
+        "isDir": true,
+        "childs": [],
+        "info": {}
+    }
+]
