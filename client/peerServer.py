@@ -6,15 +6,18 @@ import socket
 from threading import Thread
 
 import fileSharing
+import syncScheduler
 import transmission
 
 
-# Multithread server class that will manage incoming connections.
-# For each incoming connection it will create a thread.
-# This thread will manage the request and terminate.
-# The server runs until the property __stop is equals to False.
-# The port on which the server will listen is choosen among available ports.
 class Server(Thread):
+    """
+    Multithread server class that will manage incoming connections.
+    For each incoming connection it will create a thread.
+    This thread will manage the request and terminate.
+    The server runs until the property __stop is equals to False.
+    The port on which the server will listen is choosen among available ports.
+    """
 
     def __init__(self, host, max_clients=5):
         """
@@ -177,8 +180,17 @@ class SocketServerThread(Thread):
         if message.split()[0] == "CHUNKS_LIST":
             fileSharing.sendChunksList(message, self)
 
-        if message.split()[0] == "CHUNK":
+        elif message.split()[0] == "CHUNK":
             fileSharing.sendChunk(message, self)
+
+        elif message.split()[0] == "ADDED_FILES":
+            syncScheduler.addedFiles(message)
+
+        elif message.split()[0] == "REMOVED_FILES":
+            syncScheduler.removedFiles(message)
+
+        elif message.split()[0] == "UPDATED_FILES":
+            syncScheduler.updatedFiles(message)
 
         elif message == "BYE":
             answer = "BYE PEER"

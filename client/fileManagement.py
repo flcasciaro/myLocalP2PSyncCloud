@@ -3,16 +3,13 @@
 
 
 import datetime
-import json
 import math
 import os
 import stat
 from threading import Lock
 
-
 # chunk size is fixed and equal for all the file
 CHUNK_SIZE = 1048576          #    1 MB
-
 
 class File:
 
@@ -105,65 +102,5 @@ def getFileStat(filepath):
         return st[stat.ST_SIZE], st[stat.ST_MTIME]
     except OSError:
         return None, None
-
-
-def getPreviousFiles(previousSessionFile):
-
-    fileList = dict()
-
-    try:
-        f = open(previousSessionFile, 'r')
-        try:
-            fileListJson = json.load(f)
-        except ValueError:
-            return fileList
-        f.close()
-    except FileNotFoundError:
-        print("No previous session session information found")
-        return fileList
-
-    for fileKey in fileListJson:
-        fileList[fileKey] = File(fileListJson[fileKey]["groupName"],
-                                 fileListJson[fileKey]["filename"],
-                                 fileListJson[fileKey]["filepath"],
-                                 fileListJson[fileKey]["filesize"],
-                                 fileListJson[fileKey]["timestamp"],
-                                 fileListJson[fileKey]["status"],
-                                 fileListJson[fileKey]["previousChunks"])
-    del fileListJson
-
-    print("Previous session information successfully retrieved")
-
-    return fileList
-
-
-def saveFileStatus(previousSessionFile, fileList):
-
-    fileListJson = dict()
-
-    for fileKey in fileList:
-        fileListJson[fileKey] = dict()
-        fileListJson[fileKey]["groupName"] = fileList[fileKey].groupName
-        fileListJson[fileKey]["filename"] = fileList[fileKey].filename
-        fileListJson[fileKey]["filepath"] = fileList[fileKey].filepath
-        fileListJson[fileKey]["filesize"] = fileList[fileKey].filesize
-        fileListJson[fileKey]["timestamp"] = fileList[fileKey].timestamp
-        fileListJson[fileKey]["status"] = fileList[fileKey].status
-        fileListJson[fileKey]["previousChunks"] = fileList[fileKey].previousChunks
-
-    print("Session information successfully saved")
-
-
-    try:
-        f = open(previousSessionFile, 'w')
-        json.dump(fileListJson, f, indent=4)
-        del fileListJson
-        f.close()
-    except FileNotFoundError:
-        print("Error while saving the current file status")
-        del fileListJson
-        return False
-
-    return True
 
 

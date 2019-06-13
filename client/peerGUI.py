@@ -247,20 +247,17 @@ class myP2PSync(QMainWindow):
 
         self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverIP, peerCore.serverPort))
 
+        # start the peerServer and register peer coordinates on the tracker
+        self.server = peerCore.startSync()
+        if self.server is None:
+            exit(-1)
+
         # retrieve groups info from the server and update windows
         peerCore.retrieveGroups()
         self.fillGroupManager()
 
         # show to the user the possibility to restore all the groups
         self.restoreAllHandler()
-
-        # start the peerServer and register peer coordinates on the tracker
-        self.server = peerCore.startSync()
-        if self.server is None:
-            exit(-1)
-
-        # obtain files information fro active groups from the tracker
-        peerCore.updateLocalFileList()
 
         # start the background refreshing thread
         self.refreshThread.daemon = True
@@ -285,10 +282,8 @@ class myP2PSync(QMainWindow):
         """
         Refresh groupManager and fileManager
         """
-
         peerCore.retrieveGroups()
         self.fillGroupManager()
-        peerCore.updateLocalFileList()
         if not self.fileList.isHidden():
             self.loadFileManager()
 
@@ -507,6 +502,7 @@ class myP2PSync(QMainWindow):
         of the peer.
         """
 
+
         # hide all the components
         self.hideFileManager()
 
@@ -563,85 +559,13 @@ class myP2PSync(QMainWindow):
     def fillFileList(self):
 
         self.fileList.clear()
-        for file in peerCore.localFileList.values():
-            if file.groupName == self.groupName:
 
-                if file.filesize < 1024:
-                    filesize = str(file.filesize) + " B"
-                elif file.filesize < 1048576:
-                    filesize = str(int(file.filesize / 1024)) + " KB"
-                elif file.filesize < 1024 * 1048576:
-                    filesize = str(int(file.filesize / 1048576)) + " MB"
-                else:
-                    filesize = str(file.filesize / (1024 * 1048576)) + " GB"
+        groupFiles = peerCore.localFileTree.getGroup(self.groupName)
+        if groupFiles is None:
+            return
 
-                if file.status == "S":
-                    syncStatus = "Synchronized"
-                elif file.status == "U":
-                    syncStatus = "Not synchronized"
-                elif file.status == "D":
-                    syncStatus = "Synchronizing: " + str(file.progress) + "%"
-
-                if len(file.filename.split("/")) == 1:
-                    filename = file.filename.split("/")[-1]
-                    item = QTreeWidgetItem([filename, file.filepath, filesize,
-                                            file.getLastModifiedTime(), syncStatus])
-                    self.fileList.addTopLevelItem(item)
-                else:
-                    # file belongs to a directory
-                    # for each directory on the name:
-                    #       find the directory in the list (if not exist add it)
-                    parent = None
-                    dirTree = file.filename.split("/")
-                    length = len(dirTree) - 1
-
-                    for index in range(0, length):
-
-                        node = dirTree[index]
-
-                        item = QTreeWidgetItem([node, "", "", "", ""])
-
-                        items = self.fileList.findItems(node, Qt.MatchExactly | Qt.MatchRecursive, 0)
-                        if len(items) == 0:
-                            # directory is not listed yet: add it
-                            if parent is not None:
-                                parent.addChild(item)
-                            else:
-                                self.fileList.addTopLevelItem(item)
-                            item.setExpanded(True)
-                            parent = item
-                        else:
-                            # one or more items match: check if parents are right
-
-                            found = False
-
-                            for i in items:
-                                j = index - 1
-                                match = True
-                                dirToCheck = i.parent()
-                                while j >= 0:
-                                    if dirTree[j] != dirToCheck.text(0):
-                                        match = False
-                                        break
-                                    else:
-                                        j -= 1
-                                if match:
-                                    found = True
-                                    parent = i
-                                    break
-
-                            if not found:
-                                if parent is not None:
-                                    parent.addChild(item)
-                                else:
-                                    self.fileList.addTopLevelItem(item)
-                                parent = item
-
-                    # add file to the directory item
-                    filename = file.filename.split("/")[-1]
-                    item = QTreeWidgetItem([filename, file.filepath, filesize,
-                                            file.getLastModifiedTime(), syncStatus])
-                    parent.addChild(item)
+        for node in groupFiles.childs:
+            self.fileList.addTopLevelItem(generateItem(node))
 
     def addFileHandler(self):
 
@@ -758,19 +682,22 @@ class myP2PSync(QMainWindow):
                     filename = parent.text(0) + "/" + filename
                     parent = parent.parent()
 
-                file = peerCore.localFileList[self.groupName + "_" + filename]
+                file = peerCore.localFileTree.findNode(filename).file
+                oldTimestamp = file.timestamp
+                file.updateFileStat()
+
                 files = list()
 
-                if file.status == "U":
-                    files.append(file)
+                if oldTimestamp < file.timestamp:
+                    files.append((filename, file))
                     if peerCore.syncFiles(self.groupName, files):
-                        self.addLogMessage("File {} synchronized".format(filename))
+                        self.addLogMessage("File {} synchronized".format(file.filename))
                         self.loadFileManager()
                     else:
                         self.addLogMessage("It was not possible to synchronize the file {}"
-                                           .format(filename))
+                                           .format(file.filename))
                 else:
-                    QMessageBox.about(self, "Info", "Files is already synchronized")
+                    QMessageBox.about(self, "Info", "File have been already synchronized")
             else:
                 QMessageBox.about(self, "Error", "You've selected a directory instead of a file")
         else:
@@ -807,7 +734,7 @@ class myP2PSync(QMainWindow):
                                            .format(dirName))
 
                 else:
-                    QMessageBox.about(self, "Info", "All files are already synchronized")
+                    QMessageBox.about(self, "Info", "All files have been already synchronized")
             else:
                 QMessageBox.about(self, "Error", "You've selected a file instead of a directory")
         else:
@@ -840,7 +767,7 @@ class myP2PSync(QMainWindow):
 
             if len(files) > 0:
                 if peerCore.syncFiles(self.groupName, files):
-                    self.addLogMessage("All files have been synchronized")
+                    self.addLogMessage("All files have been already synchronized")
                     self.loadFileManager()
                 else:
                     self.addLogMessage("It was not possible to synchronize all the files")
@@ -961,6 +888,40 @@ class mySig(QObject):
     def refreshEmit(self):
         # emit the signal
         self.refresh.emit()
+
+def generateItem(node):
+
+    if node.isDir:
+        item = QTreeWidgetItem([node.nodeName, "", "", "", ""])
+        for child in node.childs:
+            item.addChild(generateItem(child))
+    else:
+        filesize, syncStatus = getFileLabels(node.file)
+        item = QTreeWidgetItem([node.file.filename, node.file.filepath, filesize,
+                                node.file.getLastModifiedTime(), syncStatus])
+
+    # item.setExpanded(True)
+    return item
+
+
+def getFileLabels(file):
+    if file.filesize < 1024:
+        filesize = str(file.filesize) + " B"
+    elif file.filesize < 1048576:
+        filesize = str(int(file.filesize / 1024)) + " KB"
+    elif file.filesize < 1024 * 1048576:
+        filesize = str(int(file.filesize / 1048576)) + " MB"
+    else:
+        filesize = str(file.filesize / (1024 * 1048576)) + " GB"
+
+    if file.status == "S":
+        syncStatus = "Synchronized"
+    elif file.status == "U":
+        syncStatus = "Not synchronized"
+    elif file.status == "D":
+        syncStatus = "Synchronizing: " + str(file.progress) + "%"
+
+    return filesize, syncStatus
 
 
 def getDirFilenames(item, dirName, filenames):
