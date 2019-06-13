@@ -7,9 +7,10 @@ import select
 import socket
 from threading import Thread, Lock
 
+import fileSystem
 import reqHandlers
 import transmission
-from groupClass import Group
+from group import Group
 
 # Main data structure for groups management.
 # It's a dictionary where the key is the GroupName and the value is
@@ -75,22 +76,11 @@ def initServer():
         except FileNotFoundError:
             pass
 
-        try:
-            f = open(groupsFilesFile, 'r')
-            try:
-                filesJson = json.load(f)
-                for file in filesJson:
-                    groupName = file["groupName"]
-                    filename = file["filename"]
-                    filesize = file["filesize"]
-                    timestamp = file["timestamp"]
-                    groups[groupName].addFile(filename, filesize, timestamp)
-                del filesJson
-            except ValueError:
-                return None
-            f.close()
-        except FileNotFoundError:
-            pass
+        fileTree = fileSystem.getFileStatus(groupsFilesFile)
+
+        if fileTree is not None:
+            for group in fileTree.groups:
+                groups[group.nodeName].filesInGroup = group
 
 
 def saveState():
@@ -118,18 +108,11 @@ def saveState():
         json.dump(peersJson, f, indent=4)
         del peersJson
 
-    filesJson = list()
-    with open(groupsFilesFile, 'w') as f:
-        for group in groups.values():
-            for file in group.filesInGroup.values():
-                fileInfo = dict()
-                fileInfo["groupName"] = group.name
-                fileInfo["filename"] = file.filename
-                fileInfo["filesize"] = file.filesize
-                fileInfo["timestamp"] = file.timestamp
-                filesJson.append(fileInfo)
-        json.dump(filesJson, f, indent=4)
-        del filesJson
+    fileTree = fileSystem.FileTree()
+    for group in groups.values():
+        fileTree.addGroup(group.filesInGroup)
+
+    fileSystem.saveFileStatus(fileTree, groupsFilesFile)
 
 
 class Server:
@@ -283,20 +266,21 @@ class SocketServerThread(Thread):
             answer = reqHandlers.retrievePeers(request, groups, peers, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "ADD_FILES":
-            answer = reqHandlers.addFiles(request, groups, groupsLock, peerID)
+        elif request.split()[0] == "ADDED_FILES":
+            answer = reqHandlers.addedFiles(request, groups, groupsLock, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "UPDATE_FILES":
-            answer = reqHandlers.updateFiles(request, groups, groupsLock, peerID)
+        elif request.split()[0] == "UPDATED_FILES":
+            answer = reqHandlers.updatedFiles(request, groups, groupsLock, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "REMOVE_FILES":
-            answer = reqHandlers.removeFiles(request, groups, groupsLock, peerID)
+        elif request.split()[0] == "REMOVED_FILES":
+            answer = reqHandlers.removedFiles(request, groups, groupsLock, peerID)
             transmission.mySend(self.client_sock, answer)
 
         elif request.split()[0] == "GET_FILES":
-            answer = reqHandlers.getFiles(groups, peerID)
+            answer = reqHandlers.getFiles(request,
+                                          groups, peerID)
             transmission.mySend(self.client_sock, answer)
 
         elif request.split()[0] == "HERE":

@@ -1,18 +1,18 @@
 """Code for groups management in server side in myP2PSync.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
+import fileSystem
 
 class Group:
 
-    def __init__(self, name, tokenRW, tokenRO, root):
+    def __init__(self, name, tokenRW, tokenRO):
         self.name = name
         self.tokenRW = tokenRW
         self.tokenRO = tokenRO
         self.activePeers = 0
         self.totalPeers = 0
-        self.nrFiles = 0
         self.peersInGroup = dict()
-        self.filesInGroup = root
+        self.filesInGroup = fileSystem.Node(name, True, None)
 
     def addPeer(self, peerID, active, role):
         p = PeerInGroup(peerID, active, role)
@@ -37,17 +37,16 @@ class Group:
         self.activePeers -= 1
 
     def addFile(self, filename, filesize, timestamp):
-        f = FileInGroup(filename, filesize, timestamp)
-        self.filesInGroup[filename] = f
-        self.nrFiles += 1
+
+        self.filesInGroup.addNode(filename, filesize, timestamp)
 
     def updateFile(self, filename, filesize, timestamp):
-        self.filesInGroup[filename].filesize = filesize
-        self.filesInGroup[filename].timestamp = int(timestamp)
+
+        self.filesInGroup.updateNode(filename, filesize, timestamp)
 
     def removeFile(self, filename):
-        del self.filesInGroup[filename]
-        self.nrFiles -= 1
+
+        self.filesInGroup.removeNode(filename)
 
     def getPublicInfo(self, role, status):
         groupInfo = dict()
@@ -71,7 +70,7 @@ class FileInGroup:
 
     def __init__(self, filename, filesize, timestamp):
         self.filename = filename
-        self.filesize = filesize
+        self.filesize = int(filesize)
         self.timestamp = int(timestamp)
 
     def getFileInfo(self):
