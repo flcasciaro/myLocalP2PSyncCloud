@@ -1,1 +1,52 @@
-
+[
+    {
+        "nodeName": "ITDepartment",
+        "isDir": true,
+        "childs": [
+            {
+                "nodeName": "prova",
+                "isDir": true,
+                "childs": [
+                    {
+                        "nodeName": "ccc.txt",
+                        "isDir": false,
+                        "childs": [],
+                        "info": {
+                            "groupName": "ITDepartment",
+                            "treePath": "prova/ccc.txt",
+                            "filename": "ccc.txt",
+                            "filepath": "C:/Users/FrancescoLorenzo/Desktop/prova/ccc.txt",
+                            "filesize": 25,
+                            "timestamp": 1559842681,
+                            "status": "S",
+                            "previousChunks": []
+                        }
+                    },
+                    {
+                        "nodeName": "dvdv.txt",
+                        "isDir": false,
+                        "childs": [],
+                        "info": {
+                            "groupName": "ITDepartment",
+                            "treePath": "prova/dvdv.txt",
+                            "filename": "dvdv.txt",
+                            "filepath": "C:/Users/FrancescoLorenzo/Desktop/prova/dvdv.txt",
+                            "filesize": 10,
+                            "timestamp": 1559842418,
+                            "status": "S",
+                            "previousChunks": []
+                        }
+                    },
+                    {
+                        "nodeName": "provaInprova",
+                        "isDir": true,
+                        "childs": [],
+                        "info": {}
+                    }
+                ],
+                "info": {}
+            }
+        ],
+        "info": {}
+    }
+]
