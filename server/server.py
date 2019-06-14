@@ -51,7 +51,7 @@ def initServer():
             return None
         f.close()
     except FileNotFoundError:
-        print("No previous session session information found")
+        print("No previous session status found")
         previous = False
 
     if previous:
@@ -91,6 +91,8 @@ def initServer():
             f.close()
         except FileNotFoundError:
             pass
+
+        print("Previous session status restored")
 
 
 def saveState():
