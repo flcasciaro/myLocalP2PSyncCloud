@@ -7,23 +7,24 @@ class FileTree:
 
     def __init__(self):
 
-        self.groups = list()
+        self.groups = dict()
 
-    def addGroup(self, groupNode):
+    def addGroup(self, groupTree):
 
-        self.groups.append(groupNode)
+        groupName = groupTree.nodeName
+        self.groups[groupName] = groupTree
 
     def getGroup(self, groupName):
 
-        for group in self.groups:
-            if group.nodeName == groupName:
-                return group
-        return None
+        if groupName in self.groups:
+            return self.groups[groupName]
+        else:
+            return None
 
     def print(self):
 
         for group in self.groups:
-            group.print()
+            group.print(0)
 
 
 class Node:
@@ -47,20 +48,24 @@ class Node:
         else:
             print("ERROR: TRYING TO ADD A CHILD TO A FILE NODE")
 
-    def print(self):
-        if self.isDir:
-            print("Dirname: {}".format(self.nodeName))
-            for child in self.childs:
-                child.print()
-        else:
-            print("Filename: {} timestamp: {}".format(self.file.filename, self.file.timestamp))
+    def print(self, level):
 
-    def findNode(self, filename):
+        levelStr = "-" * level * 5
+        levelStr += ">"
+
+        if self.isDir:
+            print("{} Dirname: {}".format(levelStr, self.nodeName))
+            for child in self.childs:
+                child.print(level+1)
+        else:
+            print("{} Filename: {}".format(levelStr, self.file.filename))
+
+    def findNode(self, treePath):
 
         current = self
         found = False
 
-        for name in filename.split("/"):
+        for name in treePath.split("/"):
             for child in current.childs:
                 if child.nodeName == name:
                     found = True
@@ -73,9 +78,9 @@ class Node:
 
         return current
 
-    def updateNode(self, filename, filesize, timestamp):
+    def updateNode(self, treePath, filesize, timestamp):
 
-        node = self.findNode(filename)
+        node = self.findNode(treePath)
 
         if node is not None:
             node.file.filesize = int(filesize)
@@ -83,48 +88,66 @@ class Node:
         else:
             print("NODE NOT FOUND")
 
-    def addNode(self, filename, file):
+    def addNode(self, treePath, file):
+        """
+        Add a node in a tree with root in the node.
+        If a directory node in the middle is not present, the function creates it.
+        :param treePath: path to follow to reach where the node will be placed
+        :param file: file Object
+        :return: void
+        """
 
         current = self
-        i = 0
-        n = len(filename.split("/"))
-        for name in filename.split("/"):
+        treePathFields = treePath.split("/")
+        n = len(treePathFields)
+        # traverse the tree
+        for i in range(0, n):
+            field = treePathFields[i]
             found = False
+
             for child in current.childs:
-                if child.nodeName == name:
+                if child.nodeName == field:
                     found = True
                     current = child
-                    i += 1
                     break
 
             if not found:
                 if i < n - 1:
                     # addDir node
-                    node = Node(name, True)
+                    node = Node(field, True)
                     current.addChild(node)
                     current = node
-                    i += 1
                 else:
                     # add File node
-                    node = Node(name, False, file)
+                    node = Node(field, False, file)
                     current.addChild(node)
-                    return True
+                    return
             else:
                 # file node found
                 if i == n - 1:
                     print("NODE ALREADY INSERTED")
-                    return False
+                    return
 
 
-    def removeNode(self, filename):
+    def removeNode(self, treePath):
+        """
+        Remove a node from the tree with root in the node.
+        :param treePath: path to follow to reach the node that will be removed
+        :return: void
+        """
 
         current = self
-        found = False
 
+        # use a nodeList to store all the nodes in the middle
+        # between the root and the node that will be removed
         nodeList = list()
+        # append root
         nodeList.append(self)
 
-        for name in filename.split("/"):
+        # traverse the tree
+        for name in treePath.split("/"):
+            found = False
+
             for child in current.childs:
                 if child.nodeName == name:
                     found = True
@@ -136,6 +159,7 @@ class Node:
             if not found:
                 print("NODE NOT FOUND")
                 return
+
 
         last = nodeList.pop()
         #delete File object
@@ -156,19 +180,20 @@ class Node:
             else:
                 break
 
-    def getTreePaths(self):
+    def getFileTreePaths(self):
 
         treePaths = list()
 
         if self.isDir:
             for child in self.childs:
-                treePaths.extend(child.getTreePathsR(""))
+                treePaths.extend(child.getFileTreePathsR(""))
         else:
             return None
 
         return treePaths
 
-    def getTreePathsR(self, treePath):
+
+    def getFileTreePathsR(self, treePath):
 
         treePaths = list()
 
@@ -179,7 +204,7 @@ class Node:
 
         if self.isDir:
             for child in self.childs:
-                treePaths.extend(child.getTreePathsR(treePath))
+                treePaths.extend(child.getFileTreePathsR(treePath))
         else:
             treePaths.append(treePath)
 
@@ -190,6 +215,7 @@ class Node:
 def getFileStatus(previousSessionFile):
 
     fileTree = FileTree()
+
     try:
         f = open(previousSessionFile, 'r')
         try:
@@ -202,9 +228,9 @@ def getFileStatus(previousSessionFile):
         return fileTree
 
     for group in fileTreeJson:
-        groupNode = Node(group["nodeName"], True, None)
-        fillNode(groupNode, group["childs"])
-        fileTree.addGroup(groupNode)
+        groupTree = Node(group["nodeName"], True, None)
+        fillNode(groupTree, group["childs"])
+        fileTree.addGroup(groupTree)
 
     del fileTreeJson
 
@@ -220,10 +246,10 @@ def fillNode(node, childs):
             fillNode(newNode, child["childs"])
         else:
             fileInfo = child["info"]
-            file = fileManagement.File(fileInfo["groupName"], fileInfo["filename"],
-                                       fileInfo["filepath"], fileInfo["filesize"],
-                                       fileInfo["timestamp"], fileInfo["status"],
-                                       fileInfo["previousChunks"])
+            file = fileManagement.File(fileInfo["groupName"], fileInfo["treePath"],
+                                       fileInfo["filename"], fileInfo["filepath"],
+                                       fileInfo["filesize"], fileInfo["timestamp"],
+                                       fileInfo["status"], fileInfo["previousChunks"])
             newNode = Node(child["nodeName"], False, file)
         node.addChild(newNode)
 
@@ -232,7 +258,7 @@ def saveFileStatus(fileTree, sessionFile):
 
     fileTreeJson = list()
 
-    for group in fileTree.groups:
+    for group in fileTree.groups.values():
 
         groupInfo = dict()
         groupInfo["nodeName"] = group.nodeName
@@ -277,6 +303,7 @@ def fillChildsInfo(groupInfo, childs):
             nestedInfo["info"] = dict()
 
             nestedInfo["info"]["groupName"] = child.file.groupName
+            nestedInfo["info"]["treePath"] = child.file.treePath
             nestedInfo["info"]["filename"] = child.file.filename
             nestedInfo["info"]["filepath"] = child.file.filepath
             nestedInfo["info"]["filesize"] = child.file.filesize
@@ -285,3 +312,5 @@ def fillChildsInfo(groupInfo, childs):
             nestedInfo["info"]["previousChunks"] = child.file.previousChunks
 
         groupInfo["childs"].append(nestedInfo)
+
+
