@@ -1,9 +1,10 @@
 import os
 import time
 from collections import deque
-from threading import Lock
+from threading import Thread, Lock
 
 import fileManagement
+import fileSharing
 import peerCore
 
 # Data structure where sync operations will be scheduled
@@ -25,6 +26,35 @@ syncThreadsLock = Lock()
 # Maximum number of synchronization threads working at the same time
 MAX_SYNC_THREAD = 5
 
+class syncTask:
+
+    def __init__(self, groupName, fileTreePath, timestamp):
+
+        self.groupName = groupName
+        self.fileTreePath = fileTreePath
+        self.timestamp = timestamp
+
+    def print(self):
+
+        print("SYNC {} {} {}".format(self.groupName, self.fileTreePath, self.timestamp))
+
+
+    def outdatedSyncTask(self, newTask):
+        """
+        Check if a syncTask is outdated.
+        A task is outdated if it refers to the same file of a new task but the timestamp is older (or equal).
+        :param self: checked task
+        :param newTask: new task
+        :return: boolean (True if the task is outdated, otherwise False)
+        """
+
+        if self.groupName == newTask.groupName and self.fileTreePath == newTask.fileTreePath:
+            if self.timestamp <= newTask.timestamp:
+                return True
+
+        return False
+
+
 def scheduler():
 
     while True:
@@ -33,37 +63,43 @@ def scheduler():
             break
         else:
             # extract action from the queue until is empty or all syncThreads are busy
-            while not queue.empty() and len(syncThreads) < MAX_SYNC_THREAD:
+            while len(queue) > 0 and len(syncThreads) < MAX_SYNC_THREAD:
+
                 queueLock.acquire()
-                task = queue.get()
-
+                task = queue.popleft()
                 queueLock.release()
+
+                # skip task of non active groups
+                if peerCore.groupsList[task.groupName]["status"] != "ACTIVE":
+                    continue
+
                 # assign task to a sync thread
-                #     # ignore file in non active groups
-        #     if groupsList[file.groupName]["status"] != "ACTIVE":
-        #         continue
-        #
-        #     # if the file is not already in sync
-        #     if file.syncLock.acquire(blocking=False):
-        #
-        #         # Sync file if status is "D" and there are available threads
-        #         syncThreadsLock.acquire()
-        #         if file.status == "D" and len(syncThreads) < MAX_SYNC_THREAD:
-        #             # start a new synchronization thread if there are less
-        #             # than MAX_SYNC_THREAD already active threads
-        #             syncThread = Thread(target=fileSharing.downloadFile, args=(file,))
-        #             syncThread.daemon = True
-        #             key = file.groupName + "_" + file.filename
-        #             syncThreads[key] = dict()
-        #             syncThreads[key]["groupName"] = file.groupName
-        #             syncThreads[key]["stop"] = False
-        #             syncThread.start()
-        #         syncThreadsLock.release()
-        #         file.syncLock.release()
 
+                groupTree = peerCore.localFileTree.getGroup(task.groupName)
+                fileNode = groupTree.findNode(task.fileTreePath)
 
+                if fileNode is None:
+                    # file has been removed
+                    continue
 
-                syncThreadsLock.release()
+                # if the file is not already in sync
+                if fileNode.file.syncLock.acquire(blocking=False):
+
+                    # Sync file if status is "D" and there are available threads
+                    syncThreadsLock.acquire()
+                    if fileNode.file.status == "D":
+                        # start a new synchronization thread if there are less
+                        # than MAX_SYNC_THREAD already active threads
+                        syncThread = Thread(target=fileSharing.downloadFile, args=(fileNode.file, ))
+                        syncThread.daemon = True
+                        key = task.groupName + "_" + task.fileTreePath
+                        syncThreads[key] = dict()
+                        syncThreads[key]["groupName"] = task.groupName
+                        syncThreads[key]["stop"] = False
+                        syncThread.start()
+                    syncThreadsLock.release()
+                    fileNode.file.syncLock.release()
+
             time.sleep(1)
 
 def stopScheduler():
@@ -92,21 +128,25 @@ def addedFiles(message):
                         os.makedirs(path)
                     peerCore.pathCreationLock.release()
 
-                    filepath = path + "/" + fileInfo["filename"]
-
-                    filename = fileInfo["filename"].split("/")[-1]
+                    treePath = fileInfo["filename"]
+                    filepath = path + "/" + treePath
+                    filename = treePath.split("/")[-1]
 
                     # create file Object
-                    file = fileManagement.File(groupName=groupName, filename=filename,
-                                               filepath=filepath, filesize=fileInfo["filesize"],
-                                               timestamp=fileInfo["timestamp"], status="D",
-                                               previousChunks=list())
+                    file = fileManagement.File(groupName=groupName, treePath=treePath,
+                                               filename=filename, filepath=filepath,
+                                               filesize=fileInfo["filesize"],
+                                               timestamp=fileInfo["timestamp"],
+                                               status="D", previousChunks=list())
 
-                    peerCore.localGroupTree.addNode(fileInfo["filename"], file)
+                    peerCore.localFileTree.getGroup(groupName).addNode(treePath, file)
 
-                    task = "SYNC {} {}".format(groupName, fileInfo["filename"])
+                    # create new syncTask
+                    newTask = syncTask(groupName, treePath, fileInfo["timestamp"])
+
                     queueLock.acquire()
-                    queue.put(task)
+                    # add newTask
+                    queue.append(newTask)
                     queueLock.release()
 
                 answer = "OK - FILES SUCCESSFULLY ADDED"
@@ -121,7 +161,36 @@ def addedFiles(message):
     return answer
 
 def removedFiles(message):
-    pass
+
+    try:
+        messageFields = message.split(" ", 2)
+        groupName = messageFields[1]
+        fileTreePaths = eval(message[2])
+
+        if groupName in peerCore.groupsList:
+            if peerCore.groupsList[groupName]["status"] == "ACTIVE":
+                for treePath in fileTreePaths:
+
+                    peerCore.localFileTree.getGroup(groupName).removeNode(treePath)
+
+                    # stop possible synchronization thread acting on the file
+                    key = groupName + "_" + treePath
+
+                    syncThreadsLock.acquire()
+                    if key in syncThreads:
+                        syncThreads[key]["stop"] = True
+                    syncThreadsLock.release()
+
+                answer = "OK - FILES SUCCESSFULLY ADDED"
+            else:
+                answer = "ERROR - CURRENTLY I'M NOT ACTIVE"
+        else:
+            answer = "ERROR - GROUP DOESN'T EXIST"
+
+    except IndexError:
+        answer = "ERROR - INVALID REQUEST"
+
+    return answer
 
 
 def updatedFiles(message):
@@ -142,9 +211,22 @@ def updatedFiles(message):
                     file.status = "D"
                     file.previousChunks = list()
 
-                    task = "SYNC {} {}".format(groupName, fileInfo["filename"])
+                    # stop possible synchronization thread acting on the file
+                    key = groupName + "_" + fileInfo["filename"]
+
+                    syncThreadsLock.acquire()
+                    if key in syncThreads:
+                        syncThreads[key]["stop"] = True
+                    syncThreadsLock.release()
+
+                    # create new syncTask
+                    newTask = syncTask(groupName, fileInfo["filename"], fileInfo["timestamp"])
+
                     queueLock.acquire()
-                    queue.put(task)
+                    # remove outdated syncTask
+                    queue[:] = [task for task in queue if not task.outdatedTask(newTask)]
+                    # add newTask
+                    queue.append(newTask)
                     queueLock.release()
 
                 answer = "OK - FILES SUCCESSFULLY ADDED"
