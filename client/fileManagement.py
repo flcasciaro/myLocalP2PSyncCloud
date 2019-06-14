@@ -13,12 +13,13 @@ CHUNK_SIZE = 1048576          #    1 MB
 
 class File:
 
-    def __init__(self, groupName, filename, filepath, filesize, timestamp, status, previousChunks):
+    def __init__(self, groupName, treePath, filename, filepath, filesize, timestamp, status, previousChunks):
 
         # main properties (retrieved and stored in the session file)
         self.groupName = groupName
-        self.filename = filename
-        self.filepath = filepath
+        self.treePath = treePath                # path in the fileTree used to reach the fileNode   e.g. dir1/dir2/file.txt
+        self.filename = filename                # name of the file                                  e.g. file.txt
+        self.filepath = filepath                # real path of the file                             e.g. C://home/dir1/dir2/file.txt
         self.filesize = int(filesize)
         self.timestamp = int(timestamp)
         self.status = status
