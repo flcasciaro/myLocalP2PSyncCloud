@@ -502,7 +502,6 @@ class myP2PSync(QMainWindow):
         of the peer.
         """
 
-
         # hide all the components
         self.hideFileManager()
 
@@ -560,11 +559,11 @@ class myP2PSync(QMainWindow):
 
         self.fileList.clear()
 
-        groupFiles = peerCore.localFileTree.getGroup(self.groupName)
-        if groupFiles is None:
+        groupTree = peerCore.localFileTree.getGroup(self.groupName)
+        if groupTree is None:
             return
 
-        for node in groupFiles.childs:
+        for node in groupTree.childs:
             self.fileList.addTopLevelItem(generateItem(node))
 
     def addFileHandler(self):
@@ -574,8 +573,9 @@ class myP2PSync(QMainWindow):
         if file[0] == "":
             # no file picked
             return
-        length = len(file[0].split("/"))
-        filename = file[0].split("/")[length - 1]
+
+        # get only the filename (remove dir path)
+        filename = file[0].split("/")[-1]
 
         if len(filename.split(" ")) == 1:
             # convert to a "UNIX-like" path
@@ -625,15 +625,18 @@ class myP2PSync(QMainWindow):
         if self.fileList.currentItem() is not None:
             if self.fileList.currentItem().text(1) != "":
                 filename = self.fileList.currentItem().text(0)
+
+                # build treePath
+                treePath = filename
                 parent = self.fileList.currentItem().parent()
                 while parent is not None:
-                    filename = parent.text(0) + "/" + filename
+                    treePath = parent.text(0) + "/" + treePath
                     parent = parent.parent()
 
-                filenames = list()
-                filenames.append(filename)
+                treePaths = list()
+                treePaths.append(treePath)
 
-                if peerCore.removeFiles(self.groupName, filenames):
+                if peerCore.removeFiles(self.groupName, treePaths):
                     self.addLogMessage("File {} removed from group {}".format(filename, self.groupName))
                     self.loadFileManager()
                 else:
@@ -651,14 +654,16 @@ class myP2PSync(QMainWindow):
                 dirName = self.fileList.currentItem().text(0)
                 parent = self.fileList.currentItem().parent()
 
+                treePath = dirName
+
                 while parent is not None:
-                    dirName = parent.text(0) + "/" + dirName
+                    treePath = parent.text(0) + "/" + treePath
                     parent = parent.parent()
 
-                filenames = list()
-                getDirFilenames(self.fileList.currentItem(), dirName, filenames)
+                treePaths = list()
+                getDirFilenames(self.fileList.currentItem(), treePath, treePaths)
 
-                if peerCore.removeFiles(self.groupName, filenames):
+                if peerCore.removeFiles(self.groupName, treePaths):
                     self.addLogMessage("Directory {} removed from group {}".format(dirName, self.groupName))
                     self.loadFileManager()
                 else:
@@ -676,20 +681,21 @@ class myP2PSync(QMainWindow):
             if self.fileList.currentItem().text(1) != "":
 
                 filename = self.fileList.currentItem().text(0)
+                treePath = filename
                 parent = self.fileList.currentItem().parent()
 
                 while parent is not None:
-                    filename = parent.text(0) + "/" + filename
+                    treePath = parent.text(0) + "/" + treePath
                     parent = parent.parent()
 
-                file = peerCore.localFileTree.findNode(filename).file
+                file = peerCore.localFileTree.getGroup(self.groupName).findNode(treePath).file
                 oldTimestamp = file.timestamp
                 file.updateFileStat()
 
                 files = list()
 
                 if oldTimestamp < file.timestamp:
-                    files.append((filename, file))
+                    files.append(file)
                     if peerCore.syncFiles(self.groupName, files):
                         self.addLogMessage("File {} synchronized".format(file.filename))
                         self.loadFileManager()
@@ -715,13 +721,18 @@ class myP2PSync(QMainWindow):
                     dirName = parent.text(0) + "/" + dirName
                     parent = parent.parent()
 
-                filenames = list()
+                treePaths = list()
                 files = list()
-                getDirFilenames(self.fileList.currentItem(), dirName, filenames)
+                getDirFilenames(self.fileList.currentItem(), dirName, treePaths)
 
-                for filename in filenames:
-                    file = peerCore.localFileList[self.groupName + "_" + filename]
-                    if file.status == "U":
+                groupTree = peerCore.localFileTree.getGroup(self.groupName)
+
+                for treePath in treePaths:
+                    file = groupTree.findNode(treePath).file
+                    oldTimestamp = file.timestamp
+                    file.updateFileStat()
+
+                    if oldTimestamp < file.timestamp:
                         files.append(file)
 
                 if len(files) > 0:
@@ -749,20 +760,25 @@ class myP2PSync(QMainWindow):
             for i in range(0, self.fileList.topLevelItemCount()):
 
                 item = self.fileList.topLevelItem(i)
-                filenames = list()
+                treePaths = list()
 
                 if item.text(1) == "":
                     # item is a directory: look for nested files and collect their filenames
-                    getDirFilenames(item, item.text(0), filenames)
+                    getDirFilenames(item, item.text(0), treePaths)
                 else:
                     # item is a file: append to filenames and try to synchronize
-                    filenames.append(item.text(0))
+                    treePaths.append(item.text(0))
 
             files = list()
 
-            for filename in filenames:
-                file = peerCore.localFileList[self.groupName + "_" + filename]
-                if file.status == "U":
+            for treePath in treePaths:
+
+                file = peerCore.localFileTree.getGroup(self.groupName).findNode(treePath).file
+
+                oldTimestamp = file.timestamp
+                file.updateFileStat()
+
+                if oldTimestamp < file.timestamp:
                     files.append(file)
 
             if len(files) > 0:
@@ -889,8 +905,8 @@ class mySig(QObject):
         # emit the signal
         self.refresh.emit()
 
-def generateItem(node):
 
+def generateItem(node):
     if node.isDir:
         item = QTreeWidgetItem([node.nodeName, "", "", "", ""])
         for child in node.childs:
@@ -924,23 +940,23 @@ def getFileLabels(file):
     return filesize, syncStatus
 
 
-def getDirFilenames(item, dirName, filenames):
+def getDirFilenames(item, dirName, treePaths):
     """
     Recursive function for traversing a QTreeWidget item
-    while setting all the filenames discovered into a filepaths list.
+    while setting all the treePaths discovered into a treePaths list.
     :param item: is a QTreeWidgetItem object, which can have childs or not
     :param dirName: name of the parent directory
-    :param filenames: filenames list
+    :param treePaths: treePaths list
     :return: void
     """
     # for each child of the item
     for i in range(0, item.childCount()):
         if item.child(i).text(1) == "":
             # is a directory: call again the function recursively into the directory
-            getDirFilenames(item.child(i), dirName + "/" + item.child(i).text(0), filenames)
+            getDirFilenames(item.child(i), dirName + "/" + item.child(i).text(0), treePaths)
         else:
             # is a file: append the filename to the list
-            filenames.append(dirName + "/" + item.child(i).text(0))
+            treePaths.append(dirName + "/" + item.child(i).text(0))
 
 
 if __name__ == '__main__':

@@ -46,6 +46,7 @@ localFileTree = None
 
 
 
+
 def createSocket(ipAddress, port):
     """
     Create a socket connection with a remote host.
@@ -221,8 +222,7 @@ def restoreGroup(groupName):
             localFileTree.addGroup(fileSystem.Node(groupName, True))
 
         # initialize file list for the group
-        if not initGroupLocalFileTree(groupName):
-            return False
+        initGroupLocalFileTree(groupName)
 
         return True
 
@@ -283,9 +283,8 @@ def joinGroup(groupName, token):
         if localFileTree.getGroup(groupName) is None:
             localFileTree.addGroup(fileSystem.Node(groupName, True))
 
-            # initialize file list for the group
-        if not initGroupLocalFileTree(groupName):
-            return False
+        # initialize file list for the group
+        initGroupLocalFileTree(groupName)
 
         return True
 
@@ -503,7 +502,7 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
     e.g. a file in the server is not present locally, peer need to add it and synchronize
     e.g. a file present locally is not present anymore in the server, peer need to remove it
     :param groupName: name of the group that is foing to be initialized
-    :param localGroupTree: fileTree of a certain group peer side
+    :param localGroupTree: fileTree of a certain group - peer side
     :param updatedFileList: fileTree (in form of list) retrieved from the server
     :return: void
     """
@@ -513,16 +512,12 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
 
     for fileInfo in updatedFileList:
 
-        treePath = fileInfo["treePath"]
+        treePath = fileInfo["filename"]
         serverTreePaths.append(treePath)
 
         localNode = localGroupTree.findNode(treePath)
 
         if localNode is not None:
-            # file found locally, check version
-
-            # localNode.print()
-            # time.sleep(1)
 
             myFile = localNode.file
 
@@ -533,9 +528,9 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
 
             if myFile.timestamp == fileInfo["timestamp"] and myFile.status == "D":
                 myFile.status = "D"
-                task = "SYNC {} {}".format(treePath, groupName)
+                task = syncScheduler.syncTask(groupName, myFile.treePath, myFile.timestamp)
                 syncScheduler.queueLock.acquire()
-                syncScheduler.queue.put(task)
+                syncScheduler.queue.append(task)
                 syncScheduler.queueLock.release()
 
             elif myFile.timestamp < fileInfo["timestamp"]:
@@ -544,9 +539,9 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
                 myFile.filesize = int(fileInfo["filesize"])
                 myFile.previousChunks = list()
                 myFile.status = "D"
-                task = "SYNC {} {}".format(groupName, treePath)
+                task = syncScheduler.syncTask(groupName, myFile.treePath, myFile.timestamp)
                 syncScheduler.queueLock.acquire()
-                syncScheduler.queue.put(task)
+                syncScheduler.queue.append(task)
                 syncScheduler.queueLock.release()
 
         else:
@@ -563,23 +558,20 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
             filepath = path + "/" + treePath
 
             # create file Object
-            file = fileManagement.File(groupName=groupName, filename=fileInfo["filename"],
-                                        filepath=filepath, filesize=fileInfo["filesize"],
-                                        timestamp=fileInfo["timestamp"], status="D",
-                                        previousChunks=list())
+            file = fileManagement.File(groupName=groupName, treePath=treePath,
+                                       filename=fileInfo["filename"], filepath=filepath,
+                                       filesize=fileInfo["filesize"], timestamp=fileInfo["timestamp"],
+                                       status="D", previousChunks=list())
 
             localGroupTree.addNode(treePath, file)
 
-            task = "SYNC {} {}".format(groupName, treePath)
+            task = syncScheduler.syncTask(groupName, myFile.treePath, myFile.timestamp)
             syncScheduler.queueLock.acquire()
-            syncScheduler.queue.put(task)
+            syncScheduler.queue.append(task)
             syncScheduler.queueLock.release()
 
     # check if there are removed files
-    localTreePaths = localGroupTree.getTreePaths()
-
-    # print(localTreePaths)
-    # print(serverTreePaths)
+    localTreePaths = localGroupTree.getFileTreePaths()
 
     for treePath in localTreePaths:
         if treePath not in serverTreePaths:
@@ -591,7 +583,7 @@ def addFiles(groupName, filepaths, directory):
     """
     Add a list of files to a synchronization group.
     :param groupName: name of the group in which files will be added
-    :param filepaths: list of filepath of the files that will be added
+    :param filepaths: filepaths list of the files that will be added
     :param directory: directory path (empty if the file doesn't belong a directory)
     :return: boolean (True for success, False for any error)
     """
@@ -610,6 +602,7 @@ def addFiles(groupName, filepaths, directory):
         fileInfo = dict()
         # split filepath into directoryPath and filename, saving only the latter
         __, fileInfo["filename"] = os.path.split(filepath)
+        fileInfo["treePath"] = fileInfo["filename"]
         fileInfo["filepath"] = filepath
         fileInfo["filesize"], fileInfo["timestamp"] = fileManagement.getFileStat(filepath)
         filesInfo.append(fileInfo)
@@ -656,17 +649,20 @@ def addFiles(groupName, filepaths, directory):
         return False
     else:
 
-        groupNode = localFileTree.getGroup(groupName)
+        groupTree = localFileTree.getGroup(groupName)
 
         for fileInfo in filesInfo:
             # add file to the personal list of files of the peer
 
             filename = fileInfo["filename"].split("/")[-1]
+            treePath = fileInfo["filename"]
 
-            file = fileManagement.File(groupName, filename, fileInfo["filepath"],
-                                        fileInfo["filesize"], fileInfo["timestamp"], "S", list())
+            file = fileManagement.File(groupName=groupName, treePath=treePath,
+                                       filename=filename, filepath=fileInfo["filepath"],
+                                       filesize=fileInfo["filesize"], timestamp=fileInfo["timestamp"],
+                                       status="S", previousChunks=list())
 
-            groupNode.addNode(fileInfo["filename"], file)
+            groupTree.addNode(treePath, file)
 
             file.iHaveIt()
 
@@ -693,11 +689,11 @@ def addFiles(groupName, filepaths, directory):
         return True
 
 
-def removeFiles(groupName, filenames):
+def removeFiles(groupName, treePaths):
     """
     Remove a list of file from the synchronization group.
     :param groupName: name of the group from which files will be removed
-    :param filenames: list of filenames of the files that will be removed
+    :param treePaths: list of treePaths of the files that will be removed
     :return: boolean (True for success, False for any error)
     """
 
@@ -707,7 +703,7 @@ def removeFiles(groupName, filenames):
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "REMOVED_FILES {} {}".format(groupName, str(filenames))
+        message = str(peerID) + " " + "REMOVED_FILES {} {}".format(groupName, str(treePaths))
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
         closeSocket(s)
@@ -722,18 +718,18 @@ def removeFiles(groupName, filenames):
     else:
         # remove files from the local file list
 
-        groupNode = localFileTree.getGroup(groupName)
+        groupTree = localFileTree.getGroup(groupName)
 
-        for filename in filenames:
+        for treePath in treePaths:
 
-            groupNode.removeNode(filename)
+            groupTree.removeNode(treePath)
 
-            key = groupName + "_" + filename
+            key = groupName + "_" + treePath
 
-            if key in syncThreads:
-                syncThreadsLock.acquire()
-                syncThreads[key]["stop"] = True
-                syncThreadsLock.release()
+            if key in syncScheduler.syncThreads:
+                syncScheduler.syncThreadsLock.acquire()
+                syncScheduler.syncThreads[key]["stop"] = True
+                syncScheduler.syncThreadsLock.release()
 
         # retrieve the list of active peers for the file
         activePeers = retrievePeers(groupName, selectAll=False)
@@ -747,7 +743,7 @@ def removeFiles(groupName, filenames):
 
             try:
                 # send request message and wait for the answer, then close the socket
-                message = "REMOVED_FILES {} {}".format(groupName, str(filenames))
+                message = "REMOVED_FILES {} {}".format(groupName, str(treePaths))
                 transmission.mySend(s, message)
                 __ = transmission.myRecv(s)
                 closeSocket(s)
@@ -765,7 +761,7 @@ def syncFiles(groupName, files):
     Update a list of file in the synchronization group,
     making them ready to be acknowledged from other peers.
     :param groupName: name of the group from which files will be updated
-    :param files: list of tuples (filename, fileObject)
+    :param files: list of fileObject
     :return: 
     """
     
@@ -776,9 +772,9 @@ def syncFiles(groupName, files):
     # collect information required for the update operation
     filesInfo = list()
 
-    for (filename, file) in files:
+    for file in files:
         fileInfo = dict()
-        fileInfo["filename"] = filename
+        fileInfo["filename"] = file.treePath
         fileInfo["filesize"] = file.filesize
         fileInfo["timestamp"] = file.timestamp
         filesInfo.append(fileInfo)
@@ -799,7 +795,7 @@ def syncFiles(groupName, files):
         return False
     else:
         # make the peer ready to upload chunks
-        for (filename, file) in files:
+        for file in files:
             file.status = "S"
             file.iHaveIt()
 

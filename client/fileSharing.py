@@ -9,6 +9,7 @@ from random import randint, random
 from threading import Thread
 
 import peerCore
+import syncScheduler
 import transmission
 from fileManagement import CHUNK_SIZE
 
@@ -19,15 +20,19 @@ MAX_CHUNKS_PER_THREAD = 50
 
 
 def sendChunksList(message, thread):
-    messageFields = message.split()
-    key = messageFields[1]
-    timestamp = int(messageFields[2])
 
-    if key in peerCore.localFileList:
-        if peerCore.localFileList[key].timestamp == timestamp:
-            if peerCore.localFileList[key].availableChunks is not None:
-                if len(peerCore.localFileList[key].availableChunks) != 0:
-                    answer = str(peerCore.localFileList[key].availableChunks)
+    messageFields = message.split()
+    groupName = messageFields[1]
+    fileTreePath = messageFields[2]
+    timestamp = int(messageFields[3])
+
+    fileNode = peerCore.localFileTree.getGroup(groupName).findNode(fileTreePath)
+
+    if fileNode is not None:
+        if fileNode.file.timestamp == timestamp:
+            if fileNode.file.availableChunks is not None:
+                if len(fileNode.file.availableChunks) != 0:
+                    answer = str(fileNode.availableChunks)
                 else:
                     answer = "ERROR - EMPTY LIST"
             else:
@@ -35,7 +40,7 @@ def sendChunksList(message, thread):
         else:
             answer = "ERROR - DIFFERENT VERSION"
     else:
-        answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
+        answer = "ERROR - UNRECOGNIZED FILE {} IN GROUP {}".format(fileTreePath, groupName)
 
     try:
         transmission.mySend(thread.client_sock, answer)
@@ -44,15 +49,19 @@ def sendChunksList(message, thread):
 
 
 def sendChunk(message, thread):
+
     messageFields = message.split()
-    key = messageFields[1]
-    timestamp = int(messageFields[2])
+    groupName = messageFields[1]
+    fileTreePath = messageFields[2]
+    timestamp = int(messageFields[3])
     chunkID = int(messageFields[3])
 
     error = True
 
-    if key in peerCore.localFileList:
-        file = peerCore.localFileList[key]
+    fileNode = peerCore.localFileTree.getGroup(groupName).findNode(fileTreePath)
+
+    if fileNode is not None:
+        file = fileNode.file
         if file.timestamp == timestamp:
             if chunkID in file.availableChunks:
 
@@ -109,7 +118,7 @@ def sendChunk(message, thread):
         else:
             answer = "ERROR - DIFFERENT VERSION"
     else:
-        answer = "ERROR - UNRECOGNIZED KEY {}".format(key)
+        answer = "ERROR - UNRECOGNIZED FILE {} IN GROUP {}".format(fileTreePath, groupName)
 
     if error:
         # send error answer
@@ -126,7 +135,7 @@ def downloadFile(file):
 
     print("Starting synchronization of", file.filename)
 
-    key = file.groupName + "_" + file.filename
+    key = file.groupName + "_" + file.treePath
 
     file.syncLock.acquire()
     file.initDownload()
@@ -138,13 +147,13 @@ def downloadFile(file):
     while len(file.missingChunks) > 0 and unavailable < MAX_UNAVAILABLE:
 
         # check thread termination status
-        peerCore.syncThreadsLock.acquire()
-        if peerCore.syncThreads[key]["stop"]:
-            peerCore.syncThreadsLock.release()
+        syncScheduler.syncThreadsLock.acquire()
+        if syncScheduler.syncThreads[key]["stop"]:
+            syncScheduler.syncThreadsLock.release()
             unavailable = MAX_UNAVAILABLE
             break
         else:
-            peerCore.syncThreadsLock.release()
+            syncScheduler.syncThreadsLock.release()
 
         # retrieve the list of active peers for the file
         activePeers = peerCore.retrievePeers(file.groupName, selectAll=False)
@@ -276,13 +285,13 @@ def downloadFile(file):
 
 
         # check again thread termination status
-        peerCore.syncThreadsLock.acquire()
-        if peerCore.syncThreads[key]["stop"]:
-            peerCore.syncThreadsLock.release()
+        syncScheduler.syncThreadsLock.acquire()
+        if syncScheduler.syncThreads[key]["stop"]:
+            syncScheduler.syncThreadsLock.release()
             unavailable = MAX_UNAVAILABLE
             break
         else:
-            peerCore.syncThreadsLock.release()
+            syncScheduler.syncThreadsLock.release()
 
 
         threads = list()
@@ -308,11 +317,17 @@ def downloadFile(file):
     if unavailable == MAX_UNAVAILABLE:
         # save download current state in order to restart it at next sync
         file.previousChunks = file.availableChunks
-        file.syncLock.release()
         print("Synchronization of {} failed".format(file.filename))
-        peerCore.syncThreadsLock.acquire()
-        del peerCore.syncThreads[key]
-        peerCore.syncThreadsLock.release()
+        syncScheduler.syncThreadsLock.acquire()
+        del syncScheduler.syncThreads[key]
+
+        syncScheduler.queueLock.acquire()
+        reloadTask = syncScheduler.syncTask(file.groupName, file.treePath, file.timestamp)
+        syncScheduler.queue.append(reloadTask)
+        syncScheduler.queueLock.release()
+
+        syncScheduler.syncThreadsLock.release()
+        file.syncLock.release()
         return
 
     if mergeChunks(file, tmpDirPath):
@@ -327,9 +342,9 @@ def downloadFile(file):
         # if mergeChunks fails save the download current state
         file.previousChunks = file.availableChunks
 
-    peerCore.syncThreadsLock.acquire()
+    syncScheduler.syncThreadsLock.acquire()
     del peerCore.syncThreads[key]
-    peerCore.syncThreadsLock.release()
+    syncScheduler.syncThreadsLock.release()
 
     file.syncLock.release()
 
@@ -344,14 +359,12 @@ def getChunksList(file, peerIP, peerPort):
     :return:
     """
 
-    key = file.groupName + "_" + file.filename
-
     s = peerCore.createSocket(peerIP, peerPort)
     if s is None:
         return None
 
     try:
-        message = "CHUNKS_LIST {} {}".format(key, file.timestamp)
+        message = "CHUNKS_LIST {} {} {}".format(file.groupName, file.treePath, file.timestamp)
         transmission.mySend(s, message)
         data = transmission.myRecv(s)
         peerCore.closeSocket(s)
@@ -387,15 +400,13 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
 
     for chunkID in chunksList:
 
-        key = file.groupName + "_" + file.filename
-
         if chunkID == file.chunksNumber - 1:
             chunkSize = file.lastChunkSize
         else:
             chunkSize = CHUNK_SIZE
 
         try:
-            message = "CHUNK {} {} {}".format(key, file.timestamp, chunkID)
+            message = "CHUNK {} {} {}".format(file.groupName, file.treePath, file.timestamp, chunkID)
             transmission.mySend(s, message)
             answer = transmission.myRecv(s)
         except (socket.timeout, RuntimeError):
