@@ -7,7 +7,6 @@ import select
 import socket
 from threading import Thread, Lock
 
-import fileSystem
 import reqHandlers
 import transmission
 from group import Group
@@ -76,11 +75,22 @@ def initServer():
         except FileNotFoundError:
             pass
 
-        fileTree = fileSystem.getFileStatus(groupsFilesFile)
-
-        if fileTree is not None:
-            for group in fileTree.groups:
-                groups[group.nodeName].filesInGroup = group
+        try:
+            f = open(groupsFilesFile, 'r')
+            try:
+                filesJson = json.load(f)
+                for file in filesJson:
+                    groupName = file["groupName"]
+                    filename = file["filename"]
+                    filesize = file["filesize"]
+                    timestamp = file["timestamp"]
+                    groups[groupName].addFile(filename, filesize, timestamp)
+                del filesJson
+            except ValueError:
+                return None
+            f.close()
+        except FileNotFoundError:
+            pass
 
 
 def saveState():
@@ -108,11 +118,18 @@ def saveState():
         json.dump(peersJson, f, indent=4)
         del peersJson
 
-    fileTree = fileSystem.FileTree()
-    for group in groups.values():
-        fileTree.addGroup(group.filesInGroup)
-
-    fileSystem.saveFileStatus(fileTree, groupsFilesFile)
+    filesJson = list()
+    with open(groupsFilesFile, 'w') as f:
+        for group in groups.values():
+            for file in group.filesInGroup.values():
+                fileInfo = dict()
+                fileInfo["groupName"] = group.name
+                fileInfo["filename"] = file.filename
+                fileInfo["filesize"] = file.filesize
+                fileInfo["timestamp"] = file.timestamp
+                filesJson.append(fileInfo)
+        json.dump(filesJson, f, indent=4)
+        del filesJson
 
 
 class Server:
@@ -279,8 +296,7 @@ class SocketServerThread(Thread):
             transmission.mySend(self.client_sock, answer)
 
         elif request.split()[0] == "GET_FILES":
-            answer = reqHandlers.getFiles(request,
-                                          groups, peerID)
+            answer = reqHandlers.getFiles(request, groups, peerID)
             transmission.mySend(self.client_sock, answer)
 
         elif request.split()[0] == "HERE":
