@@ -45,8 +45,6 @@ groupsList = dict()
 localFileTree = None
 
 
-
-
 def createSocket(ipAddress, port):
     """
     Create a socket connection with a remote host.
@@ -462,7 +460,6 @@ def startSync():
     return server
 
 
-
 def initGroupLocalFileTree(groupName):
     """
     Retrieve from the server the file list of an active groups.
@@ -576,7 +573,6 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
     for treePath in localTreePaths:
         if treePath not in serverTreePaths:
             localGroupTree.removeNode(treePath)
-
 
 
 def addFiles(groupName, filepaths, directory):
@@ -751,8 +747,6 @@ def removeFiles(groupName, treePaths):
                 closeSocket(s)
                 continue
 
-
-
         return True
 
 
@@ -764,7 +758,7 @@ def syncFiles(groupName, files):
     :param files: list of fileObject
     :return: 
     """
-    
+
     s = createSocket(serverIP, serverPort)
     if s is None:
         return False
@@ -828,7 +822,7 @@ def leaveGroup(groupName):
     :param groupName: name of the group that will be left
     :return: boolean (True for success, False for any error)
     """
-    
+
     s = createSocket(serverIP, serverPort)
     if s is None:
         return False
@@ -854,9 +848,9 @@ def leaveGroup(groupName):
             if thread["groupName"] == groupName:
                 thread["stop"] = True
         syncScheduler.syncThreadsLock.release()
-        
+
         groupsList[groupName]["status"] = "OTHER"
-        
+
         return True
 
 
@@ -866,7 +860,7 @@ def disconnectGroup(groupName):
     :param groupName: name of the group from which the peer want to disconnect
     :return: boolean (True for success, False for any error)
     """
-    
+
     s = createSocket(serverIP, serverPort)
     if s is None:
         return False
@@ -894,7 +888,7 @@ def disconnectGroup(groupName):
         syncScheduler.syncThreadsLock.release()
 
         groupsList[groupName]["status"] = "RESTORABLE"
-        
+
         return True
 
 
@@ -904,9 +898,9 @@ def peerExit():
     Furthermore, stop all the working synchronization thread.
     :return: boolean (True for success, False for any error)
     """
-    
+
     s = createSocket(serverIP, serverPort)
-    
+
     if s is None:
         return False
 
@@ -934,11 +928,11 @@ def peerExit():
         for thread in syncScheduler.syncThreads.values():
             thread["stop"] = True
         syncScheduler.syncThreadsLock.release()
-        
+
         # wait for thread termination
         time.sleep(4)
-        
+
         # save session status
         fileSystem.saveFileStatus(localFileTree, previousSessionFile)
-        
+
         return True

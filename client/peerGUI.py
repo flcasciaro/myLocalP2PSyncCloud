@@ -563,7 +563,7 @@ class myP2PSync(QMainWindow):
         if groupTree is None:
             return
 
-        for node in groupTree.childs:
+        for node in groupTree.childs.values():
             self.fileList.addTopLevelItem(generateItem(node))
 
     def addFileHandler(self):
@@ -599,8 +599,8 @@ class myP2PSync(QMainWindow):
         if directory == "":
             # no directory picked
             return
-        length = len(directory.split("/"))
-        dirName = directory.split("/")[length - 1]
+
+        dirName = directory.split("/")[-1]
 
         if len(dirName.split(" ")) == 1:
             filepaths = list()
@@ -668,7 +668,6 @@ class myP2PSync(QMainWindow):
                     self.loadFileManager()
                 else:
                     QMessageBox.about(self, "Error", "Cannot remove the selected directory!")
-
             else:
                 QMessageBox.about(self, "Error", "You've selected a file instead of a directory")
         else:
@@ -909,14 +908,14 @@ class mySig(QObject):
 def generateItem(node):
     if node.isDir:
         item = QTreeWidgetItem([node.nodeName, "", "", "", ""])
-        for child in node.childs:
+        for child in node.childs.values():
             item.addChild(generateItem(child))
     else:
         filesize, syncStatus = getFileLabels(node.file)
         item = QTreeWidgetItem([node.file.filename, node.file.filepath, filesize,
                                 node.file.getLastModifiedTime(), syncStatus])
 
-    # item.setExpanded(True)
+    item.setExpanded(True)
     return item
 
 
