@@ -36,7 +36,7 @@ class Node:
 
         if self.isDir:
             self.file = None
-            self.childs = list()
+            self.childs = dict()
         else:
             self.file = file
             self.childs = None
@@ -44,7 +44,10 @@ class Node:
     def addChild(self, child):
 
         if self.isDir:
-            self.childs.append(child)
+            if child.nodeName not in self.childs:
+                self.childs[child.nodeName] = child
+            else:
+                print("ERROR: CHILD ALREADY ADDED")
         else:
             print("ERROR: TRYING TO ADD A CHILD TO A FILE NODE")
 
@@ -55,7 +58,7 @@ class Node:
 
         if self.isDir:
             print("{} Dirname: {}".format(levelStr, self.nodeName))
-            for child in self.childs:
+            for child in self.childs.values():
                 child.print(level+1)
         else:
             print("{} Filename: {}".format(levelStr, self.file.filename))
@@ -63,17 +66,12 @@ class Node:
     def findNode(self, treePath):
 
         current = self
-        found = False
 
         for name in treePath.split("/"):
-            for child in current.childs:
-                if child.nodeName == name:
-                    found = True
-                    current = child
-                    break
-
-            # path not found
-            if not found:
+            if name in current.childs:
+                current = current.childs[name]
+            else:
+                # path not found
                 return None
 
         return current
@@ -103,15 +101,16 @@ class Node:
         # traverse the tree
         for i in range(0, n):
             field = treePathFields[i]
-            found = False
 
-            for child in current.childs:
-                if child.nodeName == field:
-                    found = True
-                    current = child
-                    break
+            if field in current.childs:
+                if i == n - 1:
+                    # file node found
+                    print("NODE ALREADY INSERTED")
+                    return
+                else:
+                    current = current.childs[field]
 
-            if not found:
+            else:
                 if i < n - 1:
                     # addDir node
                     node = Node(field, True)
@@ -122,11 +121,7 @@ class Node:
                     node = Node(field, False, file)
                     current.addChild(node)
                     return
-            else:
-                # file node found
-                if i == n - 1:
-                    print("NODE ALREADY INSERTED")
-                    return
+
 
 
     def removeNode(self, treePath):
@@ -146,27 +141,21 @@ class Node:
 
         # traverse the tree
         for name in treePath.split("/"):
-            found = False
 
-            for child in current.childs:
-                if child.nodeName == name:
-                    found = True
-                    current = child
-                    nodeList.append(current)
-                    break
+            if name in current.childs:
+                current = current.childs[name]
+                nodeList.append(current)
 
-            # path not found
-            if not found:
+            else:
                 print("NODE NOT FOUND")
                 return
-
 
         last = nodeList.pop()
         #delete File object
         del last.file
         parent = nodeList.pop()
-        # remove node from the parent list
-        parent.childs.remove(last)
+        # remove node from the parent dictionary
+        del parent.childs[last.nodeName]
         # remove Node object
         del last
 
@@ -174,18 +163,19 @@ class Node:
         while len(nodeList) > 0:
             last = parent
             parent = nodeList.pop()
-            if len(parent.childs) <= 1:
-                parent.childs.remove(last)
+            if len(last.childs) == 0:
+                del parent.childs[last.nodeName]
                 del last
             else:
                 break
+
 
     def getFileTreePaths(self):
 
         treePaths = list()
 
         if self.isDir:
-            for child in self.childs:
+            for child in self.childs.values():
                 treePaths.extend(child.getFileTreePathsR(""))
         else:
             return None
@@ -203,7 +193,7 @@ class Node:
             treePath = treePath + "/" + self.nodeName
 
         if self.isDir:
-            for child in self.childs:
+            for child in self.childs.values():
                 treePaths.extend(child.getFileTreePathsR(treePath))
         else:
             treePaths.append(treePath)
@@ -285,7 +275,7 @@ def saveFileStatus(fileTree, sessionFile):
 
 def fillChildsInfo(groupInfo, childs):
 
-    for child in childs:
+    for child in childs.values():
         if child.isDir:
             nestedInfo = dict()
             nestedInfo["nodeName"] = child.nodeName
