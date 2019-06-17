@@ -175,7 +175,8 @@ class SocketServerThread(Thread):
         :param message: incoming message
         :return: void
         """
-        # print('[Thr {}] Received {}'.format(self.number, message))
+
+        print('[Thr {}] Received {}'.format(self.number, message))
 
         if message.split()[0] == "CHUNKS_LIST":
             fileSharing.sendChunksList(message, self)
