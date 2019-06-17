@@ -176,27 +176,30 @@ class SocketServerThread(Thread):
         :return: void
         """
 
-        print('[Thr {}] Received {}'.format(self.number, message))
+        action = message.split()[0]
 
-        if message.split()[0] == "CHUNKS_LIST":
+        if action != "BYE":
+            print('[Thr {}] Received {}'.format(self.number, message))
+
+        if action == "CHUNKS_LIST":
             fileSharing.sendChunksList(message, self)
 
-        elif message.split()[0] == "CHUNK":
+        elif action == "CHUNK":
             fileSharing.sendChunk(message, self)
 
-        elif message.split()[0] == "ADDED_FILES":
+        elif action == "ADDED_FILES":
             answer = syncScheduler.addedFiles(message)
             transmission.mySend(self.client_sock, answer)
 
-        elif message.split()[0] == "REMOVED_FILES":
+        elif action == "REMOVED_FILES":
             answer = syncScheduler.removedFiles(message)
             transmission.mySend(self.client_sock, answer)
 
-        elif message.split()[0] == "UPDATED_FILES":
+        elif action == "UPDATED_FILES":
             answer = syncScheduler.updatedFiles(message)
             transmission.mySend(self.client_sock, answer)
 
-        elif message == "BYE":
+        elif action == "BYE":
             answer = "BYE PEER"
             transmission.mySend(self.client_sock, answer)
             self.stop()
