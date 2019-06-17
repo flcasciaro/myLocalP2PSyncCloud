@@ -131,9 +131,9 @@ def addedFiles(message):
                         os.makedirs(path)
                     peerCore.pathCreationLock.release()
 
-                    treePath = fileInfo["filename"]
+                    filename = fileInfo["filename"]
+                    treePath = fileInfo["treePath"]
                     filepath = path + "/" + treePath
-                    filename = treePath.split("/")[-1]
 
                     # create file Object
                     file = fileManagement.File(groupName=groupName, treePath=treePath,
@@ -207,7 +207,7 @@ def updatedFiles(message):
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
                 for fileInfo in filesInfo:
 
-                    file = peerCore.localFileTree.getGroup(groupName).findNode(fileInfo["filename"])
+                    file = peerCore.localFileTree.getGroup(groupName).findNode(fileInfo["treePath"])
 
                     file.filesize = fileInfo["filesize"]
                     file.timestamp = fileInfo["timestamp"]
@@ -215,7 +215,7 @@ def updatedFiles(message):
                     file.previousChunks = list()
 
                     # stop possible synchronization thread acting on the file
-                    key = groupName + "_" + fileInfo["filename"]
+                    key = groupName + "_" + fileInfo["treePath"]
 
                     syncThreadsLock.acquire()
                     if key in syncThreads:
@@ -223,7 +223,7 @@ def updatedFiles(message):
                     syncThreadsLock.release()
 
                     # create new syncTask
-                    newTask = syncTask(groupName, fileInfo["filename"], fileInfo["timestamp"])
+                    newTask = syncTask(groupName, fileInfo["treePath"], fileInfo["timestamp"])
 
                     queueLock.acquire()
                     # remove outdated syncTask

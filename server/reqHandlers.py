@@ -185,7 +185,7 @@ def addedFiles(request, groups, groupsLock, peerID):
                     answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
                 else:
                     for fileInfo in filesInfo:
-                        groups[groupName].addFile(fileInfo["filename"], fileInfo["filesize"], fileInfo["timestamp"])
+                        groups[groupName].addFile(fileInfo["treePath"], fileInfo["filesize"], fileInfo["timestamp"])
                     answer = "OK - FILES SUCCESSFULLY ADDED"
             else:
                 answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"
@@ -205,7 +205,7 @@ def removedFiles(request, groups, groupsLock, peerID):
     try:
         requestFields = request.split(" ", 2)
         groupName = requestFields[1]
-        filenames = eval(requestFields[2])
+        treePaths = eval(requestFields[2])
 
         groupsLock.acquire()
 
@@ -214,8 +214,8 @@ def removedFiles(request, groups, groupsLock, peerID):
                 if groups[groupName].peersInGroup[peerID].role.upper() == "RO":
                     answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGE"
                 else:
-                    for filename in filenames:
-                        groups[groupName].removeFile(filename)
+                    for tp in treePaths:
+                        groups[groupName].removeFile(tp)
                     answer = "OK - FILES REMOVED FROM THE GROUP"
             else:
                 answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"
@@ -245,7 +245,7 @@ def updatedFiles(request, groups, groupsLock, peerID):
                     answer = "ERROR - PEER DOESN'T HAVE ENOUGH PRIVILEGES"
                 else:
                     for fileInfo in filesInfo:
-                        groups[groupName].updateFile(fileInfo["filename"], fileInfo["filesize"], fileInfo["timestamp"])
+                        groups[groupName].updateFile(fileInfo["treePath"], fileInfo["filesize"], fileInfo["timestamp"])
                     answer = "OK - FILES SUCCESSFULLY UPDATED"
             else:
                 answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"

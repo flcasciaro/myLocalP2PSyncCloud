@@ -597,8 +597,7 @@ def addFiles(groupName, filepaths, directory):
         filepath = filepaths.pop()
         fileInfo = dict()
         # split filepath into directoryPath and filename, saving only the latter
-        __, fileInfo["filename"] = os.path.split(filepath)
-        fileInfo["treePath"] = fileInfo["filename"]
+        __, fileInfo["treePath"] = os.path.split(filepath)
         fileInfo["filepath"] = filepath
         fileInfo["filesize"], fileInfo["timestamp"] = fileManagement.getFileStat(filepath)
         filesInfo.append(fileInfo)
@@ -617,7 +616,7 @@ def addFiles(groupName, filepaths, directory):
             #       dirPath:    C://home
             #       filename:   Desktop/file.txt
             dirPath, __ = os.path.split(directory)
-            fileInfo["filename"] = filepath.replace(dirPath, "")[1:]
+            fileInfo["treePath"] = filepath.replace(dirPath, "")[1:]
             fileInfo["filepath"] = filepath
             fileInfo["filesize"], fileInfo["timestamp"] = fileManagement.getFileStat(filepath)
             filesInfo.append(fileInfo)
@@ -650,8 +649,8 @@ def addFiles(groupName, filepaths, directory):
         for fileInfo in filesInfo:
             # add file to the personal list of files of the peer
 
-            filename = fileInfo["filename"].split("/")[-1]
-            treePath = fileInfo["filename"]
+            filename = fileInfo["treePath"].split("/")[-1]
+            treePath = fileInfo["treePath"]
 
             file = fileManagement.File(groupName=groupName, treePath=treePath,
                                        filename=filename, filepath=fileInfo["filepath"],
@@ -768,7 +767,7 @@ def syncFiles(groupName, files):
 
     for file in files:
         fileInfo = dict()
-        fileInfo["filename"] = file.treePath
+        fileInfo["treePath"] = file.treePath
         fileInfo["filesize"] = file.filesize
         fileInfo["timestamp"] = file.timestamp
         filesInfo.append(fileInfo)
