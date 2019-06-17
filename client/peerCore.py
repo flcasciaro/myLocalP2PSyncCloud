@@ -551,11 +551,12 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
                 os.makedirs(path)
             pathCreationLock.release()
 
+            filename = treePath.split("/")[-1]
             filepath = path + "/" + treePath
 
             # create file Object
             file = fileManagement.File(groupName=groupName, treePath=treePath,
-                                       filename=fileInfo["filename"], filepath=filepath,
+                                       filename=filename, filepath=filepath,
                                        filesize=fileInfo["filesize"], timestamp=fileInfo["timestamp"],
                                        status="D", previousChunks=list())
 
