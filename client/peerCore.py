@@ -562,7 +562,7 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
 
             localGroupTree.addNode(treePath, file)
 
-            task = syncScheduler.syncTask(groupName, myFile.treePath, myFile.timestamp)
+            task = syncScheduler.syncTask(groupName, file.treePath, file.timestamp)
             syncScheduler.queueLock.acquire()
             syncScheduler.queue.append(task)
             syncScheduler.queueLock.release()
