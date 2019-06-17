@@ -116,7 +116,7 @@ def addedFiles(message):
         print("*******************************************************************")
         messageFields = message.split(" ", 2)
         groupName = messageFields[1]
-        filesInfo = eval(message[2])
+        filesInfo = eval(messageFields[2])
 
         if groupName in peerCore.groupsList:
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
@@ -168,7 +168,7 @@ def removedFiles(message):
     try:
         messageFields = message.split(" ", 2)
         groupName = messageFields[1]
-        fileTreePaths = eval(message[2])
+        fileTreePaths = eval(messageFields[2])
 
         if groupName in peerCore.groupsList:
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
@@ -201,7 +201,7 @@ def updatedFiles(message):
     try:
         messageFields = message.split(" ", 2)
         groupName = messageFields[1]
-        filesInfo = eval(message[2])
+        filesInfo = eval(messageFields[2])
 
         if groupName in peerCore.groupsList:
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
