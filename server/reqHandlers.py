@@ -266,7 +266,16 @@ def getFiles(request, groups, peerID):
         if groupName in groups:
             g = groups[groupName]
             if peerID in g.peersInGroup:
-                answer = str(g.filesInGroup)
+
+                filesInfo = list()
+                for file in g.filesInGroup.values():
+                    fileDict = dict()
+                    fileDict["treePath"] = file.filename
+                    fileDict["filesize"] = file.filesize
+                    fileDict["timestamp"] = file.timestamp
+
+                answer = str(filesInfo)
+
             else:
                 answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"
         else:
