@@ -172,7 +172,7 @@ def retrieveGroups():
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "SEND GROUPS"
+        message = str(peerID) + " " + "GROUPS"
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
         closeSocket(s)
