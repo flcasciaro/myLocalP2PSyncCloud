@@ -57,6 +57,8 @@ class syncTask:
 
 def scheduler():
 
+    global queue
+
     while True:
 
         if stop:
