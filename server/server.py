@@ -214,7 +214,8 @@ class SocketServerThread(Thread):
         self.__stop = False
 
     def run(self):
-        print("[Thr {}] SocketServerThread starting with client {}".format(self.number, self.client_addr))
+
+        # print("[Thr {}] SocketServerThread starting with client {}".format(self.number, self.client_addr))
 
         while not self.__stop:
             if self.client_sock:
@@ -251,7 +252,7 @@ class SocketServerThread(Thread):
     def close(self):
         """ Close connection with the client socket. """
         if self.client_sock:
-            print('[Thr {}] Closing connection with {}'.format(self.number, self.client_addr))
+            # print('[Thr {}] Closing connection with {}'.format(self.number, self.client_addr))
             self.client_sock.close()
 
     def manageRequest(self, request, peerID):
@@ -263,7 +264,7 @@ class SocketServerThread(Thread):
 
         # filter common requests
         if action != "PEERS" and action != "BYE" and action != "GROUPS":
-            print('[Thr {}] Received {}'.format(self.number, request))
+            print('[Thr {}] [Peer: {}] Received {}'.format(self.number, peerID, request))
 
         if action == "GROUPS":
             answer = reqHandlers.sendGroups(groups, peerID)
