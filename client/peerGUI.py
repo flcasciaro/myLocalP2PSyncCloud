@@ -702,7 +702,7 @@ class myP2PSync(QMainWindow):
                         self.addLogMessage("It was not possible to synchronize the file {}"
                                            .format(file.filename))
                 else:
-                    QMessageBox.about(self, "Info", "File have been already synchronized")
+                    QMessageBox.about(self, "Info", "File has been already synchronized")
             else:
                 QMessageBox.about(self, "Error", "You've selected a directory instead of a file")
         else:
@@ -782,7 +782,7 @@ class myP2PSync(QMainWindow):
 
             if len(files) > 0:
                 if peerCore.syncFiles(self.groupName, files):
-                    self.addLogMessage("All files have been already synchronized")
+                    self.addLogMessage("All files have been synchronized")
                     self.loadFileManager()
                 else:
                     self.addLogMessage("It was not possible to synchronize all the files")
