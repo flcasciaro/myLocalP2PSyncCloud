@@ -261,7 +261,8 @@ class SocketServerThread(Thread):
 
         action = request.split()[0]
 
-        if action != "PEERS" and action != "BYE":
+        # filter common requests
+        if action != "PEERS" and action != "BYE" and action != "GROUPS":
             print('[Thr {}] Received {}'.format(self.number, request))
 
         if action == "GROUPS":
