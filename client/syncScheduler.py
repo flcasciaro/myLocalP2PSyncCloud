@@ -200,6 +200,8 @@ def updatedFiles(message):
         groupName = messageFields[1]
         filesInfo = eval(messageFields[2])
 
+        global queue
+
         if groupName in peerCore.groupsList:
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
                 for fileInfo in filesInfo:
