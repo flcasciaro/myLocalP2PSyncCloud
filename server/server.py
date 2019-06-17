@@ -259,65 +259,68 @@ class SocketServerThread(Thread):
         Serves the different client requests
         """
 
-        print('[Thr {}] Received {}'.format(self.number, request))
+        action = request.split()[0]
 
-        if request == "SEND GROUPS":
+        if action != "PEERS" and action != "BYE":
+            print('[Thr {}] Received {}'.format(self.number, request))
+
+        if action == "GROUPS":
             answer = reqHandlers.sendGroups(groups, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "RESTORE":
+        elif action == "RESTORE":
             answer = reqHandlers.restoreGroup(request, groups, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "JOIN":
+        elif action == "JOIN":
             answer = reqHandlers.joinGroup(request, groups, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "CREATE":
+        elif action == "CREATE":
             answer = reqHandlers.createGroup(request, groups, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "ROLE":
+        elif action == "ROLE":
             answer = reqHandlers.manageRole(request, groups, groupsLock, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "PEERS":
+        elif action == "PEERS":
             answer = reqHandlers.retrievePeers(request, groups, peers, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "ADDED_FILES":
+        elif action == "ADDED_FILES":
             answer = reqHandlers.addedFiles(request, groups, groupsLock, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "UPDATED_FILES":
+        elif action == "UPDATED_FILES":
             answer = reqHandlers.updatedFiles(request, groups, groupsLock, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "REMOVED_FILES":
+        elif action == "REMOVED_FILES":
             answer = reqHandlers.removedFiles(request, groups, groupsLock, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "GET_FILES":
+        elif action == "GET_FILES":
             answer = reqHandlers.getFiles(request, groups, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "HERE":
+        elif action == "HERE":
             answer = reqHandlers.imHere(request, peers, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "LEAVE":
+        elif action == "LEAVE":
             answer = reqHandlers.leaveGroup(groups, groupsLock, request.split()[2], peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request.split()[0] == "DISCONNECT":
+        elif action == "DISCONNECT":
             answer = reqHandlers.disconnectGroup(groups, groupsLock, request.split()[2], peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request == "EXIT":
+        elif action == "EXIT":
             answer = reqHandlers.peerExit(groups, groupsLock, peerID)
             transmission.mySend(self.client_sock, answer)
 
-        elif request == "BYE":
+        elif action == "BYE":
             answer = "OK - BYE PEER"
             transmission.mySend(self.client_sock, answer)
             self.stop()
