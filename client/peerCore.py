@@ -487,7 +487,6 @@ def initGroupLocalFileTree(groupName):
         return
     else:
         updatedFileList = eval(answer)
-        # print(updatedFileList)
 
     updateLocalGroupTree(groupName, localFileTree.getGroup(groupName), updatedFileList)
 
@@ -509,7 +508,7 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
 
     for fileInfo in updatedFileList:
 
-        treePath = fileInfo["filename"]
+        treePath = fileInfo["treePath"]
         serverTreePaths.append(treePath)
 
         localNode = localGroupTree.findNode(treePath)
