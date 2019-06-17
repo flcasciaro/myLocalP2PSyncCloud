@@ -54,7 +54,7 @@ def sendChunk(message, thread):
     groupName = messageFields[1]
     fileTreePath = messageFields[2]
     timestamp = int(messageFields[3])
-    chunkID = int(messageFields[3])
+    chunkID = int(messageFields[4])
 
     error = True
 
@@ -406,7 +406,7 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
             chunkSize = CHUNK_SIZE
 
         try:
-            message = "CHUNK {} {} {}".format(file.groupName, file.treePath, file.timestamp, chunkID)
+            message = "CHUNK {} {} {} {}".format(file.groupName, file.treePath, file.timestamp, chunkID)
             transmission.mySend(s, message)
             answer = transmission.myRecv(s)
         except (socket.timeout, RuntimeError):
