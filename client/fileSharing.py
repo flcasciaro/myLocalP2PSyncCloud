@@ -32,7 +32,7 @@ def sendChunksList(message, thread):
         if fileNode.file.timestamp == timestamp:
             if fileNode.file.availableChunks is not None:
                 if len(fileNode.file.availableChunks) != 0:
-                    answer = str(fileNode.availableChunks)
+                    answer = str(fileNode.file.availableChunks)
                 else:
                     answer = "ERROR - EMPTY LIST"
             else:
