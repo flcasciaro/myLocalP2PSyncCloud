@@ -343,7 +343,7 @@ def downloadFile(file):
         file.previousChunks = file.availableChunks
 
     syncScheduler.syncThreadsLock.acquire()
-    del peerCore.syncThreads[key]
+    del syncScheduler.syncThreads[key]
     syncScheduler.syncThreadsLock.release()
 
     file.syncLock.release()
