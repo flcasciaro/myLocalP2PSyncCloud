@@ -76,15 +76,6 @@ class Node:
 
         return current
 
-    def updateNode(self, treePath, filesize, timestamp):
-
-        node = self.findNode(treePath)
-
-        if node is not None:
-            node.file.filesize = int(filesize)
-            node.file.timestamp = int(timestamp)
-        else:
-            print("NODE NOT FOUND")
 
     def addNode(self, treePath, file):
         """

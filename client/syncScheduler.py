@@ -131,8 +131,8 @@ def addedFiles(message):
                         os.makedirs(path)
                     peerCore.pathCreationLock.release()
 
-                    filename = fileInfo["filename"]
                     treePath = fileInfo["treePath"]
+                    filename = treePath.split("/")[-1]
                     filepath = path + "/" + treePath
 
                     # create file Object
