@@ -111,6 +111,9 @@ def stopScheduler():
 def addedFiles(message):
 
     try:
+        print("*******************************************************************")
+        print(message)
+        print("*******************************************************************")
         messageFields = message.split(" ", 2)
         groupName = messageFields[1]
         filesInfo = eval(message[2])
