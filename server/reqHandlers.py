@@ -273,6 +273,7 @@ def getFiles(request, groups, peerID):
                     fileDict["treePath"] = file.filename
                     fileDict["filesize"] = file.filesize
                     fileDict["timestamp"] = file.timestamp
+                    filesInfo.append(fileDict)
 
                 answer = str(filesInfo)
 
