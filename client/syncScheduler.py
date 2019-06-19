@@ -66,6 +66,7 @@ def scheduler():
 
                 queueLock.acquire()
                 task = queue.popleft()
+                print(task.toString())
                 queueLock.release()
 
                 # skip task of non active groups
