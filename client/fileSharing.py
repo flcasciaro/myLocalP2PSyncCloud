@@ -364,7 +364,8 @@ def getChunksList(file, peerIP, peerPort):
         return None
 
     try:
-        message = "CHUNKS_LIST {} {} {}".format(file.groupName, file.treePath, file.timestamp)
+        message = str(peerCore.peerID) + " " + \
+                  "CHUNKS_LIST {} {} {}".format(file.groupName, file.treePath, file.timestamp)
         transmission.mySend(s, message)
         data = transmission.myRecv(s)
         peerCore.closeSocket(s)
@@ -406,7 +407,8 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
             chunkSize = CHUNK_SIZE
 
         try:
-            message = "CHUNK {} {} {} {}".format(file.groupName, file.treePath, file.timestamp, chunkID)
+            message = str(peerCore.peerID) + " " + \
+                      "CHUNK {} {} {} {}".format(file.groupName, file.treePath, file.timestamp, chunkID)
             transmission.mySend(s, message)
             answer = transmission.myRecv(s)
         except (socket.timeout, RuntimeError):
