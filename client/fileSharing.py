@@ -20,7 +20,6 @@ MAX_CHUNKS_PER_THREAD = 50
 
 
 def sendChunksList(message, thread):
-
     messageFields = message.split()
     groupName = messageFields[1]
     fileTreePath = messageFields[2]
@@ -49,7 +48,6 @@ def sendChunksList(message, thread):
 
 
 def sendChunk(message, thread):
-
     messageFields = message.split()
     groupName = messageFields[1]
     fileTreePath = messageFields[2]
@@ -71,7 +69,7 @@ def sendChunk(message, thread):
                     chunkSize = CHUNK_SIZE
 
                 if file.status == "S":
-                    """peer has the whole file -> open and send it"""
+                    # peer has the whole file -> open and send it
 
                     try:
                         f = open(file.filepath, 'rb')
@@ -93,7 +91,7 @@ def sendChunk(message, thread):
                         answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
 
                 if file.status == "D":
-                    """peer is still downloading the file -> send chunk from tmp file"""
+                    # peer is still downloading the file -> send chunk from tmp file
 
                     try:
                         chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
@@ -283,7 +281,6 @@ def downloadFile(file):
                     r = (r + 1) % len(chunks_peers[chunk])
                     i += 1
 
-
         # check again thread termination status
         syncScheduler.syncThreadsLock.acquire()
         if syncScheduler.syncThreads[key]["stop"]:
@@ -292,7 +289,6 @@ def downloadFile(file):
             break
         else:
             syncScheduler.syncThreadsLock.release()
-
 
         threads = list()
 
@@ -393,7 +389,7 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
     :return:
     """
 
-    #print(chunksList)
+    # print(chunksList)
 
     s = peerCore.createSocket(peerIP, peerPort)
     if s is None:
