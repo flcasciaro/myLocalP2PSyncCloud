@@ -511,6 +511,8 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
 
             myFile = localNode.file
 
+            myFile.syncLock.acquire()
+
             if myFile.timestamp == fileInfo["timestamp"] and myFile.status == "S":
                 if myFile.availableChunks is None:
                     # now the peer is able to upload chunks
@@ -529,6 +531,8 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
                 myFile.status = "D"
                 task = syncScheduler.syncTask(groupName, myFile.treePath, myFile.timestamp)
                 syncScheduler.appendTask(task)
+
+            myFile.syncLock.release()
 
         else:
             # file not found locally, add it
@@ -777,8 +781,10 @@ def syncFiles(groupName, files):
     else:
         # make the peer ready to upload chunks
         for file in files:
+            file.syncLock.acquire()
             file.status = "S"
             file.iHaveIt()
+            file.syncLock.release()
 
         # retrieve the list of active peers for the file
         activePeers = retrievePeers(groupName, selectAll=False)
@@ -830,11 +836,9 @@ def leaveGroup(groupName):
         return False
     else:
         # stop every synchronization thread working on file of the group
-        syncScheduler.syncThreadsLock.acquire()
-        for thread in syncScheduler.syncThreads.values():
-            if thread["groupName"] == groupName:
-                thread["stop"] = True
-        syncScheduler.syncThreadsLock.release()
+        # and remove group related tasks from the queue
+        syncScheduler.stopSyncThreadByGroup(groupName)
+        syncScheduler.removeGroupTask(groupName)
 
         groupsList[groupName]["status"] = "OTHER"
 
@@ -868,11 +872,9 @@ def disconnectGroup(groupName):
         return False
     else:
         # stop every synchronization thread working on file of the group
-        syncScheduler.syncThreadsLock.acquire()
-        for thread in syncScheduler.syncThreads.values():
-            if thread["groupName"] == groupName:
-                thread["stop"] = True
-        syncScheduler.syncThreadsLock.release()
+        # and remove group related tasks from the queue
+        syncScheduler.stopSyncThreadByGroup(groupName)
+        syncScheduler.removeGroupTask(groupName)
 
         groupsList[groupName]["status"] = "RESTORABLE"
 
@@ -909,12 +911,10 @@ def peerExit():
 
         # stop scheduler
         syncScheduler.stopScheduler()
+        syncScheduler.removeAllTasks()
 
         # stop every working synchronization thread
-        syncScheduler.syncThreadsLock.acquire()
-        for thread in syncScheduler.syncThreads.values():
-            thread["stop"] = True
-        syncScheduler.syncThreadsLock.release()
+        syncScheduler.stopAllSyncThreads()
 
         # wait for thread termination
         time.sleep(4)

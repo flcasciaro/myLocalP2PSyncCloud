@@ -24,6 +24,7 @@ syncThreadsLock = Lock()
 # Maximum number of synchronization threads working at the same time
 MAX_SYNC_THREAD = 5
 
+
 class syncTask:
 
     def __init__(self, groupName, fileTreePath, timestamp):
@@ -35,7 +36,6 @@ class syncTask:
     def toString(self):
 
         return "SYNC {} {} {}".format(self.groupName, self.fileTreePath, self.timestamp)
-
 
     def isOutdated(self, newTask):
         """
@@ -54,7 +54,6 @@ class syncTask:
 
 
 def scheduler():
-
     global queue, stop
 
     while True:
@@ -90,7 +89,7 @@ def scheduler():
                     if fileNode.file.status == "D":
                         # start a new synchronization thread if there are less
                         # than MAX_SYNC_THREAD already active threads
-                        syncThread = Thread(target=fileSharing.downloadFile, args=(fileNode.file, ))
+                        syncThread = Thread(target=fileSharing.downloadFile, args=(fileNode.file, task.timestamp))
                         syncThread.daemon = True
                         key = task.groupName + "_" + task.fileTreePath
                         syncThreads[key] = dict()
@@ -102,12 +101,12 @@ def scheduler():
 
                 else:
                     print("Re-appending task: ", task.toString())
-                    appendTask(task, True)
+                    appendTask(task)
 
             time.sleep(1)
 
-def stopScheduler():
 
+def stopScheduler():
     global stop
     stop = True
 
@@ -142,7 +141,7 @@ def appendTask(task, checkOutdated=False):
                 deleteIndex.append(i)
 
         if not outdated:
-            #delete outdated tasks and append the new one
+            # delete outdated tasks and append the new one
             for index in deleteIndex:
                 del queue[index]
             queue.append(task)
@@ -154,9 +153,64 @@ def appendTask(task, checkOutdated=False):
     queueLock.release()
 
 
+def removeGroupTask(groupName):
+    """
+    Remove from the task queue all the tasks acting on file of a specific group.
+    It's useful after a group disconnect or leave operation.
+    :param groupName: name of the group
+    :return: void
+    """
+
+    global queue
+    queueLock.acquire()
+    queue = deque([t for t in queue if t.groupName != groupName])
+    queueLock.release()
+
+
+def removeAllTasks():
+    global queue
+    queueLock.acquire()
+    queue = deque()
+    queueLock.release()
+
+
+def removeSyncThread(key):
+    syncThreadsLock.acquire()
+    if key in syncThreads:
+        del syncThreads[key]
+    syncThreadsLock.release()
+
+
+def getThreadStatus(key):
+    syncThreadsLock.acquire()
+    if key in syncThreads:
+        return syncThreads[key]["stop"]
+    syncThreadsLock.release()
+
+
+def stopSyncThread(key):
+    syncThreadsLock.acquire()
+    if key in syncThreads:
+        syncThreads[key]["stop"] = True
+    syncThreadsLock.release()
+
+
+def stopSyncThreadByGroup(groupName):
+    syncThreadsLock.acquire()
+    for thread in syncThreads.values():
+        if thread["groupName"] == groupName:
+            thread["stop"] = True
+    syncThreadsLock.release()
+
+
+def stopAllSyncThreads():
+    syncThreadsLock.acquire()
+    for thread in syncThreads.values():
+        thread["stop"] = True
+    syncThreadsLock.release()
+
 
 def addedFiles(message):
-
     global queue
 
     try:
@@ -206,8 +260,8 @@ def addedFiles(message):
     print(answer)
     return answer
 
-def removedFiles(message):
 
+def removedFiles(message):
     try:
         messageFields = message.split(" ", 2)
         groupName = messageFields[1]
@@ -216,16 +270,11 @@ def removedFiles(message):
         if groupName in peerCore.groupsList:
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
                 for treePath in fileTreePaths:
-
                     peerCore.localFileTree.getGroup(groupName).removeNode(treePath)
 
                     # stop possible synchronization thread acting on the file
                     key = groupName + "_" + treePath
-
-                    syncThreadsLock.acquire()
-                    if key in syncThreads:
-                        syncThreads[key]["stop"] = True
-                    syncThreadsLock.release()
+                    stopSyncThread(key)
 
                 answer = "OK - FILES SUCCESSFULLY REMOVED"
             else:
@@ -241,7 +290,6 @@ def removedFiles(message):
 
 
 def updatedFiles(message):
-
     global queue
 
     try:
@@ -258,6 +306,7 @@ def updatedFiles(message):
                     if fileNode is None:
                         continue
 
+                    fileNode.file.syncLock.acquire()
 
                     fileNode.file.filesize = fileInfo["filesize"]
                     fileNode.file.timestamp = fileInfo["timestamp"]
@@ -266,11 +315,9 @@ def updatedFiles(message):
 
                     # stop possible synchronization thread acting on the file
                     key = groupName + "_" + fileInfo["treePath"]
+                    stopSyncThread(key)
 
-                    syncThreadsLock.acquire()
-                    if key in syncThreads:
-                        syncThreads[key]["stop"] = True
-                    syncThreadsLock.release()
+                    fileNode.file.syncLock.release()
 
                     # create new syncTask
                     newTask = syncTask(groupName, fileInfo["treePath"], fileInfo["timestamp"])
