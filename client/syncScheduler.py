@@ -82,26 +82,25 @@ def scheduler():
                     # file has been removed
                     continue
 
+                print(fileNode.file.filename, fileNode.file.filesize, fileNode.file.timestamp, fileNode.file.status)
+
                 # if the file is not already in sync
                 if fileNode.file.syncLock.acquire(blocking=False):
 
                     print("file not in sync")
                     # Sync file if status is "D" and there are available threads
                     syncThreadsLock.acquire()
-                    print("STATUS: ", fileNode.file.status)
+
                     if fileNode.file.status == "D":
-                        print("status is D")
                         # start a new synchronization thread if there are less
                         # than MAX_SYNC_THREAD already active threads
                         syncThread = Thread(target=fileSharing.downloadFile, args=(fileNode.file, ))
                         syncThread.daemon = True
                         key = task.groupName + "_" + task.fileTreePath
-                        print("here")
                         syncThreads[key] = dict()
                         syncThreads[key]["groupName"] = task.groupName
                         syncThreads[key]["stop"] = False
                         syncThread.start()
-                        print("started")
                     syncThreadsLock.release()
                     fileNode.file.syncLock.release()
 
@@ -228,10 +227,14 @@ def updatedFiles(message):
 
                     file = peerCore.localFileTree.getGroup(groupName).findNode(fileInfo["treePath"])
 
+                    print(file.filename, file.filesize, file.timestamp, file.status)
+
                     file.filesize = fileInfo["filesize"]
                     file.timestamp = fileInfo["timestamp"]
                     file.status = "D"
                     file.previousChunks = list()
+
+                    print(file.filename, file.filesize, file.timestamp, file.status)
 
                     # stop possible synchronization thread acting on the file
                     key = groupName + "_" + fileInfo["treePath"]
