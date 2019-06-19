@@ -186,6 +186,8 @@ def isThreadStopped(key):
     syncThreadsLock.acquire()
     if key in syncThreads:
         stop = syncThreads[key]["stop"]
+    else:
+        stop = True
     syncThreadsLock.release()
     return stop
 
