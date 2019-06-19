@@ -228,7 +228,7 @@ def updatedFiles(message):
 
                     queueLock.acquire()
                     # remove outdated syncTask
-                    queue = [task for task in queue if not task.outdatedTask(newTask)]
+                    queue = deque([task for task in queue if not task.outdatedTask(newTask)])
                     # add newTask
                     queue.append(newTask)
                     queueLock.release()
