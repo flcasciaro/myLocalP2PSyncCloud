@@ -462,13 +462,6 @@ def startSync():
 
 
 def initGroupLocalFileTree(groupName):
-    """
-    Retrieve from the server the file list of an active groups.
-    Delete from the local list removed file (if any).
-    For each file: compare local version with the server one,
-                   add synchronization task to queue if necessary.
-    :return: void
-    """
 
     s = createSocket(serverIP, serverPort)
     if s is None:
@@ -526,9 +519,7 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
             if myFile.timestamp == fileInfo["timestamp"] and myFile.status == "D":
                 myFile.status = "D"
                 task = syncScheduler.syncTask(groupName, myFile.treePath, myFile.timestamp)
-                syncScheduler.queueLock.acquire()
-                syncScheduler.queue.append(task)
-                syncScheduler.queueLock.release()
+                syncScheduler.appendTask(task)
 
             elif myFile.timestamp < fileInfo["timestamp"]:
                 # my file version is not the last one
@@ -537,9 +528,7 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
                 myFile.previousChunks = list()
                 myFile.status = "D"
                 task = syncScheduler.syncTask(groupName, myFile.treePath, myFile.timestamp)
-                syncScheduler.queueLock.acquire()
-                syncScheduler.queue.append(task)
-                syncScheduler.queueLock.release()
+                syncScheduler.appendTask(task)
 
         else:
             # file not found locally, add it
@@ -564,9 +553,7 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
             localGroupTree.addNode(treePath, file)
 
             task = syncScheduler.syncTask(groupName, file.treePath, file.timestamp)
-            syncScheduler.queueLock.acquire()
-            syncScheduler.queue.append(task)
-            syncScheduler.queueLock.release()
+            syncScheduler.appendTask(task)
 
     # check if there are removed files
     localTreePaths = localGroupTree.getFileTreePaths()

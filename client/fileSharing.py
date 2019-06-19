@@ -317,11 +317,8 @@ def downloadFile(file):
         syncScheduler.syncThreadsLock.acquire()
         del syncScheduler.syncThreads[key]
 
-        syncScheduler.queueLock.acquire()
         reloadTask = syncScheduler.syncTask(file.groupName, file.treePath, file.timestamp)
-        syncScheduler.queue.append(reloadTask)
-        syncScheduler.queueLock.release()
-
+        syncScheduler.appendTask(reloadTask, True)
         syncScheduler.syncThreadsLock.release()
         file.syncLock.release()
         return
