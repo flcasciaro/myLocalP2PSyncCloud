@@ -37,7 +37,7 @@ class syncTask:
         return "SYNC {} {} {}".format(self.groupName, self.fileTreePath, self.timestamp)
 
 
-    def outdatedTask(self, newTask):
+    def isOutdated(self, newTask):
         """
         Check if a syncTask is outdated.
         A task is outdated if it refers to the same file of a new task but the timestamp is older (or equal).
@@ -113,12 +113,44 @@ def stopScheduler():
 
 
 def appendTask(task, checkOutdated=False):
+    """
+    Append a task to queue.
+    If checkOutdated is True verify all the task in the queue
+    and remove outdated tasks (smaller timestamp for the same file).
+    Furthermore, if task is outdated don't append it.
+    :param task: task to insert
+    :param checkOutdated: boolean (if True enable the check)
+    :return: void
+    """
 
     global queue
     queueLock.acquire()
+
     if checkOutdated:
-        queue = deque([t for t in queue if not t.outdatedTask(task)])
-    queue.append(task)
+        # remove outdated tasks and check if task is outdated or not
+        deleteIndex = list()
+        outdated = False
+
+        for i in range(0, queue.count()):
+            # check if task is outdated respect to task-i
+            if task.isOutdated(queue[i]):
+                outdated = True
+                break
+
+            # check if task-i is outdated respect to task
+            if queue[i].isOutdated(task):
+                deleteIndex.append(i)
+
+        if not outdated:
+            #delete outdated tasks and append the new one
+            for index in deleteIndex:
+                del queue[index]
+            queue.append(task)
+
+    else:
+        # append task without any check
+        queue.append(task)
+
     queueLock.release()
 
 
