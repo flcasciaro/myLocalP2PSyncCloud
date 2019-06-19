@@ -284,10 +284,13 @@ def downloadFile(file, taskTimestamp):
                     r = (r + 1) % len(chunks_peers[chunk])
                     i += 1
 
+        print("here")
         # check again thread termination status
         if syncScheduler.getThreadStatus(key):
+            print(syncScheduler.getThreadStatus(key))
             unavailable = MAX_UNAVAILABLE
             break
+        print("here2")
 
         threads = list()
 
