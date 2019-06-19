@@ -8,7 +8,7 @@ import fileSharing
 import peerCore
 
 # Data structure where sync operations will be scheduled
-queue = None
+queue = deque()
 queueLock = Lock()
 
 # Global variable used to stop the sync scheduler thread
@@ -56,7 +56,6 @@ class syncTask:
 def scheduler():
 
     global queue
-    queue = deque()
 
     while True:
 
