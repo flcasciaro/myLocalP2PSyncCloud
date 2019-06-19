@@ -182,12 +182,12 @@ def removeSyncThread(key):
     syncThreadsLock.release()
 
 
-def getThreadStatus(key):
+def isThreadStopped(key):
     syncThreadsLock.acquire()
     if key in syncThreads:
-        return syncThreads[key]["stop"]
+        stop = syncThreads[key]["stop"]
     syncThreadsLock.release()
-
+    return stop
 
 def stopSyncThread(key):
     syncThreadsLock.acquire()
