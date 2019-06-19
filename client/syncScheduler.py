@@ -73,6 +73,7 @@ def scheduler():
                 # skip task of non active groups
                 if peerCore.groupsList[task.groupName]["status"] != "ACTIVE":
                     continue
+                print("active group")
 
                 # assign task to a sync thread
 
@@ -82,22 +83,27 @@ def scheduler():
                 if fileNode is None:
                     # file has been removed
                     continue
+                print("valid file node")
 
                 # if the file is not already in sync
                 if fileNode.file.syncLock.acquire(blocking=False):
 
+                    print("file not in sync")
                     # Sync file if status is "D" and there are available threads
                     syncThreadsLock.acquire()
                     if fileNode.file.status == "D":
+                        print("status is D")
                         # start a new synchronization thread if there are less
                         # than MAX_SYNC_THREAD already active threads
                         syncThread = Thread(target=fileSharing.downloadFile, args=(fileNode.file, ))
                         syncThread.daemon = True
                         key = task.groupName + "_" + task.fileTreePath
+                        print("here")
                         syncThreads[key] = dict()
                         syncThreads[key]["groupName"] = task.groupName
                         syncThreads[key]["stop"] = False
                         syncThread.start()
+                        print("started")
                     syncThreadsLock.release()
                     fileNode.file.syncLock.release()
 
@@ -167,6 +173,7 @@ def addedFiles(message):
     except IndexError:
         answer = "ERROR - INVALID REQUEST"
 
+    print(answer)
     return answer
 
 def removedFiles(message):
@@ -199,6 +206,7 @@ def removedFiles(message):
     except IndexError:
         answer = "ERROR - INVALID REQUEST"
 
+    print(answer)
     return answer
 
 
