@@ -123,19 +123,26 @@ def sendChunk(message, thread):
         transmission.mySend(thread.client_sock, answer)
 
 
-def downloadFile(file):
-    """
+def downloadFile(file, taskTimestamp):
 
-
-    :param file:
-    :return:
-    """
-
-    print("Starting synchronization of", file.filename)
-
-    key = file.groupName + "_" + file.treePath
 
     file.syncLock.acquire()
+    # this check allows to avoid a race condition like the following:
+    # thread1 receive update file and append the task
+    # scheduler launch the task
+    # meanwhile thread2 update again file stat and append another task
+    # without erasing the first one that is already launched
+    # at this point file.timestamp refers to the new timestamp so it's
+    # different from taskTimestamp: in this case quit the download
+    # the last version will be download as soon as the scheduler
+    # will select the last inserted task addressing the file
+    if taskTimestamp <= file.timestamp:
+        file.syncLock.release()
+        return
+
+    print("Starting synchronization of", file.filename)
+    key = file.groupName + "_" + file.treePath
+
     file.initDownload()
 
     unavailable = 0
@@ -145,13 +152,9 @@ def downloadFile(file):
     while len(file.missingChunks) > 0 and unavailable < MAX_UNAVAILABLE:
 
         # check thread termination status
-        syncScheduler.syncThreadsLock.acquire()
-        if syncScheduler.syncThreads[key]["stop"]:
-            syncScheduler.syncThreadsLock.release()
+        if syncScheduler.getThreadStatus(key):
             unavailable = MAX_UNAVAILABLE
             break
-        else:
-            syncScheduler.syncThreadsLock.release()
 
         # retrieve the list of active peers for the file
         activePeers = peerCore.retrievePeers(file.groupName, selectAll=False)
@@ -282,13 +285,9 @@ def downloadFile(file):
                     i += 1
 
         # check again thread termination status
-        syncScheduler.syncThreadsLock.acquire()
-        if syncScheduler.syncThreads[key]["stop"]:
-            syncScheduler.syncThreadsLock.release()
+        if syncScheduler.getThreadStatus(key):
             unavailable = MAX_UNAVAILABLE
             break
-        else:
-            syncScheduler.syncThreadsLock.release()
 
         threads = list()
 
@@ -314,12 +313,9 @@ def downloadFile(file):
         # save download current state in order to restart it at next sync
         file.previousChunks = file.availableChunks
         print("Synchronization of {} failed".format(file.filename))
-        syncScheduler.syncThreadsLock.acquire()
-        del syncScheduler.syncThreads[key]
-
+        syncScheduler.removeSyncThread(key)
         reloadTask = syncScheduler.syncTask(file.groupName, file.treePath, file.timestamp)
         syncScheduler.appendTask(reloadTask, True)
-        syncScheduler.syncThreadsLock.release()
         file.syncLock.release()
         return
 
@@ -335,9 +331,7 @@ def downloadFile(file):
         # if mergeChunks fails save the download current state
         file.previousChunks = file.availableChunks
 
-    syncScheduler.syncThreadsLock.acquire()
-    del syncScheduler.syncThreads[key]
-    syncScheduler.syncThreadsLock.release()
+    syncScheduler.removeSyncThread(key)
 
     file.syncLock.release()
 
@@ -376,17 +370,7 @@ def getChunksList(file, peerIP, peerPort):
 
 
 def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
-    """
 
-    :param file:
-    :param chunksList:
-    :param peerIP:
-    :param peerPort:
-    :param tmpDirPath:
-    :return:
-    """
-
-    # print(chunksList)
 
     s = peerCore.createSocket(peerIP, peerPort)
     if s is None:
