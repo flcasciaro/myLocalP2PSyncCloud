@@ -86,8 +86,6 @@ def scheduler():
 
                 # if the file is not already in sync
                 if fileNode.file.syncLock.acquire(blocking=False):
-
-                    print("file not in sync")
                     # Sync file if status is "D" and there are available threads
                     syncThreadsLock.acquire()
 
@@ -225,16 +223,16 @@ def updatedFiles(message):
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
                 for fileInfo in filesInfo:
 
-                    file = peerCore.localFileTree.getGroup(groupName).findNode(fileInfo["treePath"])
+                    fileNode = peerCore.localFileTree.getGroup(groupName).findNode(fileInfo["treePath"])
 
-                    print(file.filename, file.filesize, file.timestamp, file.status)
+                    if fileNode is None:
+                        continue
 
-                    file.filesize = fileInfo["filesize"]
-                    file.timestamp = fileInfo["timestamp"]
-                    file.status = "D"
-                    file.previousChunks = list()
 
-                    print(file.filename, file.filesize, file.timestamp, file.status)
+                    fileNode.file.filesize = fileInfo["filesize"]
+                    fileNode.file.timestamp = fileInfo["timestamp"]
+                    fileNode.file.status = "D"
+                    fileNode.file.previousChunks = list()
 
                     # stop possible synchronization thread acting on the file
                     key = groupName + "_" + fileInfo["treePath"]
