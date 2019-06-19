@@ -8,9 +8,7 @@ import fileSharing
 import peerCore
 
 # Data structure where sync operations will be scheduled
-# I'm not using a Queue object (that is thread-safe and don't need a lock)
-# because it is not iterable
-queue = deque()
+queue = None
 queueLock = Lock()
 
 # Global variable used to stop the sync scheduler thread
@@ -58,6 +56,7 @@ class syncTask:
 def scheduler():
 
     global queue
+    queue = deque()
 
     while True:
 
@@ -201,8 +200,6 @@ def updatedFiles(message):
         messageFields = message.split(" ", 2)
         groupName = messageFields[1]
         filesInfo = eval(messageFields[2])
-
-        global queue
 
         if groupName in peerCore.groupsList:
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
