@@ -142,7 +142,10 @@ class SocketServerThread(Thread):
                     else:
                         # Strip newlines just for output clarity
                         message = readData.rstrip()
-                        self.manageRequest(message)
+                        messageFields = message.split(' ', 1)
+                        peerID = messageFields[0]
+                        message = messageFields[1]
+                        self.manageRequest(message, peerID)
             else:
                 print("[Thr {}] No peer is connected, SocketServer can't receive data".format(self.number))
                 self.stop()
@@ -168,7 +171,7 @@ class SocketServerThread(Thread):
             self.client_sock.close()
 
 
-    def manageRequest(self, message):
+    def manageRequest(self, message, peerID):
         """
         Manage different incoming requests.
         Call an appropriate handler according to the message content.
@@ -179,7 +182,7 @@ class SocketServerThread(Thread):
         action = message.split()[0]
 
         if action != "BYE":
-            print('[Thr {}] Received {}'.format(self.number, message))
+            print('[Thr {}] [Peer: {}] Received {}'.format(self.number, peerID, message))
 
         if action == "CHUNKS_LIST":
             fileSharing.sendChunksList(message, self)
