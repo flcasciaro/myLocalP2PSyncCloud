@@ -421,6 +421,11 @@ def startSync():
     if localFileTree is None:
         return None
 
+    # create and start the scheduler thread
+    schedulerThread = Thread(target=syncScheduler.scheduler, args=())
+    schedulerThread.daemon = True
+    schedulerThread.start()
+
     # retrieve internal IP address
     myIP = socket.gethostbyname(socket.gethostname())
 
@@ -452,10 +457,6 @@ def startSync():
     except (socket.timeout, RuntimeError):
         closeSocket(s)
         return None
-
-    schedulerThread = Thread(target=syncScheduler.scheduler, args=())
-    schedulerThread.daemon = True
-    schedulerThread.start()
 
     return server
 
@@ -673,7 +674,7 @@ def addFiles(groupName, filepaths, directory):
 
             try:
                 # send request message and wait for the answer, then close the socket
-                message = "ADDED_FILES {} {}".format(groupName, str(filesInfoWFP))
+                message = str(peerID) + " " + "ADDED_FILES {} {}".format(groupName, str(filesInfoWFP))
                 transmission.mySend(s, message)
                 __ = transmission.myRecv(s)
                 closeSocket(s)
@@ -738,7 +739,7 @@ def removeFiles(groupName, treePaths):
 
             try:
                 # send request message and wait for the answer, then close the socket
-                message = "REMOVED_FILES {} {}".format(groupName, str(treePaths))
+                message = str(peerID) + " " + "REMOVED_FILES {} {}".format(groupName, str(treePaths))
                 transmission.mySend(s, message)
                 __ = transmission.myRecv(s)
                 closeSocket(s)
@@ -804,7 +805,7 @@ def syncFiles(groupName, files):
 
             try:
                 # send request message and wait for the answer, then close the socket
-                message = "UPDATED_FILES {} {}".format(groupName, str(filesInfo))
+                message = str(peerID) + " " + "UPDATED_FILES {} {}".format(groupName, str(filesInfo))
                 transmission.mySend(s, message)
                 __ = transmission.myRecv(s)
                 closeSocket(s)
