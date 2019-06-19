@@ -131,7 +131,7 @@ def appendTask(task, checkOutdated=False):
         deleteIndex = list()
         outdated = False
 
-        for i in range(0, queue.count()):
+        for i in range(0, len(queue)):
             # check if task is outdated respect to task-i
             if task.isOutdated(queue[i]):
                 outdated = True
