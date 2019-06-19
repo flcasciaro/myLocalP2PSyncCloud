@@ -82,8 +82,6 @@ def scheduler():
                     # file has been removed
                     continue
 
-                print(fileNode.file.filename, fileNode.file.filesize, fileNode.file.timestamp, fileNode.file.status)
-
                 # if the file is not already in sync
                 if fileNode.file.syncLock.acquire(blocking=False):
                     # Sync file if status is "D" and there are available threads
