@@ -32,12 +32,12 @@ class syncTask:
         self.fileTreePath = fileTreePath
         self.timestamp = timestamp
 
-    def print(self):
+    def toString(self):
 
-        print("SYNC {} {} {}".format(self.groupName, self.fileTreePath, self.timestamp))
+        return "SYNC {} {} {}".format(self.groupName, self.fileTreePath, self.timestamp)
 
 
-    def outdatedSyncTask(self, newTask):
+    def outdatedTask(self, newTask):
         """
         Check if a syncTask is outdated.
         A task is outdated if it refers to the same file of a new task but the timestamp is older (or equal).
@@ -67,13 +67,11 @@ def scheduler():
 
                 queueLock.acquire()
                 task = queue.popleft()
-                task.print()
                 queueLock.release()
 
                 # skip task of non active groups
                 if peerCore.groupsList[task.groupName]["status"] != "ACTIVE":
                     continue
-                print("active group")
 
                 # assign task to a sync thread
 
@@ -83,7 +81,6 @@ def scheduler():
                 if fileNode is None:
                     # file has been removed
                     continue
-                print("valid file node")
 
                 # if the file is not already in sync
                 if fileNode.file.syncLock.acquire(blocking=False):
@@ -91,6 +88,7 @@ def scheduler():
                     print("file not in sync")
                     # Sync file if status is "D" and there are available threads
                     syncThreadsLock.acquire()
+                    print("STATUS: ", fileNode.file.status)
                     if fileNode.file.status == "D":
                         print("status is D")
                         # start a new synchronization thread if there are less
@@ -108,10 +106,8 @@ def scheduler():
                     fileNode.file.syncLock.release()
 
                 else:
-                    queueLock.acquire()
-                    print("Re-appending task because there is already a synchonization process")
-                    queue.append(task)
-                    queueLock.release()
+                    print("Re-appending task: ", task.toString())
+                    appendTask(task, True)
 
             time.sleep(1)
 
@@ -119,6 +115,17 @@ def stopScheduler():
 
     global stop
     stop = True
+
+
+def appendTask(task, checkOutdated=False):
+
+    global queue
+    queueLock.acquire()
+    if checkOutdated:
+        queue = deque([t for t in queue if not t.outdatedTask(task)])
+    queue.append(task)
+    queueLock.release()
+
 
 
 def addedFiles(message):
@@ -158,11 +165,7 @@ def addedFiles(message):
 
                     # create new syncTask
                     newTask = syncTask(groupName, treePath, fileInfo["timestamp"])
-
-                    queueLock.acquire()
-                    # add newTask
-                    queue.append(newTask)
-                    queueLock.release()
+                    appendTask(newTask)
 
                 answer = "OK - FILES SUCCESSFULLY ADDED"
             else:
@@ -240,13 +243,7 @@ def updatedFiles(message):
 
                     # create new syncTask
                     newTask = syncTask(groupName, fileInfo["treePath"], fileInfo["timestamp"])
-
-                    queueLock.acquire()
-                    # remove outdated syncTask
-                    queue = deque([task for task in queue if not task.outdatedTask(newTask)])
-                    # add newTask
-                    queue.append(newTask)
-                    queueLock.release()
+                    appendTask(newTask, True)
 
                 answer = "OK - SYNC TASK LOADED"
             else:
