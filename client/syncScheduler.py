@@ -55,7 +55,7 @@ class syncTask:
 
 def scheduler():
 
-    global queue
+    global queue, stop
 
     while True:
 
@@ -67,6 +67,7 @@ def scheduler():
 
                 queueLock.acquire()
                 task = queue.popleft()
+                task.print()
                 queueLock.release()
 
                 # skip task of non active groups
@@ -99,6 +100,12 @@ def scheduler():
                         syncThread.start()
                     syncThreadsLock.release()
                     fileNode.file.syncLock.release()
+
+                else:
+                    queueLock.acquire()
+                    print("Re-appending task because there is already a synchonization process")
+                    queue.append(task)
+                    queueLock.release()
 
             time.sleep(1)
 
@@ -183,7 +190,7 @@ def removedFiles(message):
                         syncThreads[key]["stop"] = True
                     syncThreadsLock.release()
 
-                answer = "OK - FILES SUCCESSFULLY ADDED"
+                answer = "OK - FILES SUCCESSFULLY REMOVED"
             else:
                 answer = "ERROR - CURRENTLY I'M NOT ACTIVE"
         else:
@@ -233,7 +240,7 @@ def updatedFiles(message):
                     queue.append(newTask)
                     queueLock.release()
 
-                answer = "OK - FILES SUCCESSFULLY ADDED"
+                answer = "OK - SYNC TASK LOADED"
             else:
                 answer = "ERROR - CURRENTLY I'M NOT ACTIVE"
         else:
@@ -242,4 +249,5 @@ def updatedFiles(message):
     except IndexError:
         answer = "ERROR - INVALID REQUEST"
 
+    print(answer)
     return answer
