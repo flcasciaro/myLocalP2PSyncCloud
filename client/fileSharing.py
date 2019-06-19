@@ -136,7 +136,7 @@ def downloadFile(file, taskTimestamp):
     # different from taskTimestamp: in this case quit the download
     # the last version will be download as soon as the scheduler
     # will select the last inserted task addressing the file
-    if taskTimestamp <= file.timestamp:
+    if taskTimestamp != file.timestamp:
         file.syncLock.release()
         return
 
