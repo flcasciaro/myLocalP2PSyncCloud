@@ -111,6 +111,8 @@ def stopScheduler():
 
 def addedFiles(message):
 
+    global queue
+
     try:
         messageFields = message.split(" ", 2)
         groupName = messageFields[1]
@@ -195,6 +197,8 @@ def removedFiles(message):
 
 
 def updatedFiles(message):
+
+    global queue
 
     try:
         messageFields = message.split(" ", 2)
