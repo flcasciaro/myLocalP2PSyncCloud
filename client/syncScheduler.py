@@ -96,6 +96,7 @@ def scheduler():
                         syncThreads[key]["groupName"] = task.groupName
                         syncThreads[key]["stop"] = False
                         syncThread.start()
+
                     syncThreadsLock.release()
                     fileNode.file.syncLock.release()
 
@@ -153,7 +154,7 @@ def appendTask(task, checkOutdated=False):
     queueLock.release()
 
 
-def removeGroupTask(groupName):
+def removeGroupTasks(groupName):
     """
     Remove from the task queue all the tasks acting on file of a specific group.
     It's useful after a group disconnect or leave operation.
@@ -195,7 +196,7 @@ def stopSyncThread(key):
     syncThreadsLock.release()
 
 
-def stopSyncThreadByGroup(groupName):
+def stopSyncThreadsByGroup(groupName):
     syncThreadsLock.acquire()
     for thread in syncThreads.values():
         if thread["groupName"] == groupName:

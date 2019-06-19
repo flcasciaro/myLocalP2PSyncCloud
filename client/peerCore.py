@@ -837,8 +837,8 @@ def leaveGroup(groupName):
     else:
         # stop every synchronization thread working on file of the group
         # and remove group related tasks from the queue
-        syncScheduler.stopSyncThreadByGroup(groupName)
-        syncScheduler.removeGroupTask(groupName)
+        syncScheduler.stopSyncThreadsByGroup(groupName)
+        syncScheduler.removeGroupTasks(groupName)
 
         groupsList[groupName]["status"] = "OTHER"
 
@@ -873,8 +873,8 @@ def disconnectGroup(groupName):
     else:
         # stop every synchronization thread working on file of the group
         # and remove group related tasks from the queue
-        syncScheduler.stopSyncThreadByGroup(groupName)
-        syncScheduler.removeGroupTask(groupName)
+        syncScheduler.stopSyncThreadsByGroup(groupName)
+        syncScheduler.removeGroupTasks(groupName)
 
         groupsList[groupName]["status"] = "RESTORABLE"
 
