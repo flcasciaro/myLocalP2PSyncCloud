@@ -29,6 +29,8 @@ groupsInfoFile = scriptPath + 'sessionFiles/groupsInfo.json'
 groupsPeersFile = scriptPath + 'sessionFiles/groupsPeers.json'
 groupsFilesFile = scriptPath + 'sessionFiles/groupsFiles.json'
 
+PORT_NUMBER = 45154
+
 
 def initServer():
     """Initialize server data structures
@@ -143,7 +145,7 @@ class Server:
     The port on which the server will listen is choosen among available ports.
     """
 
-    def __init__(self, host, port, max_clients=5):
+    def __init__(self, host, port, maxClients=5):
         """
         Initialize server.
         :param host: IP address on which the server will be reachable
@@ -157,8 +159,8 @@ class Server:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind((host, port))
-        self.sock.listen(max_clients)
-        self.sock_threads = []
+        self.sock.listen(maxClients)
+        self.sockThreads = []
         self.counter = 0  # Will be used to give a number to each thread, can be improved (re-assigning free number)
         self.__stop = False
 
@@ -170,16 +172,16 @@ class Server:
             try:
                 self.sock.settimeout(1)
                 try:
-                    client_sock, client_addr = self.sock.accept()
+                    clientSock, clientAddr = self.sock.accept()
                 except socket.timeout:
-                    client_sock = None
+                    clientSock = None
 
-                if client_sock:
-                    client_thr = SocketServerThread(client_sock, client_addr, self.counter)
+                if clientSock:
+                    clientThr = SocketServerThread(clientSock, clientAddr, self.counter)
                     self.counter += 1
-                    self.sock_threads.append(client_thr)
-                    client_thr.daemon = True
-                    client_thr.start()
+                    self.sockThreads.append(clientThr)
+                    clientThr.daemon = True
+                    clientThr.start()
             except KeyboardInterrupt:
                 self.stopServer()
 
@@ -189,7 +191,7 @@ class Server:
         """ Close the client socket threads and server socket if they exists. """
         print('Closing server socket (host {}, port {})'.format(host, port))
 
-        for thr in self.sock_threads:
+        for thr in self.sockThreads:
             thr.stop()
 
         if self.sock:
@@ -205,38 +207,38 @@ class Server:
 
 
 class SocketServerThread(Thread):
-    def __init__(self, client_sock, client_addr, number):
+    def __init__(self, clientSock, clientAddr, number):
         """ Initialize the Thread with a client socket and address """
         Thread.__init__(self)
-        self.client_sock = client_sock
-        self.client_addr = client_addr
+        self.clientSock = clientSock
+        self.clientAddr = clientAddr
         self.number = number
         self.__stop = False
 
     def run(self):
 
-        # print("[Thr {}] SocketServerThread starting with client {}".format(self.number, self.client_addr))
+        # print("[Thr {}] SocketServerThread starting with client {}".format(self.number, self.clientAddr))
 
         while not self.__stop:
-            if self.client_sock:
+            if self.clientSock:
                 # Check if the client is still connected and if data is available:
                 try:
-                    rdy_read, rdy_write, sock_err = select.select([self.client_sock, ], [self.client_sock, ], [], 5)
+                    rdyRead, rdyWrite, sockErr = select.select([self.clientSock, ], [self.clientSock, ], [], 5)
                 except select.error:
-                    print('[Thr {}] Select() failed on socket with {}'.format(self.number, self.client_addr))
+                    print('[Thr {}] Select() failed on socket with {}'.format(self.number, self.clientAddr))
                     self.stop()
                     return
 
-                if len(rdy_read) > 0:
-                    read_data = transmission.myRecv(self.client_sock)
+                if len(rdyRead) > 0:
+                    readData = transmission.myRecv(self.clientSock)
 
                     # Check if socket has been closed
-                    if len(read_data) == 0:
-                        print('[Thr {}] {} closed the socket.'.format(self.number, self.client_addr))
+                    if len(readData) == 0:
+                        print('[Thr {}] {} closed the socket.'.format(self.number, self.clientAddr))
                         self.stop()
                     else:
                         # Strip newlines just for output clarity
-                        message = read_data.rstrip()
+                        message = readData.rstrip()
                         messageFields = message.split(' ', 1)
                         peerID = messageFields[0]
                         request = messageFields[1]
@@ -251,9 +253,9 @@ class SocketServerThread(Thread):
 
     def close(self):
         """ Close connection with the client socket. """
-        if self.client_sock:
-            # print('[Thr {}] Closing connection with {}'.format(self.number, self.client_addr))
-            self.client_sock.close()
+        if self.clientSock:
+            # print('[Thr {}] Closing connection with {}'.format(self.number, self.clientAddr))
+            self.clientSock.close()
 
     def manageRequest(self, request, peerID):
         """
@@ -268,68 +270,68 @@ class SocketServerThread(Thread):
 
         if action == "GROUPS":
             answer = reqHandlers.sendGroups(groups, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "RESTORE":
             answer = reqHandlers.restoreGroup(request, groups, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "JOIN":
             answer = reqHandlers.joinGroup(request, groups, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "CREATE":
             answer = reqHandlers.createGroup(request, groups, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "ROLE":
             answer = reqHandlers.manageRole(request, groups, groupsLock, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "PEERS":
             answer = reqHandlers.retrievePeers(request, groups, peers, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "ADDED_FILES":
             answer = reqHandlers.addedFiles(request, groups, groupsLock, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "UPDATED_FILES":
             answer = reqHandlers.updatedFiles(request, groups, groupsLock, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "REMOVED_FILES":
             answer = reqHandlers.removedFiles(request, groups, groupsLock, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "GET_FILES":
             answer = reqHandlers.getFiles(request, groups, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "HERE":
             answer = reqHandlers.imHere(request, peers, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "LEAVE":
             answer = reqHandlers.leaveGroup(groups, groupsLock, request.split()[2], peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "DISCONNECT":
             answer = reqHandlers.disconnectGroup(groups, groupsLock, request.split()[2], peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "EXIT":
             answer = reqHandlers.peerExit(groups, groupsLock, peerID)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "BYE":
             answer = "OK - BYE PEER"
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
             self.stop()
 
         else:
             answer = "ERROR - UNEXPECTED REQUEST"
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
 
 if __name__ == '__main__':
@@ -337,7 +339,6 @@ if __name__ == '__main__':
     initServer()
 
     myIP = socket.gethostbyname(socket.gethostname())
-    port = 45154
 
     # run the server until CTRL+C interrupt
-    server = Server(myIP, port)
+    server = Server(myIP, PORT_NUMBER)

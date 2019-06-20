@@ -38,7 +38,7 @@ class Server(Thread):
         self.port = self.sock.getsockname()[1]
 
         self.sock.listen(max_clients)
-        self.sock_threads = []
+        self.sockThreads = []
 
         # give a number to each thread
         self.counter = 0
@@ -59,17 +59,17 @@ class Server(Thread):
             self.sock.settimeout(1)
             try:
                 # accept an incoming connection
-                client_sock, client_addr = self.sock.accept()
+                clientSock, clientAddr = self.sock.accept()
             except socket.timeout:
-                client_sock = None
+                clientSock = None
 
-            if client_sock:
+            if clientSock:
                 # create and start a thread that will handle the communication
-                client_thr = SocketServerThread(client_sock, client_addr, self.counter)
+                clientThr = SocketServerThread(clientSock, clientAddr, self.counter)
                 self.counter += 1
-                self.sock_threads.append(client_thr)
-                client_thr.daemon = True
-                client_thr.start()
+                self.sockThreads.append(clientThr)
+                clientThr.daemon = True
+                clientThr.start()
 
         self.closeServer()
 
@@ -82,7 +82,7 @@ class Server(Thread):
         print('Closing server socket (host {}, port {})'.format(self.host, self.port))
 
         # wait for running thread termination
-        for thr in self.sock_threads:
+        for thr in self.sockThreads:
             thr.stop()
             thr.join()
 
@@ -101,15 +101,15 @@ class Server(Thread):
 # Thread which will manage an incoming connection and then terminate.
 class SocketServerThread(Thread):
 
-    def __init__(self, client_sock, client_addr, number):
+    def __init__(self, clientSock, clientAddr, number):
         """
         Initialize the Thread with a client socket and address.
         :return: void
         """
 
         Thread.__init__(self)
-        self.client_sock = client_sock
-        self.client_addr = client_addr
+        self.clientSock = clientSock
+        self.clientAddr = clientAddr
         self.number = number
         self.__stop = False
 
@@ -119,25 +119,25 @@ class SocketServerThread(Thread):
         :return: void
         """
 
-        # print("[Thr {}] SocketServerThread starting with peer {}".format(self.number, self.client_addr))
+        # print("[Thr {}] SocketServerThread starting with peer {}".format(self.number, self.clientAddr))
 
         while not self.__stop:
-            if self.client_sock:
+            if self.clientSock:
                 # Check if the client is still connected and if data is available:
                 try:
-                    rdyRead, rdyWrite, sockErr = select.select([self.client_sock, ], [self.client_sock, ], [], 5)
+                    rdyRead, rdyWrite, sockErr = select.select([self.clientSock, ], [self.clientSock, ], [], 5)
                 except select.error:
-                    print('[Thr {}] Select() failed on socket with {}'.format(self.number, self.client_addr))
+                    print('[Thr {}] Select() failed on socket with {}'.format(self.number, self.clientAddr))
                     self.stop()
                     return
 
                 if len(rdyRead) > 0:
                     # read request
-                    readData = transmission.myRecv(self.client_sock)
+                    readData = transmission.myRecv(self.clientSock)
 
                     # Check if socket has been closed
                     if len(readData) == 0:
-                        # print('[Thr {}] {} closed the socket.'.format(self.number, self.client_addr))
+                        # print('[Thr {}] {} closed the socket.'.format(self.number, self.clientAddr))
                         self.stop()
                     else:
                         # Strip newlines just for output clarity
@@ -166,9 +166,9 @@ class SocketServerThread(Thread):
         :return: void
         """
 
-        if self.client_sock:
-            # print('[Thr {}] Closing connection with {}'.format(self.number, self.client_addr))
-            self.client_sock.close()
+        if self.clientSock:
+            # print('[Thr {}] Closing connection with {}'.format(self.number, self.clientAddr))
+            self.clientSock.close()
 
 
     def manageRequest(self, message, peerID):
@@ -176,6 +176,7 @@ class SocketServerThread(Thread):
         Manage different incoming requests.
         Call an appropriate handler according to the message content.
         :param message: incoming message
+        :param peerID: id of the peer who sent the message
         :return: void
         """
 
@@ -192,17 +193,17 @@ class SocketServerThread(Thread):
 
         elif action == "ADDED_FILES":
             answer = syncScheduler.addedFiles(message)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "REMOVED_FILES":
             answer = syncScheduler.removedFiles(message)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "UPDATED_FILES":
             answer = syncScheduler.updatedFiles(message)
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
 
         elif action == "BYE":
             answer = "BYE PEER"
-            transmission.mySend(self.client_sock, answer)
+            transmission.mySend(self.clientSock, answer)
             self.stop()
