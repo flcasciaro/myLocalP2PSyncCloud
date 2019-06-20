@@ -45,7 +45,7 @@ groupsList = dict()
 localFileTree = None
 
 
-def createSocket(ipAddress, port):
+def createConnection(ipAddress, port):
     """
     Create a socket connection with a remote host.
     In case of success return the established socket.
@@ -64,7 +64,7 @@ def createSocket(ipAddress, port):
     return s
 
 
-def closeSocket(s):
+def closeConnection(s):
     """
     Wrapper function for socket.close().
     Coordinates the socket close operation with the server.
@@ -106,9 +106,9 @@ def serverIsReachable():
     :return: boolean (True for success, False for any error)
     """
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is not None:
-        closeSocket(s)
+        closeConnection(s)
         return True
     else:
         return False
@@ -166,7 +166,7 @@ def retrieveGroups():
     """
     global groupsList
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return
 
@@ -175,9 +175,9 @@ def retrieveGroups():
         message = str(peerID) + " " + "GROUPS"
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     # set the local groups list equals to the retrieved one
@@ -194,7 +194,7 @@ def restoreGroup(groupName):
     :return: boolean (True for success, False for any error)
     """
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return False
 
@@ -203,9 +203,9 @@ def restoreGroup(groupName):
         message = str(peerID) + " " + "RESTORE Group: {}".format(groupName)
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     if answer.split()[0] == "ERROR":
@@ -253,7 +253,7 @@ def joinGroup(groupName, token):
     :return: boolean (True for success, False for any error) (True for success, False for any error)
     """
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return False
 
@@ -265,9 +265,9 @@ def joinGroup(groupName, token):
         message = str(peerID) + " " + "JOIN Group: {} Token: {}".format(groupName, encryptedToken.hexdigest())
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     if answer.split()[0] == "ERROR":
@@ -296,7 +296,7 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
     :return: boolean (True for success, False for any error)
     """
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return False
 
@@ -311,9 +311,9 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
                                                                                         encryptedTokenRO.hexdigest())
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     if answer.split()[0] == "ERROR":
@@ -342,7 +342,7 @@ def changeRole(groupName, targetPeerID, action):
     :param action: can be ADD_MASTER, CHANGE_MASTER, TO_RW, TO_RO
     :return: boolean (True for success, False for any error)
     """
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return False
 
@@ -351,9 +351,9 @@ def changeRole(groupName, targetPeerID, action):
         message = str(peerID) + " " + "ROLE {} {} GROUP {}".format(action.upper(), targetPeerID, groupName)
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     if answer.split()[0] == "ERROR":
@@ -377,7 +377,7 @@ def retrievePeers(groupName, selectAll):
     :return: list of peers
     """
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return None
 
@@ -391,9 +391,9 @@ def retrievePeers(groupName, selectAll):
         message = str(peerID) + " " + "PEERS {} {} ".format(groupName, tmp)
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return None
 
     if answer.split()[0] == "ERROR":
@@ -442,7 +442,7 @@ def startSync():
     # get peer server port number
     myPortNumber = server.port
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return None
 
@@ -453,9 +453,9 @@ def startSync():
         transmission.mySend(s, message)
         # get reply into an "ignore" variable
         __ = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return None
 
     return server
@@ -463,7 +463,7 @@ def startSync():
 
 def initGroupLocalFileTree(groupName):
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return
 
@@ -471,9 +471,9 @@ def initGroupLocalFileTree(groupName):
         message = str(peerID) + " " + "GET_FILES {}".format(groupName)
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return
 
     if answer.split()[0] == "ERROR":
@@ -617,7 +617,7 @@ def addFiles(groupName, filepaths, directory):
             del fileInfoWFP["filepath"]
             filesInfoWFP.append(fileInfoWFP)
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return False
 
@@ -626,9 +626,9 @@ def addFiles(groupName, filepaths, directory):
         message = str(peerID) + " " + "ADDED_FILES {} {}".format(groupName, str(filesInfoWFP))
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     if answer.split()[0] == "ERROR":
@@ -659,7 +659,7 @@ def addFiles(groupName, filepaths, directory):
         # notify other active peers
         for peer in activePeers:
 
-            s = createSocket(peer["peerIP"], peer["peerPort"])
+            s = createConnection(peer["peerIP"], peer["peerPort"])
             if s is None:
                 continue
 
@@ -668,9 +668,9 @@ def addFiles(groupName, filepaths, directory):
                 message = str(peerID) + " " + "ADDED_FILES {} {}".format(groupName, str(filesInfoWFP))
                 transmission.mySend(s, message)
                 __ = transmission.myRecv(s)
-                closeSocket(s)
+                closeConnection(s)
             except (socket.timeout, RuntimeError):
-                closeSocket(s)
+                closeConnection(s)
                 continue
 
         return True
@@ -684,7 +684,7 @@ def removeFiles(groupName, treePaths):
     :return: boolean (True for success, False for any error)
     """
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return False
 
@@ -693,9 +693,9 @@ def removeFiles(groupName, treePaths):
         message = str(peerID) + " " + "REMOVED_FILES {} {}".format(groupName, str(treePaths))
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     if answer.split()[0] == "ERROR":
@@ -724,7 +724,7 @@ def removeFiles(groupName, treePaths):
         # notify other active peers
         for peer in activePeers:
 
-            s = createSocket(peer["peerIP"], peer["peerPort"])
+            s = createConnection(peer["peerIP"], peer["peerPort"])
             if s is None:
                 continue
 
@@ -733,9 +733,9 @@ def removeFiles(groupName, treePaths):
                 message = str(peerID) + " " + "REMOVED_FILES {} {}".format(groupName, str(treePaths))
                 transmission.mySend(s, message)
                 __ = transmission.myRecv(s)
-                closeSocket(s)
+                closeConnection(s)
             except (socket.timeout, RuntimeError):
-                closeSocket(s)
+                closeConnection(s)
                 continue
 
         return True
@@ -750,7 +750,7 @@ def syncFiles(groupName, files):
     :return: 
     """
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return False
 
@@ -769,9 +769,9 @@ def syncFiles(groupName, files):
         message = str(peerID) + " " + "UPDATED_FILES {} {}".format(groupName, str(filesInfo))
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     if answer.split()[0] == "ERROR":
@@ -792,7 +792,7 @@ def syncFiles(groupName, files):
         # notify other active peers
         for peer in activePeers:
 
-            s = createSocket(peer["peerIP"], peer["peerPort"])
+            s = createConnection(peer["peerIP"], peer["peerPort"])
             if s is None:
                 continue
 
@@ -801,9 +801,9 @@ def syncFiles(groupName, files):
                 message = str(peerID) + " " + "UPDATED_FILES {} {}".format(groupName, str(filesInfo))
                 transmission.mySend(s, message)
                 __ = transmission.myRecv(s)
-                closeSocket(s)
+                closeConnection(s)
             except (socket.timeout, RuntimeError):
-                closeSocket(s)
+                closeConnection(s)
                 continue
 
         return True
@@ -816,7 +816,7 @@ def leaveGroup(groupName):
     :return: boolean (True for success, False for any error)
     """
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return False
 
@@ -825,9 +825,9 @@ def leaveGroup(groupName):
         message = str(peerID) + " " + "LEAVE Group: {}".format(groupName)
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     if answer.split()[0] == "ERROR":
@@ -852,7 +852,7 @@ def disconnectGroup(groupName):
     :return: boolean (True for success, False for any error)
     """
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
     if s is None:
         return False
 
@@ -861,9 +861,9 @@ def disconnectGroup(groupName):
         message = str(peerID) + " " + "DISCONNECT Group: {}".format(groupName)
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     if answer.split()[0] == "ERROR":
@@ -888,7 +888,7 @@ def peerExit():
     :return: boolean (True for success, False for any error)
     """
 
-    s = createSocket(serverIP, serverPort)
+    s = createConnection(serverIP, serverPort)
 
     if s is None:
         return False
@@ -898,9 +898,9 @@ def peerExit():
         message = str(peerID) + " " + "EXIT"
         transmission.mySend(s, message)
         answer = transmission.myRecv(s)
-        closeSocket(s)
+        closeConnection(s)
     except (socket.timeout, RuntimeError):
-        closeSocket(s)
+        closeConnection(s)
         return False
 
     if answer.split()[0] == "ERROR":
