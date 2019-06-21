@@ -37,7 +37,7 @@ def sendGroups(groups, peerID):
             groupsList[g.name] = g.getPublicInfo("","OTHER")
 
 
-    return str(groupsList)
+    return "OK - " + str(groupsList)
 
 
 def restoreGroup(request, groups, peerID):
@@ -50,7 +50,7 @@ def restoreGroup(request, groups, peerID):
                     groups[groupName].restorePeer(peerID)
                     answer = "OK - GROUP {} RESTORED".format(groupName)
                 else:
-                    answer = "ERROR: - IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER ALREADY ACTIVE".format(groupName)
+                    answer = "ERROR - IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER ALREADY ACTIVE".format(groupName)
             else:
                 answer = "ERROR - IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER DOESN'T BELONG TO IT".format(groupName)
     else:
@@ -165,7 +165,7 @@ def retrievePeers(request, groups, peers, peerID):
             peerInfo["active"] = groups[groupName].peersInGroup[peer].active
             peerInfo["role"] = groups[groupName].peersInGroup[peer].role
             peersList.append(peerInfo)
-        answer = str(peersList)
+        answer = "OK - " + str(peersList)
     else:
         answer = "ERROR - GROUP {} DOESN'T EXIST".format(groupName)
 
@@ -275,7 +275,7 @@ def getFiles(request, groups, peerID):
                     fileDict["timestamp"] = file.timestamp
                     filesInfo.append(fileDict)
 
-                answer = str(filesInfo)
+                answer = "OK - " + str(filesInfo)
 
             else:
                 answer = "ERROR - PEER DOESN'T BELONG TO THE GROUP"

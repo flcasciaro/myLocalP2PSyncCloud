@@ -180,8 +180,14 @@ def retrieveGroups():
         closeConnection(s)
         return False
 
-    # set the local groups list equals to the retrieved one
-    groupsList = eval(answer)
+    if answer.split(" ", 1)[0] == "ERROR":
+        # server replied with an error message: group not restored
+        print('Received from the server :', answer)
+        return False
+    else:
+        # set the local groups list equals to the retrieved one
+        # split operation in order to skip the initial 'OK -'
+        groupsList = eval(answer.split(" ", 2)[2])
 
     return True
 
@@ -208,7 +214,7 @@ def restoreGroup(groupName):
         closeConnection(s)
         return False
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: group not restored
         print('Received from the server :', answer)
         return False
@@ -270,7 +276,7 @@ def joinGroup(groupName, token):
         closeConnection(s)
         return False
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: group not joined
         print('Received from the server :', answer)
         return False
@@ -316,7 +322,7 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
         closeConnection(s)
         return False
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: group not created
         print('Received from the server :', answer)
         return False
@@ -356,7 +362,7 @@ def changeRole(groupName, targetPeerID, action):
         closeConnection(s)
         return False
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: role not changed
         print('Received from the server :', answer)
         return False
@@ -396,12 +402,13 @@ def retrievePeers(groupName, selectAll):
         closeConnection(s)
         return None
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: return None
         print('Received from the server :', answer)
         peersList = None
     else:
-        peersList = eval(answer)
+        # split operation in order to skip the initial 'OK -'
+        peersList = eval(answer.split(" ", 2)[2])
 
     return peersList
 
@@ -476,11 +483,12 @@ def initGroupLocalFileTree(groupName):
         closeConnection(s)
         return
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: return immediately
         return
     else:
-        updatedFileList = eval(answer)
+        # split operation in order to skip the initial 'OK -'
+        updatedFileList = eval(answer.split(" ", 2)[2])
 
     updateLocalGroupTree(groupName, localFileTree.getGroup(groupName), updatedFileList)
 
@@ -631,7 +639,7 @@ def addFiles(groupName, filepaths, directory):
         closeConnection(s)
         return False
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: return False
         return False
     else:
@@ -698,7 +706,7 @@ def removeFiles(groupName, treePaths):
         closeConnection(s)
         return False
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: return False
         print('Received from the server :', answer)
         return False
@@ -774,7 +782,7 @@ def syncFiles(groupName, files):
         closeConnection(s)
         return False
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: return False
         print('Received from the server :', answer)
         return False
@@ -830,7 +838,7 @@ def leaveGroup(groupName):
         closeConnection(s)
         return False
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: return False
         print('Received from the server :', answer)
         return False
@@ -866,7 +874,7 @@ def disconnectGroup(groupName):
         closeConnection(s)
         return False
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: return False
         print('Received from the server :', answer)
         return False
@@ -903,7 +911,7 @@ def peerExit():
         closeConnection(s)
         return False
 
-    if answer.split()[0] == "ERROR":
+    if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: return False
         print('Received from the server :', answer)
         return False
