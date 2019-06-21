@@ -29,7 +29,6 @@ def mySend(sock, data):
     # get size of the message
     size = len(data)
 
-
     # put size on a 16 byte string
     strSize = str(size).zfill(SIZE_LENGTH)
     strSize = strSize.encode('utf-8')
@@ -75,7 +74,7 @@ def myRecv(sock):
     sock.settimeout(TIMEOUT)
 
     # read the 16 byte string representing the data size
-    chunks = []
+    chunks = list()
     bytesRec = 0
     while bytesRec < SIZE_LENGTH:
         try:
@@ -91,7 +90,7 @@ def myRecv(sock):
     dataSize = int(''.join(chunks))
 
     # read data until dataSize bytes have been received
-    chunks = []
+    chunks = list()
     bytesRec = 0
     while bytesRec < dataSize:
         try:
@@ -147,7 +146,7 @@ def recvChunk(sock, chunkSize):
     :return: data received representing the file chunk
     """
 
-    pieces = []
+    pieces = list()
     bytesRec = 0
 
     # read on the socket until chunkSize bytes have been received

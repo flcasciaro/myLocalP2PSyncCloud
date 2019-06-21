@@ -74,7 +74,7 @@ def myRecv(sock):
     sock.settimeout(TIMEOUT)
 
     # read the 16 byte string representing the data size
-    chunks = []
+    chunks = list()
     bytesRec = 0
     while bytesRec < SIZE_LENGTH:
         try:
@@ -90,7 +90,7 @@ def myRecv(sock):
     dataSize = int(''.join(chunks))
 
     # read data until dataSize bytes have been received
-    chunks = []
+    chunks = list()
     bytesRec = 0
     while bytesRec < dataSize:
         try:
