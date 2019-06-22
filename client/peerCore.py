@@ -12,6 +12,7 @@ from threading import Thread, Lock
 import fileManagement
 import fileSystem
 import peerServer
+import portForwarding
 import syncScheduler
 import transmission
 
@@ -447,6 +448,8 @@ def startSync():
 
     # get peer server port number
     myPortNumber = server.port
+
+    portForwarding.forwardPort(myPortNumber, myPortNumber, None, None, True, 'TCP', 0, None, False)
 
     s = createConnection(serverAddr)
     if s is None:
