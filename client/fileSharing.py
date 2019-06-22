@@ -183,7 +183,7 @@ def downloadFile(file, taskTimestamp):
             # ask each peer which chunks it has and collect informations
             # in order to apply the rarest-first approach
 
-            chunksList = getChunksList(file, peer["peerIP"], peer["peerPort"])
+            chunksList = getChunksList(file, peer["publicAddr"])
 
             if chunksList is not None:
 
@@ -335,14 +335,7 @@ def downloadFile(file, taskTimestamp):
 
 
 def getChunksList(file, peerAddr):
-    """
 
-
-    :param file:
-    :param peerIP:
-    :param peerPort:
-    :return:
-    """
 
     s = peerCore.createConnection(peerAddr)
     if s is None:
