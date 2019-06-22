@@ -245,7 +245,7 @@ class myP2PSync(QMainWindow):
             if not serverReachable:
                 QMessageBox.about(self, "Alert", "Server not reachable or coordinates not valid")
 
-        self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverIP, peerCore.serverPort))
+        self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverAddr[0], peerCore.serverAddr[1]))
 
         # start the peerServer and register peer coordinates on the tracker
         self.server = peerCore.startSync()

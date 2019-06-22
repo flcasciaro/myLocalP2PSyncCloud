@@ -25,8 +25,7 @@ previousSessionFile = scriptPath + "sessionFiles/fileList.json"
 
 # Initialize some global variables
 peerID = None
-serverIP = None
-serverPort = None
+serverAddr = None
 
 # Lock used to avoid race conditions among threads
 pathCreationLock = Lock()
@@ -45,20 +44,22 @@ groupsList = dict()
 localFileTree = None
 
 
-def createConnection(ipAddress, port):
+def createConnection(addr):
     """
     Create a socket connection with a remote host.
     In case of success return the established socket.
     In case of failure (timeout or connection refused) return None.
-    :param ipAddress: IP address of the host
-    :param port: port number on which the host is listening
+    :param addr: tuple that contains an IP address and a port number
     :return: socket or None
     """
+
+    # cast the port number to integer
+    addr = (addr[0], int(addr[1]))
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(5)
     try:
-        s.connect((ipAddress, int(port)))
+        s.connect(addr)
     except (socket.timeout, ConnectionRefusedError):
         return None
     return s
@@ -106,7 +107,7 @@ def serverIsReachable():
     :return: boolean (True for success, False for any error)
     """
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is not None:
         closeConnection(s)
         return True
@@ -123,7 +124,7 @@ def findServer():
     :return: boolean (True for success, False for any error)
     """
 
-    global serverIP, serverPort
+    global serverAddr
     try:
         file = open(configurationFile, "r")
         try:
@@ -132,8 +133,7 @@ def findServer():
             configuration = json.load(file)
 
             # Extract server coordinates
-            serverIP = configuration["serverIP"]
-            serverPort = configuration["serverPort"]
+            serverAddr = (configuration["serverIP"], configuration["serverPort"])
         except ValueError:
             return False
     except FileNotFoundError:
@@ -149,10 +149,9 @@ def setServerCoordinates(coordinates):
     :return: void
     """
 
-    global serverIP, serverPort
+    global serverAddr
     try:
-        serverIP = coordinates.split(":")[0]
-        serverPort = coordinates.split(":")[1]
+        serverAddr = (coordinates.split(":")[0], coordinates.split(":")[1])
         return True
     except IndexError:
         return False
@@ -166,7 +165,7 @@ def retrieveGroups():
     """
     global groupsList
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return
 
@@ -200,7 +199,7 @@ def restoreGroup(groupName):
     :return: boolean (True for success, False for any error)
     """
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return False
 
@@ -259,7 +258,7 @@ def joinGroup(groupName, token):
     :return: boolean (True for success, False for any error) (True for success, False for any error)
     """
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return False
 
@@ -302,7 +301,7 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
     :return: boolean (True for success, False for any error)
     """
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return False
 
@@ -348,7 +347,7 @@ def changeRole(groupName, targetPeerID, action):
     :param action: can be ADD_MASTER, CHANGE_MASTER, TO_RW, TO_RO
     :return: boolean (True for success, False for any error)
     """
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return False
 
@@ -383,7 +382,7 @@ def retrievePeers(groupName, selectAll):
     :return: list of peers
     """
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return None
 
@@ -449,7 +448,7 @@ def startSync():
     # get peer server port number
     myPortNumber = server.port
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return None
 
@@ -470,7 +469,7 @@ def startSync():
 
 def initGroupLocalFileTree(groupName):
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return
 
@@ -625,7 +624,7 @@ def addFiles(groupName, filepaths, directory):
             del fileInfoWFP["filepath"]
             filesInfoWFP.append(fileInfoWFP)
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return False
 
@@ -692,7 +691,7 @@ def removeFiles(groupName, treePaths):
     :return: boolean (True for success, False for any error)
     """
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return False
 
@@ -758,7 +757,7 @@ def syncFiles(groupName, files):
     :return: 
     """
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return False
 
@@ -824,7 +823,7 @@ def leaveGroup(groupName):
     :return: boolean (True for success, False for any error)
     """
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return False
 
@@ -860,7 +859,7 @@ def disconnectGroup(groupName):
     :return: boolean (True for success, False for any error)
     """
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
     if s is None:
         return False
 
@@ -896,7 +895,7 @@ def peerExit():
     :return: boolean (True for success, False for any error)
     """
 
-    s = createConnection(serverIP, serverPort)
+    s = createConnection(serverAddr)
 
     if s is None:
         return False

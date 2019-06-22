@@ -293,10 +293,9 @@ def downloadFile(file, taskTimestamp):
         # start threads
         for i in range(0, busyThreads):
             threadChunksList = threadInfo[i]["chunksList"]
-            peerIP = threadInfo[i]["peer"]["peerIP"]
-            peerPort = threadInfo[i]["peer"]["peerPort"]
+            peerAddr = threadInfo[i]["peer"]["publicAddr"]
 
-            t = Thread(target=getChunks, args=(file, threadChunksList, peerIP, peerPort, tmpDirPath))
+            t = Thread(target=getChunks, args=(file, threadChunksList, peerAddr, tmpDirPath))
             threads.append(t)
             t.start()
 
@@ -335,7 +334,7 @@ def downloadFile(file, taskTimestamp):
     file.syncLock.release()
 
 
-def getChunksList(file, peerIP, peerPort):
+def getChunksList(file, peerAddr):
     """
 
 
@@ -345,7 +344,7 @@ def getChunksList(file, peerIP, peerPort):
     :return:
     """
 
-    s = peerCore.createSocket(peerIP, peerPort)
+    s = peerCore.createConnection(peerAddr)
     if s is None:
         return None
 
@@ -354,10 +353,10 @@ def getChunksList(file, peerIP, peerPort):
                   "CHUNKS_LIST {} {} {}".format(file.groupName, file.treePath, file.timestamp)
         transmission.mySend(s, message)
         data = transmission.myRecv(s)
-        peerCore.closeSocket(s)
+        peerCore.closeConnection(s)
     except (socket.timeout, RuntimeError):
         print("Error while getting chunks list")
-        peerCore.closeSocket(s)
+        peerCore.closeConnection(s)
         return None
 
     if str(data).split()[0] == "ERROR":
@@ -368,10 +367,10 @@ def getChunksList(file, peerIP, peerPort):
         return chunksList
 
 
-def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
+def getChunks(file, chunksList, peerAddr, tmpDirPath):
 
 
-    s = peerCore.createSocket(peerIP, peerPort)
+    s = peerCore.createConnection(peerAddr)
     if s is None:
         return
 
@@ -421,7 +420,7 @@ def getChunks(file, chunksList, peerIP, peerPort, tmpDirPath):
         except FileNotFoundError:
             continue
 
-    peerCore.closeSocket(s)
+    peerCore.closeConnection(s)
 
 
 def mergeChunks(file, tmpDirPath):
