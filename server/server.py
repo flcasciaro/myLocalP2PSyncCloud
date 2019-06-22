@@ -309,7 +309,7 @@ class SocketServerThread(Thread):
             transmission.mySend(self.clientSock, answer)
 
         elif action == "HERE":
-            answer = reqHandlers.imHere(request, peers, peerID)
+            answer = reqHandlers.imHere(request, peers, peerID, self.clientAddr)
             transmission.mySend(self.clientSock, answer)
 
         elif action == "LEAVE":

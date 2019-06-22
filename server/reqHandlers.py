@@ -5,7 +5,7 @@ to serve clients request.
 from group import Group
 
 
-def imHere(request, peers, peerID):
+def imHere(request, peers, peerID, publicAddr):
 
     """store IP address and Port Number on which the peer can be contacted by other peers"""
 
@@ -13,8 +13,12 @@ def imHere(request, peers, peerID):
         """unknown peer"""
         peers[peerID] = dict()
 
-    peers[peerID]["peerIP"] = request.split()[1]
-    peers[peerID]["peerPort"] = request.split()[2]
+    peers[peerID]["privateIP"] = request.split()[1]
+    peers[peerID]["privatePort"] = request.split()[2]
+    peers[peerID]["publicIP"] = publicAddr[0]
+    peers[peerID]["publicPort"] = publicAddr[1]
+
+    print(peers[peerID])
 
     answer = "OK - PEER INFO UPDATED"
     return answer
@@ -160,8 +164,8 @@ def retrievePeers(request, groups, peers, peerID):
                 continue
             peerInfo = dict()
             peerInfo["peerID"] = peer
-            peerInfo["peerIP"] = peers[peer]["peerIP"]
-            peerInfo["peerPort"] = peers[peer]["peerPort"]
+            peerInfo["peerIP"] = peers[peer]["privateIP"]
+            peerInfo["peerPort"] = peers[peer]["privatePort"]
             peerInfo["active"] = groups[groupName].peersInGroup[peer].active
             peerInfo["role"] = groups[groupName].peersInGroup[peer].role
             peersList.append(peerInfo)
