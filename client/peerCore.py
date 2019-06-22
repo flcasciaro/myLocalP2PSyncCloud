@@ -666,7 +666,7 @@ def addFiles(groupName, filepaths, directory):
         # notify other active peers
         for peer in activePeers:
 
-            s = createConnection(peer["peerIP"], peer["peerPort"])
+            s = createConnection(peer["publicAddr"])
             if s is None:
                 continue
 
@@ -731,7 +731,7 @@ def removeFiles(groupName, treePaths):
         # notify other active peers
         for peer in activePeers:
 
-            s = createConnection(peer["peerIP"], peer["peerPort"])
+            s = createConnection(peer["publicAddr"])
             if s is None:
                 continue
 
@@ -799,7 +799,7 @@ def syncFiles(groupName, files):
         # notify other active peers
         for peer in activePeers:
 
-            s = createConnection(peer["peerIP"], peer["peerPort"])
+            s = createConnection(peer["publicAddr"])
             if s is None:
                 continue
 
