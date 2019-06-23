@@ -27,6 +27,7 @@ previousSessionFile = scriptPath + "sessionFiles/fileList.json"
 # Initialize some global variables
 peerID = None
 serverAddr = None
+myPortNumber = None
 
 # Lock used to avoid race conditions among threads
 pathCreationLock = Lock()
@@ -413,6 +414,12 @@ def retrievePeers(groupName, selectAll):
     return peersList
 
 
+def getMyIP():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(('8.8.8.8', 1))  # connect() for UDP doesn't send packets
+    return s.getsockname()[0]
+
+
 def startSync():
     """
     Load previous session information.
@@ -434,7 +441,7 @@ def startSync():
     schedulerThread.start()
 
     # retrieve internal IP address
-    myIP = socket.gethostbyname(socket.gethostname())
+    myIP = getMyIP()
 
     # create a server thread passing only the IP address of the machine
     # port will be choose among available ones
@@ -447,9 +454,12 @@ def startSync():
         pass
 
     # get peer server port number
+    global myPortNumber
     myPortNumber = server.port
 
-    portForwarding.forwardPort(myPortNumber, myPortNumber, None, None, True, 'TCP', 0, None, False)
+    # enable port forwarding
+    cmd = 'upnpc -a {} {} {} TCP'.format(myIP, myPortNumber, myPortNumber)
+    os.system(cmd)
 
     s = createConnection(serverAddr)
     if s is None:
@@ -926,8 +936,12 @@ def peerExit():
         # stop every working synchronization thread
         syncScheduler.stopAllSyncThreads()
 
+        # disable port forwarding
+        cmd = 'upnpc -d {} TCP'.format(myPortNumber)
+        os.system(cmd)
+
         # wait for thread termination
-        time.sleep(4)
+        time.sleep(3)
 
         # save session status
         fileSystem.saveFileStatus(localFileTree, previousSessionFile)
