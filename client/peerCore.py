@@ -2,6 +2,7 @@
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import hashlib
+import ipaddress
 import json
 import os
 import socket
@@ -12,7 +13,6 @@ from threading import Thread, Lock
 import fileManagement
 import fileSystem
 import peerServer
-import portForwarding
 import syncScheduler
 import transmission
 
@@ -27,6 +27,8 @@ previousSessionFile = scriptPath + "sessionFiles/fileList.json"
 # Initialize some global variables
 peerID = None
 serverAddr = None
+publicIP = None
+myIP = None
 myPortNumber = None
 
 # Lock used to avoid race conditions among threads
@@ -46,17 +48,22 @@ groupsList = dict()
 localFileTree = None
 
 
-def createConnection(addr):
+def createConnection(publicAddr, privateAddr = None):
     """
     Create a socket connection with a remote host.
     In case of success return the established socket.
     In case of failure (timeout or connection refused) return None.
-    :param addr: tuple that contains an IP address and a port number
+    :param publicAddr:
+    :param privateAddr:
     :return: socket or None
     """
 
-    # cast the port number to integer
-    addr = (addr[0], int(addr[1]))
+    if privateAddr is not None and publicAddr[0] == publicIP:
+        # machines in the same network, use private address
+        addr = (privateAddr[0], int(privateAddr[1]))
+    else:
+        # machines in different networks, use public address
+        addr = (publicAddr[0], int(publicAddr[1]))
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(5)
@@ -441,6 +448,7 @@ def startSync():
     schedulerThread.start()
 
     # retrieve internal IP address
+    global myIP
     myIP = getMyIP()
 
     # create a server thread passing only the IP address of the machine
@@ -457,9 +465,10 @@ def startSync():
     global myPortNumber
     myPortNumber = server.port
 
-    # enable port forwarding
-    cmd = 'upnpc -a {} {} {} TCP'.format(myIP, myPortNumber, myPortNumber)
-    os.system(cmd)
+    if ipaddress.ip_address(myIP).is_private:
+        # private address: enable port forwarding
+        cmd = 'upnpc -a {} {} {} TCP > {}upnpcLog.txt'.format(myIP, myPortNumber, myPortNumber, scriptPath)
+        os.system(cmd)
 
     s = createConnection(serverAddr)
     if s is None:
@@ -471,11 +480,18 @@ def startSync():
         message = str(peerID) + " " + "HERE {} {}".format(myIP, myPortNumber)
         transmission.mySend(s, message)
         # get reply into an "ignore" variable
-        __ = transmission.myRecv(s)
+        answer = transmission.myRecv(s)
         closeConnection(s)
     except (socket.timeout, RuntimeError):
         closeConnection(s)
         return None
+
+    if answer.split(" ", 1)[0] == 'ERROR':
+        print("Received from the server: ", answer)
+        return None
+    else:
+        global publicIP
+        publicIP = answer.split(" ", 2)[2]
 
     return server
 
@@ -497,6 +513,7 @@ def initGroupLocalFileTree(groupName):
 
     if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: return immediately
+        print("Received from the server: ", answer)
         return
     else:
         # split operation in order to skip the initial 'OK -'
@@ -679,7 +696,7 @@ def addFiles(groupName, filepaths, directory):
         # notify other active peers
         for peer in activePeers:
 
-            s = createConnection(peer["publicAddr"])
+            s = createConnection(peer["publicAddr"], peer["privateAddr"])
             if s is None:
                 continue
 
@@ -744,7 +761,7 @@ def removeFiles(groupName, treePaths):
         # notify other active peers
         for peer in activePeers:
 
-            s = createConnection(peer["publicAddr"])
+            s = createConnection(peer["publicAddr"], peer["privateAddr"])
             if s is None:
                 continue
 
@@ -812,7 +829,7 @@ def syncFiles(groupName, files):
         # notify other active peers
         for peer in activePeers:
 
-            s = createConnection(peer["publicAddr"])
+            s = createConnection(peer["publicAddr"], peer["privateAddr"])
             if s is None:
                 continue
 
@@ -936,9 +953,10 @@ def peerExit():
         # stop every working synchronization thread
         syncScheduler.stopAllSyncThreads()
 
-        # disable port forwarding
-        cmd = 'upnpc -d {} TCP'.format(myPortNumber)
-        os.system(cmd)
+        if ipaddress.ip_address(myIP).is_private:
+            # disable port forwarding
+            cmd = 'upnpc -d {} TCP > {}upnpcLog.txt'.format(myPortNumber, scriptPath)
+            os.system(cmd)
 
         # wait for thread termination
         time.sleep(3)

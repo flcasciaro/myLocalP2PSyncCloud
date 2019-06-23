@@ -18,7 +18,7 @@ def imHere(request, peers, peerID, publicAddr):
 
     print(peers[peerID])
 
-    answer = "OK - PEER INFO UPDATED"
+    answer = "OK - {}".format(publicAddr[0])
     return answer
 
 

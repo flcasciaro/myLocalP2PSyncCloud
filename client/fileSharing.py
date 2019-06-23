@@ -183,7 +183,7 @@ def downloadFile(file, taskTimestamp):
             # ask each peer which chunks it has and collect informations
             # in order to apply the rarest-first approach
 
-            chunksList = getChunksList(file, peer["publicAddr"])
+            chunksList = getChunksList(file, peer["publicAddr"], peer["privateAddr"])
 
             if chunksList is not None:
 
@@ -293,9 +293,12 @@ def downloadFile(file, taskTimestamp):
         # start threads
         for i in range(0, busyThreads):
             threadChunksList = threadInfo[i]["chunksList"]
-            peerAddr = threadInfo[i]["peer"]["publicAddr"]
+            peerPublicAddr = threadInfo[i]["peer"]["publicAddr"]
+            peerPrivateAddr = threadInfo[i]["peer"]["privateAddr"]
 
-            t = Thread(target=getChunks, args=(file, threadChunksList, peerAddr, tmpDirPath))
+            t = Thread(target=getChunks, args=(file, threadChunksList,
+                                               peerPublicAddr, peerPrivateAddr,
+                                               tmpDirPath))
             threads.append(t)
             t.start()
 
@@ -334,10 +337,10 @@ def downloadFile(file, taskTimestamp):
     file.syncLock.release()
 
 
-def getChunksList(file, peerAddr):
+def getChunksList(file, peerPublicAddr, peerPrivateAddr):
 
 
-    s = peerCore.createConnection(peerAddr)
+    s = peerCore.createConnection(peerPublicAddr, peerPrivateAddr)
     if s is None:
         return None
 
@@ -360,10 +363,10 @@ def getChunksList(file, peerAddr):
         return chunksList
 
 
-def getChunks(file, chunksList, peerAddr, tmpDirPath):
+def getChunks(file, chunksList, peerPublicAddr, peerPrivateAddr, tmpDirPath):
 
 
-    s = peerCore.createConnection(peerAddr)
+    s = peerCore.createConnection(peerPublicAddr, peerPrivateAddr)
     if s is None:
         return
 
