@@ -477,7 +477,7 @@ def startSync():
     cmd = "zerotier-cli join {}".format(networkID)
     os.system(cmd)
 
-    cmd = "zerotier-cli listnetworks > zerotierconf.txt"
+    cmd = "zerotier-cli listnetworks > {}".format(zeroTierFile)
     os.system(cmd)
 
     zeroTierIP = None
