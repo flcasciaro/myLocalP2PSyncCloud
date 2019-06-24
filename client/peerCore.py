@@ -451,10 +451,6 @@ def startSync():
     schedulerThread.daemon = True
     schedulerThread.start()
 
-    # retrieve internal IP address
-    global myIP
-    myIP = getMyIP()
-
     cmd = "zerotier-cli join {}".format(networkID)
     os.system(cmd)
 
@@ -462,9 +458,11 @@ def startSync():
     # before that moment the listnetworks command is not valid
     # so this while goes on until the subscription is recorded
     while True:
+        # print zerotier list of networks into a temp file
         cmd = "zerotier-cli listnetworks > {}".format(zeroTierFile)
         os.system(cmd)
 
+        # obtain the generated zerotier IP
         zeroTierIP = None
         f = open(zeroTierFile, "r")
         for line in f:
@@ -477,6 +475,8 @@ def startSync():
                 continue
         if zeroTierIP != '-':
             print("Obtained {} address from ZeroTier".format(zeroTierIP))
+            # remove temp file
+            os.remove(zeroTierFile)
             break
 
     # create a server thread passing only the IP address of the machine
