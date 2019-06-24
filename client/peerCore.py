@@ -477,23 +477,23 @@ def startSync():
     cmd = "zerotier-cli join {}".format(networkID)
     os.system(cmd)
 
-    cmd = "zerotier-cli listnetworks > {}".format(zeroTierFile)
-    os.system(cmd)
+    while True:
+        cmd = "zerotier-cli listnetworks > {}".format(zeroTierFile)
+        os.system(cmd)
 
-    zeroTierIP = None
-    f = open(zeroTierFile, "r")
-    for line in f:
-        lineSplit = line.split()
-        try:
-            if lineSplit[0] == "200" and lineSplit[2] == networkID:
-                zeroTierIP = lineSplit[-1].split("/")[0]
-                print(zeroTierIP)
-                break
-        except IndexError:
-            continue
-
-    if zeroTierIP is None:
-        return None
+        zeroTierIP = None
+        f = open(zeroTierFile, "r")
+        for line in f:
+            lineSplit = line.split()
+            try:
+                if lineSplit[0] == "200" and lineSplit[2] == networkID:
+                    zeroTierIP = lineSplit[-1].split("/")[0]
+                    print(zeroTierIP)
+                    break
+            except IndexError:
+                continue
+        if zeroTierIP != '-':
+            break
 
     s = createConnection(serverAddr)
     if s is None:
