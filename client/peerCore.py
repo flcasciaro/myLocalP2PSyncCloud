@@ -2,7 +2,6 @@
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import hashlib
-import ipaddress
 import json
 import os
 import socket
@@ -23,6 +22,7 @@ scriptPath += "/"
 # Set session files' paths
 configurationFile = scriptPath + "sessionFiles/configuration.json"
 previousSessionFile = scriptPath + "sessionFiles/fileList.json"
+zeroTierFile = scriptPath + "zerotier.txt"
 
 # Initialize some global variables
 peerID = None
@@ -30,6 +30,8 @@ serverAddr = None
 publicIP = None
 myIP = None
 myPortNumber = None
+
+networkID = "e5cd7a9e1cf88a16"
 
 # Lock used to avoid race conditions among threads
 pathCreationLock = Lock()
@@ -58,12 +60,14 @@ def createConnection(publicAddr, privateAddr = None):
     :return: socket or None
     """
 
-    if privateAddr is not None and publicAddr[0] == publicIP:
-        # machines in the same network, use private address
-        addr = (privateAddr[0], int(privateAddr[1]))
-    else:
-        # machines in different networks, use public address
-        addr = (publicAddr[0], int(publicAddr[1]))
+    # if privateAddr is not None and publicAddr[0] == publicIP:
+    #     # machines in the same network, use private address
+    #     addr = (privateAddr[0], int(privateAddr[1]))
+    # else:
+    #     # machines in different networks, use public address
+    #     addr = (publicAddr[0], int(publicAddr[1]))
+
+    addr = (publicAddr[0], int(publicAddr[1]))
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(5)
@@ -465,10 +469,28 @@ def startSync():
     global myPortNumber
     myPortNumber = server.port
 
-    if ipaddress.ip_address(myIP).is_private:
-        # private address: enable port forwarding
-        cmd = 'upnpc -a {} {} {} TCP > {}upnpcLog.txt'.format(myIP, myPortNumber, myPortNumber, scriptPath)
-        os.system(cmd)
+    # if ipaddress.ip_address(myIP).is_private:
+    #     # private address: enable port forwarding
+    #     cmd = "upnpc -a {} {} {} TCP > {}upnpcLog.txt".format(myIP, myPortNumber, myPortNumber, scriptPath)
+    #     os.system(cmd)
+
+    cmd = "zerotier-cli join {}".format(networkID)
+    os.system(cmd)
+
+    cmd = "zerotier-cli listnetworks > zerotierconf.txt"
+    os.system(cmd)
+
+    zeroTierIP = None
+    f = open(zeroTierFile, "r")
+    for line in f:
+        lineSplit = line.split()
+        if lineSplit[0] == "200" and lineSplit[2] == networkID:
+            zeroTierIP = lineSplit[-1].split("/")[0]
+            print(zeroTierIP)
+            break
+
+    if zeroTierIP is None:
+        return None
 
     s = createConnection(serverAddr)
     if s is None:
@@ -477,7 +499,7 @@ def startSync():
     # send my IP address and port number to central server
     # in order to be reachable from other peers
     try:
-        message = str(peerID) + " " + "HERE {} {}".format(myIP, myPortNumber)
+        message = str(peerID) + " " + "HERE {} {}".format(zeroTierIP, myPortNumber)
         transmission.mySend(s, message)
         # get reply into an "ignore" variable
         answer = transmission.myRecv(s)
@@ -953,10 +975,13 @@ def peerExit():
         # stop every working synchronization thread
         syncScheduler.stopAllSyncThreads()
 
-        if ipaddress.ip_address(myIP).is_private:
-            # disable port forwarding
-            cmd = 'upnpc -d {} TCP > {}upnpcLog.txt'.format(myPortNumber, scriptPath)
-            os.system(cmd)
+        # if ipaddress.ip_address(myIP).is_private:
+        #     # disable port forwarding
+        #     cmd = 'upnpc -d {} TCP > {}upnpcLog.txt'.format(myPortNumber, scriptPath)
+        #     os.system(cmd)
+
+        cmd = "zerotier-cli leave {}".format(networkID)
+        os.system(cmd)
 
         # wait for thread termination
         time.sleep(3)

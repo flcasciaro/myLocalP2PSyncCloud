@@ -14,7 +14,8 @@ def imHere(request, peers, peerID, publicAddr):
         peers[peerID] = dict()
 
     peers[peerID]["privateAddr"] = (request.split()[1], request.split()[2])
-    peers[peerID]["publicAddr"] = (publicAddr[0], request.split()[2])
+    #peers[peerID]["publicAddr"] = (publicAddr[0], request.split()[2])
+    peers[peerID]["publicAddr"] = peers[peerID]["privateAddr"]
 
     print(peers[peerID])
 
