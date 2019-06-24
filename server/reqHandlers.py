@@ -13,9 +13,7 @@ def imHere(request, peers, peerID, publicAddr):
         """unknown peer"""
         peers[peerID] = dict()
 
-    peers[peerID]["privateAddr"] = (request.split()[1], request.split()[2])
-    #peers[peerID]["publicAddr"] = (publicAddr[0], request.split()[2])
-    peers[peerID]["publicAddr"] = peers[peerID]["privateAddr"]
+    peers[peerID]["address"] = (request.split()[1], request.split()[2])
 
     print(peers[peerID])
 
@@ -163,8 +161,7 @@ def retrievePeers(request, groups, peers, peerID):
                 continue
             peerInfo = dict()
             peerInfo["peerID"] = peer
-            peerInfo["privateAddr"] = peers[peer]["privateAddr"]
-            peerInfo["publicAddr"] = peers[peer]["publicAddr"]
+            peerInfo["address"] = peers[peer]["address"]
             peerInfo["active"] = groups[groupName].peersInGroup[peer].active
             peerInfo["role"] = groups[groupName].peersInGroup[peer].role
             peersList.append(peerInfo)

@@ -27,8 +27,8 @@ zeroTierFile = scriptPath + "zerotier.txt"
 # Initialize some global variables
 peerID = None
 serverAddr = None
-publicIP = None
-myIP = None
+# publicIP = None
+# myIP = None
 myPortNumber = None
 
 networkID = "e5cd7a9e1cf88a16"
@@ -425,10 +425,10 @@ def retrievePeers(groupName, selectAll):
     return peersList
 
 
-def getMyIP():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(('8.8.8.8', 1))  # connect() for UDP doesn't send packets
-    return s.getsockname()[0]
+# def getMyIP():
+#     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+#     s.connect(('8.8.8.8', 1))  # connect() for UDP doesn't send packets
+#     return s.getsockname()[0]
 
 
 def startSync():
@@ -724,7 +724,7 @@ def addFiles(groupName, filepaths, directory):
         # notify other active peers
         for peer in activePeers:
 
-            s = createConnection(peer["publicAddr"], peer["privateAddr"])
+            s = createConnection(peer["address"])
             if s is None:
                 continue
 
@@ -789,7 +789,7 @@ def removeFiles(groupName, treePaths):
         # notify other active peers
         for peer in activePeers:
 
-            s = createConnection(peer["publicAddr"], peer["privateAddr"])
+            s = createConnection(peer["address"])
             if s is None:
                 continue
 
@@ -857,7 +857,7 @@ def syncFiles(groupName, files):
         # notify other active peers
         for peer in activePeers:
 
-            s = createConnection(peer["publicAddr"], peer["privateAddr"])
+            s = createConnection(peer["address"])
             if s is None:
                 continue
 

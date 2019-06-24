@@ -293,12 +293,9 @@ def downloadFile(file, taskTimestamp):
         # start threads
         for i in range(0, busyThreads):
             threadChunksList = threadInfo[i]["chunksList"]
-            peerPublicAddr = threadInfo[i]["peer"]["publicAddr"]
-            peerPrivateAddr = threadInfo[i]["peer"]["privateAddr"]
+            peerPublicAddr = threadInfo[i]["peer"]["address"]
 
-            t = Thread(target=getChunks, args=(file, threadChunksList,
-                                               peerPublicAddr, peerPrivateAddr,
-                                               tmpDirPath))
+            t = Thread(target=getChunks, args=(file, threadChunksList, peerPublicAddr, tmpDirPath))
             threads.append(t)
             t.start()
 
@@ -337,10 +334,10 @@ def downloadFile(file, taskTimestamp):
     file.syncLock.release()
 
 
-def getChunksList(file, peerPublicAddr, peerPrivateAddr):
+def getChunksList(file, peerAddr):
 
 
-    s = peerCore.createConnection(peerPublicAddr, peerPrivateAddr)
+    s = peerCore.createConnection(peerAddr)
     if s is None:
         return None
 
@@ -363,10 +360,10 @@ def getChunksList(file, peerPublicAddr, peerPrivateAddr):
         return chunksList
 
 
-def getChunks(file, chunksList, peerPublicAddr, peerPrivateAddr, tmpDirPath):
+def getChunks(file, chunksList, peerAddr, tmpDirPath):
 
 
-    s = peerCore.createConnection(peerPublicAddr, peerPrivateAddr)
+    s = peerCore.createConnection(peerAddr)
     if s is None:
         return
 
