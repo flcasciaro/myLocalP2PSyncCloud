@@ -481,7 +481,7 @@ def startSync():
 
     # create a server thread passing only the IP address of the machine
     # port will be choose among available ones
-    server = peerServer.Server(zeroTierIP)
+    server = peerServer.Server()
     server.daemon = True
     server.start()
 

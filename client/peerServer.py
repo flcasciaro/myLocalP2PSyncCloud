@@ -19,10 +19,9 @@ class Server(Thread):
     The port on which the server will listen is choosen among available ports.
     """
 
-    def __init__(self, host, max_clients=5):
+    def __init__(self, max_clients=5):
         """
         Initialize server.
-        :param host: IP address on which the server will be reachable
         :param max_clients: maximum number of incoming connections.
         :return: void
         """
@@ -32,7 +31,7 @@ class Server(Thread):
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         # using port = 0 the server will start on an available port
-        self.sock.bind((host, 0))
+        self.sock.bind(("0.0.0.0", 0))
 
         # retrieve selected port
         self.port = self.sock.getsockname()[1]
