@@ -455,9 +455,33 @@ def startSync():
     global myIP
     myIP = getMyIP()
 
+    cmd = "zerotier-cli join {}".format(networkID)
+    os.system(cmd)
+
+    # zero tier sometimes takes a bit of time to register the peer
+    # before that moment the listnetworks command is not valid
+    # so this while goes on until the subscription is recorded
+    while True:
+        cmd = "zerotier-cli listnetworks > {}".format(zeroTierFile)
+        os.system(cmd)
+
+        zeroTierIP = None
+        f = open(zeroTierFile, "r")
+        for line in f:
+            lineSplit = line.split()
+            try:
+                if lineSplit[0] == "200" and lineSplit[2] == networkID:
+                    zeroTierIP = lineSplit[-1].split("/")[0]
+                    break
+            except IndexError:
+                continue
+        if zeroTierIP != '-':
+            print("Obtained {} address from ZeroTier".format(zeroTierIP))
+            break
+
     # create a server thread passing only the IP address of the machine
     # port will be choose among available ones
-    server = peerServer.Server(myIP)
+    server = peerServer.Server(zeroTierIP)
     server.daemon = True
     server.start()
 
@@ -473,27 +497,6 @@ def startSync():
     #     # private address: enable port forwarding
     #     cmd = "upnpc -a {} {} {} TCP > {}upnpcLog.txt".format(myIP, myPortNumber, myPortNumber, scriptPath)
     #     os.system(cmd)
-
-    cmd = "zerotier-cli join {}".format(networkID)
-    os.system(cmd)
-
-    while True:
-        cmd = "zerotier-cli listnetworks > {}".format(zeroTierFile)
-        os.system(cmd)
-
-        zeroTierIP = None
-        f = open(zeroTierFile, "r")
-        for line in f:
-            lineSplit = line.split()
-            try:
-                if lineSplit[0] == "200" and lineSplit[2] == networkID:
-                    zeroTierIP = lineSplit[-1].split("/")[0]
-                    print(zeroTierIP)
-                    break
-            except IndexError:
-                continue
-        if zeroTierIP != '-':
-            break
 
     s = createConnection(serverAddr)
     if s is None:
