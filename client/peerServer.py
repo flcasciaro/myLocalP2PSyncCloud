@@ -26,7 +26,6 @@ class Server(Thread):
         :return: void
         """
         Thread.__init__(self)
-        self.host = host
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -34,6 +33,7 @@ class Server(Thread):
         self.sock.bind(("0.0.0.0", 0))
 
         # retrieve selected port
+        self.host = self.sock.getsockname()[0]
         self.port = self.sock.getsockname()[1]
 
         self.sock.listen(max_clients)
