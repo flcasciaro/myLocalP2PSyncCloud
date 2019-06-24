@@ -1,2 +1,0 @@
-200 listnetworks <nwid> <name> <mac> <status> <type> <dev> <ZT assigned ips>
-200 listnetworks e5cd7a9e1cf88a16 myP2PSync 16:ae:f8:75:fb:61 OK PUBLIC ethernet_32772 10.243.102.87/16
