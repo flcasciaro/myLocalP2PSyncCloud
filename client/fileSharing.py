@@ -183,7 +183,7 @@ def downloadFile(file, taskTimestamp):
             # ask each peer which chunks it has and collect informations
             # in order to apply the rarest-first approach
 
-            chunksList = getChunksList(file, peer["publicAddr"], peer["privateAddr"])
+            chunksList = getChunksList(file, peer["address"])
 
             if chunksList is not None:
 
