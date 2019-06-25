@@ -32,7 +32,7 @@ class Server(Thread):
         # using port = 0 the server will start on an available port
         self.sock.bind(("0.0.0.0", 0))
 
-        self.host = self.sock.getsockname()[0]
+        self.host = networking.getMyIP()
         # retrieve selected port
         self.port = self.sock.getsockname()[1]
 

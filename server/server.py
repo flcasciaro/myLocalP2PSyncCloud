@@ -160,7 +160,7 @@ class Server:
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(("0.0.0.0", port))
 
-        self.host = self.sock.getsockname()[0]
+        self.host = networking.getMyIP()
         self.port = port
 
         self.sock.listen(maxClients)

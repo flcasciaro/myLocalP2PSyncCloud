@@ -13,6 +13,20 @@ SIZE_LENGTH = 16
 
 TIMEOUT = 3.0
 
+
+def getMyIP():
+    """
+    Retrieve the IP of the machine.
+    If the machine is inside a private network
+    the private address is retrieved.
+    :return: an IP address
+    """
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(('8.8.8.8', 1))  # connect() for UDP doesn't send packets
+    return s.getsockname()[0]
+
+
 def joinNetwork():
     cmd = "zerotier-cli join {}".format(networkID)
     os.system(cmd)
@@ -101,6 +115,7 @@ def closeConnection(s, peerID):
     # close the socket anyway
     s.close()
 
+
 def mySend(sock, data):
     """
     Send a message on the socket
@@ -138,7 +153,6 @@ def mySend(sock, data):
         if sent == 0:
             raise RuntimeError("sock connection broken")
         totalSent = totalSent + sent
-
 
     # send data
     totalSent = 0
@@ -230,7 +244,6 @@ def sendChunk(sock, chunk, chunkSize):
         totalSent = totalSent + sent
 
 
-
 def recvChunk(sock, chunkSize):
     """
     Receive a file chunk over a socket connection.
@@ -255,6 +268,6 @@ def recvChunk(sock, chunkSize):
         pieces.append(piece)
 
     # join chunk pieces
-    chunk =  b''.join(pieces)
+    chunk = b''.join(pieces)
 
     return chunk
