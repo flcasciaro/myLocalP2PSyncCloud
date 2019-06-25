@@ -8,8 +8,8 @@ import time
 from random import randint, random
 from threading import Thread
 
+import networking
 import peerCore
-import shared.networking as networking
 import syncScheduler
 from fileManagement import CHUNK_SIZE
 

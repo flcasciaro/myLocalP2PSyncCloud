@@ -7,8 +7,8 @@ import select
 import socket
 from threading import Thread, Lock
 
+import networking
 import reqHandlers
-import shared.networking as networking
 from group import Group
 
 # Main data structure for groups management.
@@ -350,7 +350,6 @@ if __name__ == '__main__':
     # read session files and initialize server
     initServer()
 
-    global zeroTierIP
     zeroTierIP = networking.joinNetwork()
     print("Server's ZeroTier IP: ", zeroTierIP)
 

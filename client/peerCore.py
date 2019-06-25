@@ -11,8 +11,8 @@ from threading import Thread, Lock
 
 import fileManagement
 import fileSystem
+import networking
 import peerServer
-import shared.networking as networking
 import syncScheduler
 
 # Obtain script path and script name, it will be useful to manage filepaths
