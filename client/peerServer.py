@@ -6,7 +6,7 @@ import socket
 from threading import Thread
 
 import fileSharing
-import shared.networking as networking
+import networking
 import syncScheduler
 
 
