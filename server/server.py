@@ -69,8 +69,7 @@ def initServer():
                     role = peer["role"]
                     if peerID not in peers:
                         peers[peerID] = dict()
-                        peers[peerID]["privateAddr"] = None
-                        peers[peerID]["publicAddr"] = None
+                        peers[peerID]["address"] = None
                     groups[groupName].addPeer(peerID, False, role)
                 del peersJson
             except ValueError:

@@ -36,6 +36,7 @@ def joinNetwork():
                     break
             except IndexError:
                 continue
+        f.close()
         if zeroTierIP != '-':
             print("Obtained {} address from ZeroTier".format(zeroTierIP))
             # remove temp file
