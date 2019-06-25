@@ -6,8 +6,8 @@ import socket
 from threading import Thread
 
 import fileSharing
+import shared.networking as networking
 import syncScheduler
-import transmission
 
 
 class Server(Thread):
@@ -32,8 +32,8 @@ class Server(Thread):
         # using port = 0 the server will start on an available port
         self.sock.bind(("0.0.0.0", 0))
 
-        # retrieve selected port
         self.host = self.sock.getsockname()[0]
+        # retrieve selected port
         self.port = self.sock.getsockname()[1]
 
         self.sock.listen(max_clients)
@@ -132,7 +132,7 @@ class SocketServerThread(Thread):
 
                 if len(rdyRead) > 0:
                     # read request
-                    readData = transmission.myRecv(self.clientSock)
+                    readData = networking.myRecv(self.clientSock)
 
                     # Check if socket has been closed
                     if len(readData) == 0:
@@ -192,17 +192,17 @@ class SocketServerThread(Thread):
 
         elif action == "ADDED_FILES":
             answer = syncScheduler.addedFiles(message)
-            transmission.mySend(self.clientSock, answer)
+            networking.mySend(self.clientSock, answer)
 
         elif action == "REMOVED_FILES":
             answer = syncScheduler.removedFiles(message)
-            transmission.mySend(self.clientSock, answer)
+            networking.mySend(self.clientSock, answer)
 
         elif action == "UPDATED_FILES":
             answer = syncScheduler.updatedFiles(message)
-            transmission.mySend(self.clientSock, answer)
+            networking.mySend(self.clientSock, answer)
 
         elif action == "BYE":
             answer = "BYE PEER"
-            transmission.mySend(self.clientSock, answer)
+            networking.mySend(self.clientSock, answer)
             self.stop()

@@ -9,8 +9,8 @@ from random import randint, random
 from threading import Thread
 
 import peerCore
+import shared.networking as networking
 import syncScheduler
-import transmission
 from fileManagement import CHUNK_SIZE
 
 MAX_UNAVAILABLE = 5
@@ -42,7 +42,7 @@ def sendChunksList(message, thread):
         answer = "ERROR - UNRECOGNIZED FILE {} IN GROUP {}".format(fileTreePath, groupName)
 
     try:
-        transmission.mySend(thread.clientSock, answer)
+        networking.mySend(thread.clientSock, answer)
     except (socket.timeout, RuntimeError):
         return
 
@@ -81,8 +81,8 @@ def sendChunk(message, thread):
                         try:
                             error = False
                             answer = "OK - I'M SENDING IT"
-                            transmission.mySend(thread.clientSock, answer)
-                            transmission.sendChunk(thread.clientSock, dataChunk, chunkSize)
+                            networking.mySend(thread.clientSock, answer)
+                            networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
                         except (socket.timeout, RuntimeError):
                             print("Error while sending chunk {}".format(chunkID))
 
@@ -103,8 +103,8 @@ def sendChunk(message, thread):
                         try:
                             error = False
                             answer = "OK - I'M SENDING IT"
-                            transmission.mySend(thread.clientSock, answer)
-                            transmission.sendChunk(thread.clientSock, dataChunk, chunkSize)
+                            networking.mySend(thread.clientSock, answer)
+                            networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
                         except (socket.timeout, RuntimeError):
                             print("Error while sending chunk {}".format(chunkID))
 
@@ -120,7 +120,7 @@ def sendChunk(message, thread):
 
     if error:
         # send error answer
-        transmission.mySend(thread.clientSock, answer)
+        networking.mySend(thread.clientSock, answer)
 
 
 def downloadFile(file, taskTimestamp):
@@ -337,19 +337,19 @@ def downloadFile(file, taskTimestamp):
 def getChunksList(file, peerAddr):
 
 
-    s = peerCore.createConnection(peerAddr)
+    s = networking.createConnection(peerAddr)
     if s is None:
         return None
 
     try:
         message = str(peerCore.peerID) + " " + \
                   "CHUNKS_LIST {} {} {}".format(file.groupName, file.treePath, file.timestamp)
-        transmission.mySend(s, message)
-        data = transmission.myRecv(s)
-        peerCore.closeConnection(s)
+        networking.mySend(s, message)
+        data = networking.myRecv(s)
+        networking.closeConnection(s, peerCore.peerID)
     except (socket.timeout, RuntimeError):
         print("Error while getting chunks list")
-        peerCore.closeConnection(s)
+        networking.closeConnection(s, peerCore.peerID)
         return None
 
     if str(data).split()[0] == "ERROR":
@@ -363,7 +363,7 @@ def getChunksList(file, peerAddr):
 def getChunks(file, chunksList, peerAddr, tmpDirPath):
 
 
-    s = peerCore.createConnection(peerAddr)
+    s = networking.createConnection(peerAddr)
     if s is None:
         return
 
@@ -377,8 +377,8 @@ def getChunks(file, chunksList, peerAddr, tmpDirPath):
         try:
             message = str(peerCore.peerID) + " " + \
                       "CHUNK {} {} {} {}".format(file.groupName, file.treePath, file.timestamp, chunkID)
-            transmission.mySend(s, message)
-            answer = transmission.myRecv(s)
+            networking.mySend(s, message)
+            answer = networking.myRecv(s)
         except (socket.timeout, RuntimeError):
             print("Error receiving chunk {}".format(chunkID))
             continue
@@ -387,7 +387,7 @@ def getChunks(file, chunksList, peerAddr, tmpDirPath):
             continue
 
         try:
-            data = transmission.recvChunk(s, chunkSize)
+            data = networking.recvChunk(s, chunkSize)
         except (socket.timeout, RuntimeError):
             print("Error receiving chunk {}".format(chunkID))
             continue
@@ -413,7 +413,7 @@ def getChunks(file, chunksList, peerAddr, tmpDirPath):
         except FileNotFoundError:
             continue
 
-    peerCore.closeConnection(s)
+    networking.closeConnection(s, peerCore.peerID)
 
 
 def mergeChunks(file, tmpDirPath):

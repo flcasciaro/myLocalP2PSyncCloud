@@ -1,12 +1,104 @@
 """Code for the transmission of messages and data over socket connection in myP2PSync.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
+import os
 import socket
+
+networkID = "e5cd7a9e1cf88a16"
+
+zeroTierFile = "tmpZerotier.txt"
 
 BUFSIZE = 4096
 SIZE_LENGTH = 16
 
 TIMEOUT = 3.0
+
+def joinNetwork():
+    cmd = "zerotier-cli join {}".format(networkID)
+    os.system(cmd)
+
+    # zero tier sometimes takes a bit of time to register the peer
+    # before that moment the listnetworks command is not valid
+    # so this while goes on until the subscription is recorded
+    while True:
+        # print zerotier list of networks into a temp file
+        cmd = "zerotier-cli listnetworks > {}".format(zeroTierFile)
+        os.system(cmd)
+
+        # obtain the generated zerotier IP
+        zeroTierIP = None
+        f = open(zeroTierFile, "r")
+        for line in f:
+            lineSplit = line.split()
+            try:
+                if lineSplit[0] == "200" and lineSplit[2] == networkID:
+                    zeroTierIP = lineSplit[-1].split("/")[0]
+                    break
+            except IndexError:
+                continue
+        if zeroTierIP != '-':
+            print("Obtained {} address from ZeroTier".format(zeroTierIP))
+            # remove temp file
+            os.remove(zeroTierFile)
+            break
+
+    return zeroTierIP
+
+
+def leaveNetwork():
+    cmd = "zerotier-cli leave {}".format(networkID)
+    os.system(cmd)
+
+
+def createConnection(publicAddr):
+    """
+    Create a socket connection with a remote host.
+    In case of success return the established socket.
+    In case of failure (timeout or connection refused) return None.
+    :param publicAddr:
+    :return: socket or None
+    """
+
+    # if privateAddr is not None and publicAddr[0] == publicIP:
+    #     # machines in the same network, use private address
+    #     addr = (privateAddr[0], int(privateAddr[1]))
+    # else:
+    #     # machines in different networks, use public address
+    #     addr = (publicAddr[0], int(publicAddr[1]))
+
+    addr = (publicAddr[0], int(publicAddr[1]))
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(5)
+    try:
+        s.connect(addr)
+    except (socket.timeout, ConnectionRefusedError):
+        return None
+    return s
+
+
+def closeConnection(s, peerID):
+    """
+    Wrapper function for socket.close().
+    Coordinates the socket close operation with the remote host.
+    Send a BYE message and wait for a reply.
+    Finally close the socket anyway.
+    :param s: socket which will be closed
+    :param peerID: id of the peer sending the closing message
+    :return: void
+    """
+
+    try:
+        # send BYE message
+        message = str(peerID) + " " + "BYE"
+        mySend(s, message)
+        # get the answer into an "ignore" variable
+        __ = myRecv(s)
+    except (socket.timeout, RuntimeError):
+        pass
+
+    # close the socket anyway
+    s.close()
 
 def mySend(sock, data):
     """
