@@ -189,7 +189,7 @@ class Server:
             except KeyboardInterrupt:
                 self.stopServer()
 
-        self.closeServer(self.host, self.port)
+        self.closeServer()
 
     def closeServer(self):
         """ Close the client socket threads and server socket if they exists. """
