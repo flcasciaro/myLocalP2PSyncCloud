@@ -30,6 +30,7 @@ groupsPeersFile = scriptPath + 'sessionFiles/groupsPeers.json'
 groupsFilesFile = scriptPath + 'sessionFiles/groupsFiles.json'
 
 
+zeroTierIP = None
 PORT_NUMBER = 45154
 
 
@@ -275,6 +276,10 @@ class SocketServerThread(Thread):
         if action != "PEERS" and action != "BYE" and action != "GROUPS":
             print('[Thr {}] [Peer: {}] Received {}'.format(self.number, peerID, request))
 
+        if action == "INFO":
+            answer = str((zeroTierIP, PORT_NUMBER))
+            networking.mySend(self.clientSock, answer)
+
         if action == "GROUPS":
             answer = reqHandlers.sendGroups(groups, peerID)
             networking.mySend(self.clientSock, answer)
@@ -345,6 +350,7 @@ if __name__ == '__main__':
     # read session files and initialize server
     initServer()
 
+    global zeroTierIP
     zeroTierIP = networking.joinNetwork()
     print("Server's ZeroTier IP: ", zeroTierIP)
 

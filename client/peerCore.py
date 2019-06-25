@@ -26,8 +26,7 @@ previousSessionFile = scriptPath + "sessionFiles/fileList.json"
 # Initialize some global variables
 peerID = None
 serverAddr = None
-# publicIP = None
-# myIP = None
+serverZTAddr = None
 myPortNumber = None
 
 networkID = "e5cd7a9e1cf88a16"
@@ -68,9 +67,9 @@ def serverIsReachable():
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.networking.createConnection(serverAddr)
+    s = networking.createConnection(serverAddr)
     if s is not None:
-        networking.networking.closeConnection(s, peerID)
+        networking.closeConnection(s, peerID)
         return True
     else:
         return False
@@ -117,6 +116,26 @@ def setServerCoordinates(coordinates):
     except IndexError:
         return False
 
+def getServerZTAddr():
+
+    global serverZTAddr
+
+    s = networking.createConnection(serverAddr)
+    if s is None:
+        return
+
+    try:
+        # send request message and wait for the answer, then close the socket
+        message = str(peerID) + " " + "INFO"
+        networking.mySend(s, message)
+        answer = networking.myRecv(s)
+        networking.closeConnection(s, peerID)
+    except (socket.timeout, RuntimeError):
+        networking.closeConnection(s, peerID)
+        return False
+
+    serverZTAddr = eval(answer)
+
 
 def retrieveGroups():
     """
@@ -126,7 +145,7 @@ def retrieveGroups():
     """
     global groupsList
 
-    s = networking.networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return
 
@@ -160,7 +179,7 @@ def restoreGroup(groupName):
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return False
 
@@ -219,7 +238,7 @@ def joinGroup(groupName, token):
     :return: boolean (True for success, False for any error) (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return False
 
@@ -262,7 +281,7 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return False
 
@@ -308,7 +327,7 @@ def changeRole(groupName, targetPeerID, action):
     :param action: can be ADD_MASTER, CHANGE_MASTER, TO_RW, TO_RO
     :return: boolean (True for success, False for any error)
     """
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return False
 
@@ -343,7 +362,7 @@ def retrievePeers(groupName, selectAll):
     :return: list of peers
     """
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return None
 
@@ -401,6 +420,8 @@ def startSync():
     
     zeroTierIP = networking.joinNetwork()
 
+    getServerZTAddr()
+
     # create a server thread passing only the IP address of the machine
     # port will be choose among available ones
     server = peerServer.Server()
@@ -420,7 +441,7 @@ def startSync():
     #     cmd = "upnpc -a {} {} {} TCP > {}upnpcLog.txt".format(myIP, myPortNumber, myPortNumber, scriptPath)
     #     os.system(cmd)
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return None
 
@@ -448,7 +469,7 @@ def startSync():
 
 def initGroupLocalFileTree(groupName):
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return
 
@@ -604,7 +625,7 @@ def addFiles(groupName, filepaths, directory):
             del fileInfoWFP["filepath"]
             filesInfoWFP.append(fileInfoWFP)
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return False
 
@@ -671,7 +692,7 @@ def removeFiles(groupName, treePaths):
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return False
 
@@ -737,7 +758,7 @@ def syncFiles(groupName, files):
     :return: 
     """
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return False
 
@@ -803,7 +824,7 @@ def leaveGroup(groupName):
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return False
 
@@ -839,7 +860,7 @@ def disconnectGroup(groupName):
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
     if s is None:
         return False
 
@@ -875,7 +896,7 @@ def peerExit():
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(serverZTAddr)
 
     if s is None:
         return False
