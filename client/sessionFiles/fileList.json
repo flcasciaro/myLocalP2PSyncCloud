@@ -1,24 +1,2 @@
 [
-    {
-        "nodeName": "ITDepartment",
-        "isDir": true,
-        "childs": [
-            {
-                "nodeName": "american_beauty.mp4",
-                "isDir": false,
-                "childs": [],
-                "info": {
-                    "groupName": "ITDepartment",
-                    "treePath": "american_beauty.mp4",
-                    "filename": "american_beauty.mp4",
-                    "filepath": "C:/Users/FrancescoLorenzo/Desktop/prova/american_beauty.mp4",
-                    "filesize": 884142603,
-                    "timestamp": 1449426357,
-                    "status": "S",
-                    "previousChunks": []
-                }
-            }
-        ],
-        "info": {}
-    }
 ]
