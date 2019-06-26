@@ -4,14 +4,18 @@
 import os
 import shutil
 import socket
+import sys
 import time
 from random import randint, random
 from threading import Thread
 
-import networking
 import peerCore
 import syncScheduler
 from fileManagement import CHUNK_SIZE
+
+if "networking" not in sys.modules:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import shared.networking as networking
 
 MAX_UNAVAILABLE = 5
 

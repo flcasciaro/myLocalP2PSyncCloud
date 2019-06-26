@@ -15,8 +15,6 @@ def imHere(request, peers, peerID, publicAddr):
 
     peers[peerID]["address"] = (request.split()[1], request.split()[2])
 
-    print(peers[peerID])
-
     answer = "OK - {}".format(publicAddr[0])
     return answer
 

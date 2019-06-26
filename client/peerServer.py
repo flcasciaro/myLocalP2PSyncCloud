@@ -1,13 +1,18 @@
 """This code handles the server functions of a peer in myP2PSync.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
+import os
 import select
 import socket
+import sys
 from threading import Thread
 
 import fileSharing
-import networking
 import syncScheduler
+
+if "networking" not in sys.modules:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import shared.networking as networking
 
 
 class Server(Thread):

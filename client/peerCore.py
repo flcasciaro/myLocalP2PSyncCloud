@@ -5,15 +5,19 @@ import hashlib
 import json
 import os
 import socket
+import sys
 import time
 import uuid
 from threading import Thread, Lock
 
 import fileManagement
 import fileSystem
-import networking
 import peerServer
 import syncScheduler
+
+if "networking" not in sys.modules:
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import shared.networking as networking
 
 # Obtain script path and script name, it will be useful to manage filepaths
 scriptPath, scriptName = os.path.split((os.path.abspath(__file__)))

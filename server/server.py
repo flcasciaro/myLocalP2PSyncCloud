@@ -5,11 +5,14 @@ import json
 import os
 import select
 import socket
+import sys
 from threading import Thread, Lock
 
-import networking
 import reqHandlers
 from group import Group
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import shared.networking as networking
 
 # Main data structure for groups management.
 # It's a dictionary where the key is the GroupName and the value is
@@ -28,7 +31,6 @@ scriptPath += "/"
 groupsInfoFile = scriptPath + 'sessionFiles/groupsInfo.json'
 groupsPeersFile = scriptPath + 'sessionFiles/groupsPeers.json'
 groupsFilesFile = scriptPath + 'sessionFiles/groupsFiles.json'
-
 
 zeroTierIP = None
 PORT_NUMBER = 45154
