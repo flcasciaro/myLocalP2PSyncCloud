@@ -1,5 +1,7 @@
-"""This code manages all the main functions of myP2PSync clients.
-@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""
+This code manages all the main functions of myP2PSync clients.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
+"""
 
 import hashlib
 import json
@@ -189,7 +191,7 @@ def restoreGroup(groupName):
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "RESTORE Group: {}".format(groupName)
+        message = str(peerID) + " " + "RESTORE {}".format(groupName)
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
@@ -251,7 +253,7 @@ def joinGroup(groupName, token):
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "JOIN Group: {} Token: {}".format(groupName, encryptedToken.hexdigest())
+        message = str(peerID) + " " + "JOIN {} {}".format(groupName, encryptedToken.hexdigest())
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
@@ -394,13 +396,6 @@ def retrievePeers(groupName, selectAll):
         peersList = eval(answer.split(" ", 2)[2])
 
     return peersList
-
-
-# def getMyIP():
-#     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-#     s.connect(('8.8.8.8', 1))  # connect() for UDP doesn't send packets
-#     return s.getsockname()[0]
-
 
 def startSync():
     """

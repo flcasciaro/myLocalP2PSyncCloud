@@ -69,9 +69,6 @@ def initServer():
                     peerID = peer["peerID"]
                     groupName = peer["groupName"]
                     role = peer["role"]
-                    if peerID not in peers:
-                        peers[peerID] = dict()
-                        peers[peerID]["address"] = None
                     groups[groupName].addPeer(peerID, False, role)
                 del peersJson
             except ValueError:
@@ -156,8 +153,8 @@ class Server:
         :return: void
         """
 
-        """ Initialize the server with a host and port to listen to.
-        Provide a list of functions that will be used when receiving specific data """
+        #Initialize the server with a host and port to listen to.
+        # Provide a list of functions that will be used when receiving specific data
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.sock.bind(("0.0.0.0", port))
@@ -348,9 +345,11 @@ class SocketServerThread(Thread):
 
 
 if __name__ == '__main__':
-    # read session files and initialize server
+
+    # read previous session files and initialize server data structure
     initServer()
 
+    # joins ZeroTier network
     zeroTierIP = networking.joinNetwork()
     print("Server's ZeroTier IP: ", zeroTierIP)
 

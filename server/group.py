@@ -71,7 +71,6 @@ class Group:
         self.totalPeers -= 1
         del self.peersInGroup[peerID]
 
-
     def disconnectPeer(self, peerID):
         """
         Disconnect a peer putting Active = False.

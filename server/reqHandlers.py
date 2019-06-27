@@ -1,85 +1,110 @@
-""""This code contains functions that will be invoked by the server's threads in order
-to serve clients request.
-@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""
+Project: myP2PSync
+Code for serving clients (myP2PSync peers) requests.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
+"""
 
 from group import Group
 
 
 def imHere(request, peers, peerID, publicAddr):
-
-    """store IP address and Port Number on which the peer can be contacted by other peers"""
-
-    if peerID not in peers:
-        """unknown peer"""
-        peers[peerID] = dict()
-
+    """
+    Store IP address and port number of a peer.
+    These two values represents where the peer is running
+    its server function, waiting for other peers messages.
+    :param request: "HERE <zeroTierIP>, <PortNumber>"
+    :param peers: server data structure
+    :param peerID: id of the peer
+    :param publicAddr: public IP address of the client
+    :return: string message containing the public IP of the peer
+    """
+    peers[peerID] = dict()
     peers[peerID]["address"] = (request.split()[1], request.split()[2])
 
     answer = "OK - {}".format(publicAddr[0])
     return answer
 
 
-
 def sendGroups(groups, peerID):
-    """This function can retrieve the list of active, previous or other groups for a certain peerID"""
+    """
+    This function returns the list of active, restorable and other groups for a certain peer.
+    :param groups: server data structure
+    :param peerID: id of the peer
+    :return: list of groups, each group is described with a dictionary
+    """
     groupsList = dict()
 
     for g in groups.values():
+        # retrieve group information
+        groupsList[g.name] = g.getPublicInfo()
+        # set specific peer information
         if peerID in g.peersInGroup:
+            groupsList[g.name]["role"] = g.peersInGroup[peerID].role
             if g.peersInGroup[peerID].active:
-                role = g.peersInGroup[peerID].role
-                groupsList[g.name] = g.getPublicInfo(role,"ACTIVE")
+                groupsList[g.name]["status"] = "ACTIVE"
             else:
-                role = g.peersInGroup[peerID].role
-                groupsList[g.name] = g.getPublicInfo(role,"RESTORABLE")
+                groupsList[g.name]["status"] = "RESTORABLE"
         else:
-            groupsList[g.name] = g.getPublicInfo("","OTHER")
-
+            groupsList[g.name]["role"] = ""
+            groupsList[g.name]["status"] = "OTHER"
 
     return "OK - " + str(groupsList)
 
 
 def restoreGroup(request, groups, peerID):
-    """"make the user active in one of its group (already joined)"""
+    """
+    Makes the user active in the group specified in the message.
+    :param request: "RESTORE <groupName>"
+    :param groups: server data structure
+    :param peerID: id of the peer
+    :return: string message
+    """
 
-    groupName = request.split()[2]
+    groupName = request.split()[1]
     if groupName in groups:
-            if peerID in groups[groupName].peersInGroup:
-                if not groups[groupName].peersInGroup[peerID].active: #if not already active
-                    groups[groupName].restorePeer(peerID)
-                    answer = "OK - GROUP {} RESTORED".format(groupName)
-                else:
-                    answer = "ERROR - IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER ALREADY ACTIVE".format(groupName)
+        if peerID in groups[groupName].peersInGroup:
+            if not groups[groupName].peersInGroup[peerID].active:  # if not already active
+                groups[groupName].restorePeer(peerID)
+                answer = "OK - GROUP {} RESTORED".format(groupName)
             else:
-                answer = "ERROR - IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER DOESN'T BELONG TO IT".format(groupName)
+                answer = "ERROR - IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER ALREADY ACTIVE".format(groupName)
+        else:
+            answer = "ERROR - IT'S NOT POSSIBLE TO RESTORE GROUP {} - PEER DOESN'T BELONG TO IT".format(groupName)
     else:
         answer = "ERROR - IT'S NOT POSSIBLE TO RESTORE GROUP {} - GROUP DOESN'T EXIST".format(groupName)
 
     return answer
 
-def joinGroup(request, groups, peerID):
-    """"make the user active in a new group group
-    choosing also the role as function of the token provided"""
 
-    groupName = request.split()[2]
-    tokenProvided = request.split()[4]
+def joinGroup(request, groups, peerID):
+    """
+    Makes the user active in a new group,
+    choosing also the role as function of the token provided.
+    :param request: "JOIN <groupName> <token>"
+    :param groups:
+    :param peerID:
+    :return:
+    """
+
+    groupName = request.split()[1]
+    tokenProvided = request.split()[2]
 
     if groupName in groups:
         if tokenProvided == groups[groupName].tokenRW or tokenProvided == groups[groupName].tokenRO:
             if tokenProvided == groups[groupName].tokenRW:
                 role = "RW"
                 answer = "OK - GROUP {} JOINED IN ReadWrite MODE".format(groupName)
-            elif tokenProvided == groups[groupName].tokenRO:
+            else:
                 role = "RO"
                 answer = "OK - GROUP {} JOINED IN ReadOnly MODE".format(groupName)
             groups[groupName].addPeer(peerID, True, role)
-
         else:
             answer = "ERROR - IMPOSSIBLE TO JOIN GROUP {} - WRONG TOKEN".format(groupName)
     else:
         answer = "ERROR - IMPOSSIBLE TO JOIN GROUP {} - GROUP DOESN'T EXIST".format(groupName)
 
     return answer
+
 
 def createGroup(request, groups, peerID):
     """This function allows a peer to create a new synchronization group
@@ -97,14 +122,14 @@ def createGroup(request, groups, peerID):
         newGroup.addPeer(peerID, True, "Master")
         groups[newGroupName] = newGroup
 
-        answer =  "OK - GROUP {} SUCCESSFULLY CREATED".format(newGroupName)
+        answer = "OK - GROUP {} SUCCESSFULLY CREATED".format(newGroupName)
     else:
-        answer =  "ERROR - IMPOSSIBLE TO CREATE GROUP {} - GROUP ALREADY EXIST".format(newGroupName)
+        answer = "ERROR - IMPOSSIBLE TO CREATE GROUP {} - GROUP ALREADY EXIST".format(newGroupName)
 
     return answer
 
-def manageRole(request, groups, groupsLock, peerID):
 
+def manageRole(request, groups, groupsLock, peerID):
     action = request.split()[1]
     modPeerID = request.split()[2]
     groupName = request.split()[4]
@@ -141,6 +166,7 @@ def manageRole(request, groups, groupsLock, peerID):
 
     return answer
 
+
 def retrievePeers(request, groups, peers, peerID):
     """"retrieve a list of peers (only active or all) for a specific group
     request format: "PEERS <GROUPNAME> <ACTIVE/ALL>"   """
@@ -168,6 +194,7 @@ def retrievePeers(request, groups, peers, peerID):
         answer = "ERROR - GROUP {} DOESN'T EXIST".format(groupName)
 
     return answer
+
 
 def addedFiles(request, groups, groupsLock, peerID):
     try:
@@ -256,8 +283,8 @@ def updatedFiles(request, groups, groupsLock, peerID):
 
     return answer
 
-def getFiles(request, groups, peerID):
 
+def getFiles(request, groups, peerID):
     try:
         groupName = request.split()[1]
 
@@ -286,7 +313,6 @@ def getFiles(request, groups, peerID):
     return answer
 
 
-
 def leaveGroup(groups, groupsLock, groupName, peerID):
     """remove the peer from the group"""
     groupsLock.acquire()
@@ -298,6 +324,7 @@ def leaveGroup(groups, groupsLock, groupName, peerID):
     answer = "OK - GROUP LEFT"
     return answer
 
+
 def disconnectGroup(groups, groupsLock, groupName, peerID):
     """disconnect the peer from the group (active=False)"""
     groupsLock.acquire()
@@ -308,6 +335,7 @@ def disconnectGroup(groups, groupsLock, groupName, peerID):
 
     answer = "OK - GROUP DISCONNECTED"
     return answer
+
 
 def peerExit(groups, groupsLock, peerID):
     """Disconnect the peer from all the synchronization groups in which is active"""
@@ -321,7 +349,5 @@ def peerExit(groups, groupsLock, peerID):
 
     groupsLock.release()
 
-
     answer = "OK - PEER DISCONNECTED"
     return answer
-

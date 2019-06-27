@@ -1,16 +1,21 @@
-"""Code for the transmission of messages and data over socket connection in myP2PSync.
-@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""
+Project: myP2PSync
+This code manages all the networking functions of myP2PSync.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
+"""
 
 import os
 import socket
 
+# ZeroTier myP2PSync network ID
 networkID = "e5cd7a9e1cf88a16"
 
+# temporary filename
 zeroTierFile = "tmpZerotier.txt"
 
-BUFSIZE = 4096
+# constants used in send/receive data over sockets
 SIZE_LENGTH = 16
-
+BUFSIZE = 4096
 TIMEOUT = 3.0
 
 
@@ -21,19 +26,24 @@ def getMyIP():
     the private address is retrieved.
     :return: an IP address
     """
-
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect(('8.8.8.8', 1))  # connect() for UDP doesn't send packets
     return s.getsockname()[0]
 
 
 def joinNetwork():
+    """
+    Machine joins the ZeroTier myP2PSync network using the zerotier-cli interface.
+    :return: ZeroTier IP address of the machine
+    """
+    # join the network
     cmd = "zerotier-cli join {}".format(networkID)
     os.system(cmd)
 
-    # zero tier sometimes takes a bit of time to register the peer
+    # ZeroTier sometimes takes a bit of time to register the peer
     # before that moment the listnetworks command is not valid
     # so this while goes on until the subscription is recorded
+    # and listnetworks has a correct output
     while True:
         # print zerotier list of networks into a temp file
         cmd = "zerotier-cli listnetworks > {}".format(zeroTierFile)
@@ -46,12 +56,13 @@ def joinNetwork():
             lineSplit = line.split()
             try:
                 if lineSplit[0] == "200" and lineSplit[2] == networkID:
+                    # ZeroTier IP of the machine is the last parameter of the line
                     zeroTierIP = lineSplit[-1].split("/")[0]
                     break
             except IndexError:
                 continue
         f.close()
-        if zeroTierIP != '-':
+        if zeroTierIP != '-' and zeroTierIP is not None:
             print("Obtained {} address from ZeroTier".format(zeroTierIP))
             # remove temp file
             os.remove(zeroTierFile)
@@ -61,27 +72,25 @@ def joinNetwork():
 
 
 def leaveNetwork():
+    """
+    Machine leaves the ZeroTier myP2PSync network using the zerotier-cli interface.
+    :return: void
+    """
     cmd = "zerotier-cli leave {}".format(networkID)
     os.system(cmd)
 
 
-def createConnection(publicAddr):
+def createConnection(addr):
     """
     Create a socket connection with a remote host.
     In case of success return the established socket.
     In case of failure (timeout or connection refused) return None.
-    :param publicAddr:
-    :return: socket or None
+    :param addr: address (IP, port) of the remote host.
+    :return: socket object or None
     """
 
-    # if privateAddr is not None and publicAddr[0] == publicIP:
-    #     # machines in the same network, use private address
-    #     addr = (privateAddr[0], int(privateAddr[1]))
-    # else:
-    #     # machines in different networks, use public address
-    #     addr = (publicAddr[0], int(publicAddr[1]))
-
-    addr = (publicAddr[0], int(publicAddr[1]))
+    # cast port number to integer
+    addr[1] = int(addr[1])
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(5)
@@ -97,7 +106,7 @@ def closeConnection(s, peerID):
     Wrapper function for socket.close().
     Coordinates the socket close operation with the remote host.
     Send a BYE message and wait for a reply.
-    Finally close the socket anyway.
+    Finally close the socket.
     :param s: socket which will be closed
     :param peerID: id of the peer sending the closing message
     :return: void
@@ -112,19 +121,19 @@ def closeConnection(s, peerID):
     except (socket.timeout, RuntimeError):
         pass
 
-    # close the socket anyway
+    # close the socket
     s.close()
 
 
 def mySend(sock, data):
     """
-    Send a message on the socket
+    Send a message on the socket.
     :param sock: socket connection object
     :param data: data that will be sent
     :return: void
     """
 
-    # check socket object
+    # check socket object validity
     if sock is None:
         return
 
@@ -137,13 +146,13 @@ def mySend(sock, data):
     # get size of the message
     size = len(data)
 
-    # put size on a 16 byte string
+    # put size on a 16 byte string filled with 0s
+    # e.g. size = 123
+    #      strSize = 0000000000000123
     strSize = str(size).zfill(SIZE_LENGTH)
     strSize = strSize.encode('utf-8')
 
-    # print("strSize: ", strSize)
-
-    # send the size of the following data
+    # send the size of the data
     totalSent = 0
     while totalSent < SIZE_LENGTH:
         try:
@@ -168,12 +177,12 @@ def mySend(sock, data):
 
 def myRecv(sock):
     """
-    Wrapper for the recv function
+    Wrapper for the recv function.
     :param sock: socket connection object
     :return: data received
     """
 
-    # check socket object
+    # check socket object validity
     if sock is None:
         return None
 
@@ -225,7 +234,7 @@ def sendChunk(sock, chunk, chunkSize):
     :return: void
     """
 
-    # check socket object
+    # check socket object validity
     if sock is None:
         return
 
@@ -251,6 +260,10 @@ def recvChunk(sock, chunkSize):
     :param chunkSize: number of bytes that will be received
     :return: data received representing the file chunk
     """
+
+    # check socket object validity
+    if sock is None:
+        return
 
     pieces = list()
     bytesRec = 0
