@@ -20,7 +20,7 @@ if "networking" not in sys.modules:
 MAX_UNAVAILABLE = 5
 
 MAX_THREADS = 5
-MAX_CHUNKS_PER_THREAD = 50
+MAX_CHUNKS_PER_THREAD = 20
 
 
 def sendChunksList(message, thread):
@@ -127,6 +127,34 @@ def sendChunk(message, thread):
         networking.mySend(thread.clientSock, answer)
 
 
+def checkStatus(key, file):
+    """
+    This function periodically check the status of the synchronization thread in order to
+    detect stop request (for example after a peer in the group removes the file,
+    or simply when the synchornization fails after MAX_UNAVAILABLE tries)
+    When a stop request is detected the status of the download is saved.
+    :param key:
+    :param file:
+    :return:
+    """
+    # time between two consecutive checks
+    PERIOD = 1
+
+    file.stopSync = False
+    while True:
+        # check thread termination status
+        if syncScheduler.isThreadStopped(key):
+            file.stopSync = True
+            # wait for other threads termination (if any)
+            time.sleep(1)
+            file.previousChunks = file.availableChunks
+            syncScheduler.removeSyncThread()
+            file.syncLock.release()
+            break
+        else:
+            time.sleep(PERIOD)
+
+
 def downloadFile(file, taskTimestamp):
 
 
@@ -149,14 +177,16 @@ def downloadFile(file, taskTimestamp):
 
     file.initDownload()
 
+    checkThread = Thread(target=checkStatus, args=(key,file))
+    checkThread.start()
+
     unavailable = 0
     tmpDirPath = getTmpDirPath(file)
 
     # ask for the missing peers while the missing list is not empty
     while len(file.missingChunks) > 0 and unavailable < MAX_UNAVAILABLE:
 
-        # check thread termination status
-        if syncScheduler.isThreadStopped(key):
+        if file.stopSync:
             unavailable = MAX_UNAVAILABLE
             break
 
@@ -223,6 +253,10 @@ def downloadFile(file, taskTimestamp):
             # use random discard
             threshold = 0.7
 
+        if file.stopSync:
+            unavailable == MAX_UNAVAILABLE
+            break
+
         busyPeers = list()
         threadInfo = list()
 
@@ -288,7 +322,7 @@ def downloadFile(file, taskTimestamp):
                     r = (r + 1) % len(chunks_peers[chunk])
                     i += 1
 
-        if syncScheduler.isThreadStopped(key):
+        if file.stopSync:
             unavailable = MAX_UNAVAILABLE
             break
 
@@ -313,12 +347,10 @@ def downloadFile(file, taskTimestamp):
 
     if unavailable == MAX_UNAVAILABLE:
         # save download current state in order to restart it at next sync
-        file.previousChunks = file.availableChunks
-        print("Synchronization of {} failed".format(file.filename))
-        syncScheduler.removeSyncThread(key)
+        print("Synchronization of {} failed or stopped".format(file.filename))
+        syncScheduler.stopSyncThread()
         reloadTask = syncScheduler.syncTask(file.groupName, file.treePath, file.timestamp)
         syncScheduler.appendTask(reloadTask, True)
-        file.syncLock.release()
         return
 
     if mergeChunks(file, tmpDirPath):
@@ -333,9 +365,7 @@ def downloadFile(file, taskTimestamp):
         # if mergeChunks fails save the download current state
         file.previousChunks = file.availableChunks
 
-    syncScheduler.removeSyncThread(key)
-
-    file.syncLock.release()
+    syncScheduler.stopSyncThread()
 
 
 def getChunksList(file, peerAddr):
@@ -372,6 +402,9 @@ def getChunks(file, chunksList, peerAddr, tmpDirPath):
         return
 
     for chunkID in chunksList:
+
+        if file.stopSync:
+            break
 
         if chunkID == file.chunksNumber - 1:
             chunkSize = file.lastChunkSize
