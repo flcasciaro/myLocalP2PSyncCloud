@@ -115,10 +115,11 @@ class Node:
 
 
 
-    def removeNode(self, treePath):
+    def removeNode(self, treePath, removeFileObj):
         """
         Remove a node from the tree with root in the node.
         :param treePath: path to follow to reach the node that will be removed
+        :param removeFile: boolean value, if True remove also the file Object in the node
         :return: void
         """
 
@@ -142,8 +143,10 @@ class Node:
                 return
 
         last = nodeList.pop()
-        #delete File object
-        del last.file
+        if removeFileObj:
+            # delete File object
+            del last.file
+
         parent = nodeList.pop()
         # remove node from the parent dictionary
         del parent.childs[last.nodeName]
