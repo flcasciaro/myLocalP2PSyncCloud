@@ -716,14 +716,12 @@ def removeFiles(groupName, treePaths):
 
         for treePath in treePaths:
 
-            groupTree.removeNode(treePath)
-
             key = groupName + "_" + treePath
-
             if key in syncScheduler.syncThreads:
-                syncScheduler.syncThreadsLock.acquire()
-                syncScheduler.syncThreads[key]["stop"] = True
-                syncScheduler.syncThreadsLock.release()
+                groupTree.removeNode(treePath, False)
+                syncScheduler.stopSyncThread(key, syncScheduler.FILE_REMOVED)
+            else:
+                groupTree.removeNode(treePath, True)
 
         # retrieve the list of active peers for the file
         activePeers = retrievePeers(groupName, selectAll=False)
@@ -786,8 +784,14 @@ def syncFiles(groupName, files):
         print('Received from the server :', answer)
         return False
     else:
-        # make the peer ready to upload chunks
+
         for file in files:
+            key = file.groupName + "_" + file.treePath
+            # stop possible synchronization thread
+            syncScheduler.stopSyncThread(key,syncScheduler.FILE_UPDATED)
+
+        for file in files:
+            # make the peer ready to upload chunks
             file.syncLock.acquire()
             file.status = "S"
             file.iHaveIt()
@@ -844,7 +848,7 @@ def leaveGroup(groupName):
     else:
         # stop every synchronization thread working on file of the group
         # and remove group related tasks from the queue
-        syncScheduler.stopSyncThreadsByGroup(groupName)
+        syncScheduler.stopSyncThreadsByGroup(groupName, syncScheduler.STOPPED)
         syncScheduler.removeGroupTasks(groupName)
 
         groupsList[groupName]["status"] = "OTHER"
@@ -880,7 +884,7 @@ def disconnectGroup(groupName):
     else:
         # stop every synchronization thread working on file of the group
         # and remove group related tasks from the queue
-        syncScheduler.stopSyncThreadsByGroup(groupName)
+        syncScheduler.stopSyncThreadsByGroup(groupName, syncScheduler.STOPPED)
         syncScheduler.removeGroupTasks(groupName)
 
         groupsList[groupName]["status"] = "RESTORABLE"
@@ -921,7 +925,7 @@ def peerExit():
         syncScheduler.removeAllTasks()
 
         # stop every working synchronization thread
-        syncScheduler.stopAllSyncThreads()
+        syncScheduler.stopAllSyncThreads(syncScheduler.STOPPED)
 
         # if ipaddress.ip_address(myIP).is_private:
         #     # disable port forwarding

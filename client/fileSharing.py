@@ -142,17 +142,30 @@ def checkStatus(key, file):
 
     file.stopSync = False
     while True:
-        # check thread termination status
-        if syncScheduler.isThreadStopped(key):
+        # check thread status
+        state = syncScheduler.getThreadState(key)
+        if state == syncScheduler.RUNNING:
+            time.sleep(PERIOD)
+        else:
             file.stopSync = True
-            # wait for other threads termination (if any)
-            time.sleep(1)
-            file.previousChunks = file.availableChunks
+            if state == syncScheduler.SYNC_SUCCESS:
+                # download successfully finished
+                # clean the download current state
+                file.previousChunks = list()
+            elif state == syncScheduler.SYNC_STOPPED:
+                # save download status
+                file.previousChunks = file.availableChunks
+            elif state == syncScheduler.FILE_REMOVED:
+                # wait for other threads termination (if any)
+                time.sleep(1)
+                del file
+            elif state == syncScheduler.FILE_UPDATED:
+                # wait for other threads termination (if any)
+                time.sleep(1)
             syncScheduler.removeSyncThread()
             file.syncLock.release()
             break
-        else:
-            time.sleep(PERIOD)
+
 
 
 def downloadFile(file, taskTimestamp):
@@ -178,6 +191,7 @@ def downloadFile(file, taskTimestamp):
     file.initDownload()
 
     checkThread = Thread(target=checkStatus, args=(key,file))
+    checkThread.daemon = True
     checkThread.start()
 
     unavailable = 0
@@ -348,24 +362,27 @@ def downloadFile(file, taskTimestamp):
     if unavailable == MAX_UNAVAILABLE:
         # save download current state in order to restart it at next sync
         print("Synchronization of {} failed or stopped".format(file.filename))
-        syncScheduler.stopSyncThread()
+        # re-append task: if the group is no longer active or the file has been removed
+        # the scheduler will detect it and it will skip the append operation
         reloadTask = syncScheduler.syncTask(file.groupName, file.treePath, file.timestamp)
         syncScheduler.appendTask(reloadTask, True)
-        return
+        exitStatus = syncScheduler.SYNC_STOPPED
 
-    if mergeChunks(file, tmpDirPath):
-        file.status = "S"
-        # force timestamp to syncBeginningTime timestamp
-        os.utime(file.filepath, (file.timestamp, file.timestamp))
-        file.iHaveIt()
-        # clean the download current state
-        file.previousChunks = list()
-        print("Synchronization of {} successfully terminated".format(file.filename))
     else:
-        # if mergeChunks fails save the download current state
-        file.previousChunks = file.availableChunks
+        # all chunks have been collected
+        if mergeChunks(file, tmpDirPath):
+            file.status = "S"
+            # force OS file timestamp to be file.timestamp
+            os.utime(file.filepath, (file.timestamp, file.timestamp))
+            file.iHaveIt()
+            print("Synchronization of {} successfully terminated".format(file.filename))
+            exitStatus = syncScheduler.SYNC_SUCCESS
+        else:
+            # merge fails
+            exitStatus = syncScheduler.SYNC_STOPPED
 
-    syncScheduler.stopSyncThread()
+    # stop checkThread if stil active
+    syncScheduler.stopSyncThread(key, exitStatus)
 
 
 def getChunksList(file, peerAddr):
