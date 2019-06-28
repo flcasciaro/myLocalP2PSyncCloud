@@ -34,6 +34,7 @@ class File:
 
         # used to lock the sync: avoid overlapping of sync process
         self.syncLock = Lock()
+        self.stopSync = False
 
 
     def getLastModifiedTime(self):
@@ -76,6 +77,7 @@ class File:
             else:
                 self.missingChunks.append(i)
 
+        self.previousChunks = list()
         self.setProgress()
 
     def iHaveIt(self):
