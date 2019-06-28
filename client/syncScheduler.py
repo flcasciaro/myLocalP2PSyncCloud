@@ -24,6 +24,14 @@ syncThreadsLock = Lock()
 # Maximum number of synchronization threads working at the same time
 MAX_SYNC_THREAD = 5
 
+# define synchronization thread state
+RUNNING = 0
+SYNC_SUCCESS = 1
+SYNC_STOPPED = 2
+FILE_REMOVED = 3
+FILE_UPDATED = 4
+UNDEFINED = 5
+
 
 class syncTask:
 
@@ -94,7 +102,7 @@ def scheduler():
                         key = task.groupName + "_" + task.fileTreePath
                         syncThreads[key] = dict()
                         syncThreads[key]["groupName"] = task.groupName
-                        syncThreads[key]["stop"] = False
+                        syncThreads[key]["state"] = RUNNING
                         syncThread.start()
 
                     syncThreadsLock.release()
@@ -197,36 +205,36 @@ def removeSyncThread(key):
     syncThreadsLock.release()
 
 
-def isThreadStopped(key):
+def getThreadState(key):
     syncThreadsLock.acquire()
     try:
-        stop = syncThreads[key]["stop"]
+        state = syncThreads[key]["state"]
     except KeyError:
-        stop = True
+        state = UNDEFINED
     syncThreadsLock.release()
-    return stop
+    return state
 
-def stopSyncThread(key):
+def stopSyncThread(key, value):
     syncThreadsLock.acquire()
     try:
-        syncThreads[key]["stop"] = True
+        syncThreads[key]["state"] = value
     except KeyError:
         pass
     syncThreadsLock.release()
 
 
-def stopSyncThreadsByGroup(groupName):
+def stopSyncThreadsByGroup(groupName, value):
     syncThreadsLock.acquire()
     for thread in syncThreads.values():
         if thread["groupName"] == groupName:
-            thread["stop"] = True
+            thread["state"] = value
     syncThreadsLock.release()
 
 
-def stopAllSyncThreads():
+def stopAllSyncThreads(value):
     syncThreadsLock.acquire()
     for thread in syncThreads.values():
-        thread["stop"] = True
+        thread["state"] = value
     syncThreadsLock.release()
 
 
@@ -289,11 +297,14 @@ def removedFiles(message):
         if groupName in peerCore.groupsList:
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
                 for treePath in fileTreePaths:
-                    peerCore.localFileTree.getGroup(groupName).removeNode(treePath)
 
                     # stop possible synchronization thread acting on the file
                     key = groupName + "_" + treePath
-                    stopSyncThread(key)
+                    if key in syncThreads:
+                        peerCore.localFileTree.getGroup(groupName).removeNode(treePath, False)
+                        stopSyncThread(key, FILE_REMOVED)
+                    else:
+                        peerCore.localFileTree.getGroup(groupName).removeNode(treePath, True)
 
                 answer = "OK - FILES SUCCESSFULLY REMOVED"
             else:
@@ -333,7 +344,7 @@ def updatedFiles(message):
 
                     # stop possible synchronization thread acting on the file
                     key = groupName + "_" + fileInfo["treePath"]
-                    stopSyncThread(key)
+                    stopSyncThread(key, FILE_UPDATED)
 
                     fileNode.file.syncLock.release()
 
