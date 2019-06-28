@@ -128,6 +128,17 @@ def appendTask(task, checkOutdated=False):
     global queue
     queueLock.acquire()
 
+    # skip task of non active groups
+    if peerCore.groupsList[task.groupName]["status"] != "ACTIVE":
+        return
+
+
+    groupTree = peerCore.localFileTree.getGroup(task.groupName)
+    fileNode = groupTree.findNode(task.fileTreePath)
+    if fileNode is None:
+        # file has been removed
+        return
+
     if checkOutdated:
         # remove outdated tasks and check if task is outdated or not
         deleteIndex = list()
@@ -179,24 +190,28 @@ def removeAllTasks():
 
 def removeSyncThread(key):
     syncThreadsLock.acquire()
-    if key in syncThreads:
+    try:
         del syncThreads[key]
+    except KeyError:
+        pass
     syncThreadsLock.release()
 
 
 def isThreadStopped(key):
     syncThreadsLock.acquire()
-    if key in syncThreads:
+    try:
         stop = syncThreads[key]["stop"]
-    else:
+    except KeyError:
         stop = True
     syncThreadsLock.release()
     return stop
 
 def stopSyncThread(key):
     syncThreadsLock.acquire()
-    if key in syncThreads:
+    try:
         syncThreads[key]["stop"] = True
+    except KeyError:
+        pass
     syncThreadsLock.release()
 
 
@@ -262,7 +277,6 @@ def addedFiles(message):
     except IndexError:
         answer = "ERROR - INVALID REQUEST"
 
-    print(answer)
     return answer
 
 
@@ -290,7 +304,6 @@ def removedFiles(message):
     except IndexError:
         answer = "ERROR - INVALID REQUEST"
 
-    print(answer)
     return answer
 
 
@@ -337,5 +350,4 @@ def updatedFiles(message):
     except IndexError:
         answer = "ERROR - INVALID REQUEST"
 
-    print(answer)
     return answer
