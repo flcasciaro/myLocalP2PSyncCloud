@@ -44,13 +44,24 @@ class File:
 
 
     def updateFileStat(self):
-
-        try:
-            st = os.stat(self.filepath)
-            self.filesize = st[stat.ST_SIZE]
-            self.timestamp = st[stat.ST_MTIME]
-        except OSError:
-            print("File not found")
+        """
+        Update file stats retrieving OS values if the file is not
+        currently used by asynchronization thread and if the local version
+        is the newest of the system (another peer can already have uploaded
+        a newer version).
+        :return: void
+        """
+        if self.syncLock.acquire(blocking=False):
+            try:
+                st = os.stat(self.filepath)
+                newFilesize = st[stat.ST_SIZE]
+                newTimestamp = st[stat.ST_MTIME]
+                if newTimestamp > self.timestamp:
+                    self.filesize = newFilesize
+                    self.timestamp = newTimestamp
+            except OSError:
+                print("File not found")
+            self.syncLock.release()
             
 
     def setProgress(self):
