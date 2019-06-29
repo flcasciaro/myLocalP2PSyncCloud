@@ -103,7 +103,8 @@ def scheduler():
                     if fileNode.file.status == "D":
                         # start a new synchronization thread if there are less
                         # than MAX_SYNC_THREAD already active threads
-                        syncThread = Thread(target=fileSharing.downloadFile, args=(fileNode.file, task.timestamp))
+                        syncThread = Thread(target=fileSharing.startFileSync,
+                                            args=(fileNode.file, task.timestamp))
                         syncThread.daemon = True
                         key = task.groupName + "_" + task.fileTreePath
                         syncThreads[key] = dict()

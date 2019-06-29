@@ -127,20 +127,33 @@ def sendChunk(message, thread):
         networking.mySend(thread.clientSock, answer)
 
 
-def checkStatus(key, file):
-    """
-    This function periodically check the status of the synchronization thread in order to
-    detect stop request (for example after a peer in the group removes the file,
-    or simply when the synchornization fails after MAX_UNAVAILABLE tries)
-    When a stop request is detected the status of the download is saved.
-    :param key:
-    :param file:
-    :return:
-    """
+def startFileSync(file, taskTimestamp):
+
     # time between two consecutive checks
     PERIOD = 1
 
     file.syncLock.acquire()
+
+    # this check allows to avoid a race condition like the following:
+    # thread1 receive update file and append the task
+    # scheduler launch the task
+    # meanwhile thread2 update again file stat and append another task
+    # without erasing the first one that is already launched
+    # at this point file.timestamp refers to the new timestamp so it's
+    # different from taskTimestamp: in this case quit the download
+    # the last version will be download as soon as the scheduler
+    # will select the last inserted task addressing the file
+    if taskTimestamp != file.timestamp:
+        file.syncLock.release()
+        return
+
+    print("Starting synchronization of", file.filename)
+    key = file.groupName + "_" + file.treePath
+
+    t = Thread(target=downloadFile, args=(file, key))
+    t.daemon = True
+    t.start()
+
     file.stopSync = False
     while True:
         # check thread status
@@ -171,33 +184,9 @@ def checkStatus(key, file):
     file.syncLock.release()
 
 
-def downloadFile(file, taskTimestamp):
-
-
-    file.syncLock.acquire()
-    # this check allows to avoid a race condition like the following:
-    # thread1 receive update file and append the task
-    # scheduler launch the task
-    # meanwhile thread2 update again file stat and append another task
-    # without erasing the first one that is already launched
-    # at this point file.timestamp refers to the new timestamp so it's
-    # different from taskTimestamp: in this case quit the download
-    # the last version will be download as soon as the scheduler
-    # will select the last inserted task addressing the file
-    if taskTimestamp != file.timestamp:
-        file.syncLock.release()
-        return
-
-    print("Starting synchronization of", file.filename)
-    key = file.groupName + "_" + file.treePath
+def downloadFile(file, key):
 
     file.initDownload()
-
-    file.syncLock.release()
-
-    checkThread = Thread(target=checkStatus, args=(key,file))
-    checkThread.daemon = True
-    checkThread.start()
 
     unavailable = 0
     tmpDirPath = getTmpDirPath(file)
