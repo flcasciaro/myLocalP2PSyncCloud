@@ -31,12 +31,14 @@ SYNC_RUNNING = 0
 SYNC_SUCCESS = 1
 # synchronization failed
 SYNC_FAILED = 2
+# synchronization stopped by group disconnection
+SYNC_STOPPED = 3
 # synchronization stopped by file removal action
-FILE_REMOVED = 3
+FILE_REMOVED = 4
 # synchronization stopped by file update action
-FILE_UPDATED = 4
+FILE_UPDATED = 5
 # undefined state
-UNDEFINED_STATE = 5
+UNDEFINED_STATE = 6
 
 
 class syncTask:

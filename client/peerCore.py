@@ -868,7 +868,7 @@ def leaveGroup(groupName):
     else:
         # stop every synchronization thread working on file of the group
         # and remove group related tasks from the queue
-        syncScheduler.stopSyncThreadsByGroup(groupName, syncScheduler.STOPPED)
+        syncScheduler.stopSyncThreadsByGroup(groupName, syncScheduler.SYNC_STOPPED)
         syncScheduler.removeGroupTasks(groupName)
 
         groupsList[groupName]["status"] = "OTHER"
@@ -904,7 +904,7 @@ def disconnectGroup(groupName):
     else:
         # stop every synchronization thread working on file of the group
         # and remove group related tasks from the queue
-        syncScheduler.stopSyncThreadsByGroup(groupName, syncScheduler.STOPPED)
+        syncScheduler.stopSyncThreadsByGroup(groupName, syncScheduler.SYNC_STOPPED)
         syncScheduler.removeGroupTasks(groupName)
 
         groupsList[groupName]["status"] = "RESTORABLE"
@@ -945,7 +945,7 @@ def peerExit():
         syncScheduler.removeAllTasks()
 
         # stop every working synchronization thread
-        syncScheduler.stopAllSyncThreads(syncScheduler.STOPPED)
+        syncScheduler.stopAllSyncThreads(syncScheduler.SYNC_STOPPED)
 
         # if ipaddress.ip_address(myIP).is_private:
         #     # disable port forwarding

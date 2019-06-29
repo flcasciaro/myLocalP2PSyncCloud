@@ -169,7 +169,8 @@ def startFileSync(file, taskTimestamp):
                 # download successfully finished
                 # clean the download current state
                 file.previousChunks = list()
-            elif state == syncScheduler.SYNC_FAILED:
+            elif state == syncScheduler.SYNC_FAILED or \
+                    state == syncScheduler.SYNC_STOPPED:
                 # save download status
                 file.previousChunks = file.availableChunks
             elif state == syncScheduler.FILE_REMOVED:
