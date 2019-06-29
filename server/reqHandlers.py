@@ -81,8 +81,8 @@ def joinGroup(request, groups, peerID):
     Makes the user active in a new group,
     choosing also the role as function of the token provided.
     :param request: "JOIN <groupName> <token>"
-    :param groups:
-    :param peerID:
+    :param groups: server data structure
+    :param peerID: id of the peer
     :return:
     """
 

@@ -153,7 +153,7 @@ class Server:
         :return: void
         """
 
-        #Initialize the server with a host and port to listen to.
+        # Initialize the server with a host and port to listen to.
         # Provide a list of functions that will be used when receiving specific data
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -265,12 +265,17 @@ class SocketServerThread(Thread):
 
     def manageRequest(self, request, peerID):
         """
-        Serves the different client requests
+        Serves clients different requests.
+        :param request: incoming requested stripped of the peerID
+        :param peerID: id of the peer
+        :return: void
         """
 
+        # all the requests (stripped of the peerID) are identified using the first word
+        # e.g. <action> <parameters>
         action = request.split()[0]
 
-        # filter common requests
+        # don't show common requests in the output of the server
         if action != "PEERS" and action != "BYE" and action != "GROUPS":
             print('[Thr {}] [Peer: {}] Received {}'.format(self.number, peerID, request))
 
@@ -345,6 +350,7 @@ class SocketServerThread(Thread):
 
 
 if __name__ == '__main__':
+    # server application main function
 
     # read previous session files and initialize server data structure
     initServer()
