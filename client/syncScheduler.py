@@ -24,13 +24,19 @@ syncThreadsLock = Lock()
 # Maximum number of synchronization threads working at the same time
 MAX_SYNC_THREAD = 5
 
-# define synchronization thread state
-RUNNING = 0
+# define synchronization thread possible states
+# synchronization thread is working
+SYNC_RUNNING = 0
+# synchronization successfully completed
 SYNC_SUCCESS = 1
-SYNC_STOPPED = 2
+# synchronization failed
+SYNC_FAILED = 2
+# synchronization stopped by file removal action
 FILE_REMOVED = 3
+# synchronization stopped by file update action
 FILE_UPDATED = 4
-UNDEFINED = 5
+# undefined state
+UNDEFINED_STATE = 5
 
 
 class syncTask:
@@ -102,7 +108,7 @@ def scheduler():
                         key = task.groupName + "_" + task.fileTreePath
                         syncThreads[key] = dict()
                         syncThreads[key]["groupName"] = task.groupName
-                        syncThreads[key]["state"] = RUNNING
+                        syncThreads[key]["state"] = SYNC_RUNNING
                         syncThread.start()
 
                     syncThreadsLock.release()
@@ -210,14 +216,30 @@ def getThreadState(key):
     try:
         state = syncThreads[key]["state"]
     except KeyError:
-        state = UNDEFINED
+        state = UNDEFINED_STATE
     syncThreadsLock.release()
     return state
 
 def stopSyncThread(key, value):
+    if value == SYNC_RUNNING:
+        # value is not a stopping state
+        return
     syncThreadsLock.acquire()
     try:
         syncThreads[key]["state"] = value
+    except KeyError:
+        pass
+    syncThreadsLock.release()
+
+def stopSyncThreadIfRunning(key, value):
+    if value == SYNC_RUNNING:
+        # value is not a stopping state
+        return
+    syncThreadsLock.acquire()
+    try:
+        state = syncThreads[key]["state"]
+        if state == SYNC_RUNNING:
+            syncThreads[key]["state"] = value
     except KeyError:
         pass
     syncThreadsLock.release()
@@ -330,27 +352,37 @@ def updatedFiles(message):
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
                 for fileInfo in filesInfo:
 
+                    # stop possible synchronization thread acting on the file
+                    key = groupName + "_" + fileInfo["treePath"]
+                    stopSyncThread(key, FILE_UPDATED)
+
                     fileNode = peerCore.localFileTree.getGroup(groupName).findNode(fileInfo["treePath"])
 
                     if fileNode is None:
                         continue
 
-                    fileNode.file.syncLock.acquire()
+                    if fileNode.file.filestamp > fileInfo["timestamp"]:
+                        continue
 
-                    fileNode.file.filesize = fileInfo["filesize"]
-                    fileNode.file.timestamp = fileInfo["timestamp"]
-                    fileNode.file.status = "D"
-                    fileNode.file.previousChunks = list()
+                    if fileNode.file.syncLock.acquire(blocking=False):
 
-                    # stop possible synchronization thread acting on the file
-                    key = groupName + "_" + fileInfo["treePath"]
-                    stopSyncThread(key, FILE_UPDATED)
+                        fileNode.file.filesize = fileInfo["filesize"]
+                        fileNode.file.timestamp = fileInfo["timestamp"]
+                        fileNode.file.status = "D"
+                        fileNode.file.previousChunks = list()
 
-                    fileNode.file.syncLock.release()
+                        fileNode.file.syncLock.release()
 
-                    # create new syncTask
-                    newTask = syncTask(groupName, fileInfo["treePath"], fileInfo["timestamp"])
-                    appendTask(newTask, True)
+                        # create new syncTask
+                        newTask = syncTask(groupName, fileInfo["treePath"], fileInfo["timestamp"])
+                        appendTask(newTask, True)
+                    else:
+                        # file is currently in synchronization
+                        # create a thread which will wait under the end of the synchronization
+                        # and then it will update file state
+                        t = Thread(target=waitSyncAndUpdate, args=(fileNode,))
+                        t.daemon = True
+                        t.start()
 
                 answer = "OK - SYNC TASK LOADED"
             else:
@@ -362,3 +394,23 @@ def updatedFiles(message):
         answer = "ERROR - INVALID REQUEST"
 
     return answer
+
+
+def waitSyncAndUpdate(fileNode, fileInfo):
+
+    while not fileNode.file.syncLock.acquire(blocking=False):
+        time.sleep(0.5)
+
+    if fileNode.file.timestamp < fileInfo["timestamp"]:
+        fileNode.file.filesize = fileInfo["filesize"]
+        fileNode.file.timestamp = fileInfo["timestamp"]
+        fileNode.file.status = "D"
+        fileNode.file.previousChunks = list()
+
+        # create new syncTask
+        newTask = syncTask(fileNode.file.groupName, fileInfo["treePath"], fileInfo["timestamp"])
+        appendTask(newTask, True)
+
+    fileNode.file.syncLock.release()
+
+

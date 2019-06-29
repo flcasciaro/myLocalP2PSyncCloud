@@ -751,8 +751,8 @@ def syncFiles(groupName, files):
     Update a list of file in the synchronization group,
     making them ready to be acknowledged from other peers.
     :param groupName: name of the group from which files will be updated
-    :param files: list of fileObject
-    :return: 
+    :param files: list of tuples (fileObject, timestamp)
+    :return: void
     """
 
     s = networking.createConnection(serverZTAddr)
@@ -762,7 +762,8 @@ def syncFiles(groupName, files):
     # collect information required for the update operation
     filesInfo = list()
 
-    for file in files:
+    for f in files:
+        file = f[0]
         fileInfo = dict()
         fileInfo["treePath"] = file.treePath
         fileInfo["filesize"] = file.filesize
@@ -785,17 +786,27 @@ def syncFiles(groupName, files):
         return False
     else:
 
-        for file in files:
+        for f in files:
+            file = f[0]
+            timestamp = f[1]
             key = file.groupName + "_" + file.treePath
             # stop possible synchronization thread
             syncScheduler.stopSyncThread(key,syncScheduler.FILE_UPDATED)
 
-        for file in files:
             # make the peer ready to upload chunks
-            file.syncLock.acquire()
-            file.status = "S"
-            file.iHaveIt()
-            file.syncLock.release()
+            if file.syncLock.acquire(blocking=False):
+                # file not used by any sinchronization process
+                file.status = "S"
+                file.iHaveIt()
+                file.syncLock.release()
+            else:
+                # file is currently in synchronization
+                # create a thread which will wait under the end of the synchronization
+                # and then it will update file state
+                t = Thread(target=waitSyncAndUpdate, args=(file,timestamp))
+                t.daemon = True
+                t.start()
+
 
         # retrieve the list of active peers for the file
         activePeers = retrievePeers(groupName, selectAll=False)
@@ -818,6 +829,15 @@ def syncFiles(groupName, files):
                 continue
 
         return True
+
+def waitSyncAndUpdate(file, timestamp):
+
+    while not file.syncLock.acquire(blocking=False):
+        time.sleep(0.5)
+    if timestamp == file.timestamp:
+        file.status = "S"
+        file.iHaveIt()
+    file.syncLock.release()
 
 
 def leaveGroup(groupName):
