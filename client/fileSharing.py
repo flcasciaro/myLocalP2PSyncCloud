@@ -17,10 +17,15 @@ if "networking" not in sys.modules:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import shared.networking as networking
 
+# maximum number of attempts before quitting a synchronization
 MAX_UNAVAILABLE = 5
 
+# parameters used to download the file
 MAX_THREADS = 5
 MAX_CHUNKS_PER_THREAD = 20
+
+# time between two consecutive checks on the synchronization thread status
+CHECK_PERIOD = 1.0
 
 
 def sendChunksList(message, thread):
@@ -129,9 +134,6 @@ def sendChunk(message, thread):
 
 def startFileSync(file, taskTimestamp):
 
-    # time between two consecutive checks
-    PERIOD = 1
-
     file.syncLock.acquire()
 
     # this check allows to avoid a race condition like the following:
@@ -159,7 +161,7 @@ def startFileSync(file, taskTimestamp):
         # check thread status
         state = syncScheduler.getThreadState(key)
         if state == syncScheduler.SYNC_RUNNING:
-            time.sleep(PERIOD)
+            time.sleep(CHECK_PERIOD)
         else:
             # notify possible other threads
             file.stopSync = True
