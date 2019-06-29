@@ -140,19 +140,21 @@ def checkStatus(key, file):
     # time between two consecutive checks
     PERIOD = 1
 
+    file.syncLock.acquire()
     file.stopSync = False
     while True:
         # check thread status
         state = syncScheduler.getThreadState(key)
-        if state == syncScheduler.RUNNING:
+        if state == syncScheduler.SYNC_RUNNING:
             time.sleep(PERIOD)
         else:
+            # notify possible other threads
             file.stopSync = True
             if state == syncScheduler.SYNC_SUCCESS:
                 # download successfully finished
                 # clean the download current state
                 file.previousChunks = list()
-            elif state == syncScheduler.SYNC_STOPPED:
+            elif state == syncScheduler.SYNC_FAILED:
                 # save download status
                 file.previousChunks = file.availableChunks
             elif state == syncScheduler.FILE_REMOVED:
@@ -162,10 +164,11 @@ def checkStatus(key, file):
             elif state == syncScheduler.FILE_UPDATED:
                 # wait for other threads termination (if any)
                 time.sleep(1)
-            syncScheduler.removeSyncThread()
-            file.syncLock.release()
+            elif state == syncScheduler.UNDEFINED_STATE:
+                pass
             break
-
+    syncScheduler.removeSyncThread(key)
+    file.syncLock.release()
 
 
 def downloadFile(file, taskTimestamp):
@@ -189,6 +192,8 @@ def downloadFile(file, taskTimestamp):
     key = file.groupName + "_" + file.treePath
 
     file.initDownload()
+
+    file.syncLock.release()
 
     checkThread = Thread(target=checkStatus, args=(key,file))
     checkThread.daemon = True
@@ -268,7 +273,7 @@ def downloadFile(file, taskTimestamp):
             threshold = 0.7
 
         if file.stopSync:
-            unavailable == MAX_UNAVAILABLE
+            unavailable = MAX_UNAVAILABLE
             break
 
         busyPeers = list()
@@ -364,9 +369,11 @@ def downloadFile(file, taskTimestamp):
         print("Synchronization of {} failed or stopped".format(file.filename))
         # re-append task: if the group is no longer active or the file has been removed
         # the scheduler will detect it and it will skip the append operation
-        reloadTask = syncScheduler.syncTask(file.groupName, file.treePath, file.timestamp)
-        syncScheduler.appendTask(reloadTask, True)
-        exitStatus = syncScheduler.SYNC_STOPPED
+        state = syncScheduler.getThreadState(key)
+        if state != syncScheduler.FILE_REMOVED and state != syncScheduler.FILE_UPDATED:
+            reloadTask = syncScheduler.syncTask(file.groupName, file.treePath, file.timestamp)
+            syncScheduler.appendTask(reloadTask, True)
+        exitStatus = syncScheduler.SYNC_FAILED
 
     else:
         # all chunks have been collected
@@ -379,10 +386,10 @@ def downloadFile(file, taskTimestamp):
             exitStatus = syncScheduler.SYNC_SUCCESS
         else:
             # merge fails
-            exitStatus = syncScheduler.SYNC_STOPPED
+            exitStatus = syncScheduler.SYNC_FAILED
 
-    # stop checkThread if stil active
-    syncScheduler.stopSyncThread(key, exitStatus)
+    # this will terminate checkThread
+    syncScheduler.stopSyncThreadIfRunning(key, exitStatus)
 
 
 def getChunksList(file, peerAddr):
