@@ -179,7 +179,7 @@ class myP2PSync(QMainWindow):
         self.peersList.setAlternatingRowColors(True)
         self.peersList.setMinimumWidth(self.width / 2)
         self.peersList.setMinimumHeight(100)
-        self.fileManagerLayout.addWidget(self.peersList)
+        self.fileManagerLayout.addWidget(self.peersList, alignment=Qt.AlignCenter)
         self.selectRole.addItem("CHANGE MASTER")
         self.selectRole.addItem("ADD MASTER")
         self.selectRole.addItem("MAKE IT RW")
@@ -425,6 +425,8 @@ class myP2PSync(QMainWindow):
         elif len(groupTokenRW) == 0 or len(groupTokenRO) == 0 \
                 or groupTokenRW != groupTokenRWConfirm or groupTokenRO != groupTokenROConfirm:
             QMessageBox.about(self, "Error", "Invalid tokens!")
+        elif groupName in peerCore.groupsList:
+            QMessageBox.about(self, "Error", "GroupName already used!")
         else:
             # create groups and reload windows in case of success
             if peerCore.createGroup(groupName, groupTokenRW, groupTokenRO):
