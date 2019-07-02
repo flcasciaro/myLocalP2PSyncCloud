@@ -106,7 +106,7 @@ def joinGroup(request, groups, peerID):
     return answer
 
 
-def createGroup(request, groups, peerID):
+def createGroup(request, groups, groupsLock, peerID):
     """This function allows a peer to create a new synchronization group
     specifying the groupName and the tokens. The creator peer become also the master
     of the new group."""
@@ -114,6 +114,8 @@ def createGroup(request, groups, peerID):
     newGroupName = request.split()[2]
     newGroupTokenRW = request.split()[4]
     newGroupTokenRO = request.split()[6]
+
+    groupsLock.acquire()
 
     if newGroupName not in groups:
         """create the new group and insert in the group dictionary"""
@@ -125,6 +127,8 @@ def createGroup(request, groups, peerID):
         answer = "OK - GROUP {} SUCCESSFULLY CREATED".format(newGroupName)
     else:
         answer = "ERROR - IMPOSSIBLE TO CREATE GROUP {} - GROUP ALREADY EXIST".format(newGroupName)
+
+    groupsLock.release()
 
     return answer
 

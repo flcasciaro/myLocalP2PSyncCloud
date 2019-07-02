@@ -296,7 +296,7 @@ class SocketServerThread(Thread):
             networking.mySend(self.clientSock, answer)
 
         elif action == "CREATE":
-            answer = reqHandlers.createGroup(request, groups, peerID)
+            answer = reqHandlers.createGroup(request, groups, groupsLock, peerID)
             networking.mySend(self.clientSock, answer)
 
         elif action == "ROLE":
