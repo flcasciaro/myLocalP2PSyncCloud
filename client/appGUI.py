@@ -248,7 +248,7 @@ class myP2PSync(QMainWindow):
         self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverAddr[0], peerCore.serverAddr[1]))
 
         # start the peerServer and register peer coordinates on the tracker
-        self.server = peerCore.startSync()
+        self.server = peerCore.startPeer()
         if self.server is None:
             exit(-1)
 

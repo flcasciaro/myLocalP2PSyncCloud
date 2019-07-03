@@ -397,7 +397,7 @@ def retrievePeers(groupName, selectAll):
 
     return peersList
 
-def startSync():
+def startPeer():
     """
     Load previous session information.
     Start a server thread on a free port.
