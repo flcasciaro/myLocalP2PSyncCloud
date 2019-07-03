@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import *
 import peerCore
 
 firstTip = "Double click an active group in order to access the group file manager"
-secondTip = "Double click a not active group in order to show information about the group"
+secondTip = "Double click a not active group in order to access the group"
 statusLabel = "ROLE: {} \t PEERS (ACTIVE/TOTAL): {}/{}"
 
 #  defines the maximum number of attempts to reach the tracker server
