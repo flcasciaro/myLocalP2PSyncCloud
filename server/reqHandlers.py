@@ -189,7 +189,8 @@ def retrievePeers(request, groups, peers, peerID):
                 continue
             peerInfo = dict()
             peerInfo["peerID"] = peer
-            peerInfo["address"] = peers[peer]["address"]
+            if not selectAll and groups[groupName].peersInGroup[peer].active:
+                peerInfo["address"] = peers[peer]["address"]
             peerInfo["active"] = groups[groupName].peersInGroup[peer].active
             peerInfo["role"] = groups[groupName].peersInGroup[peer].role
             peersList.append(peerInfo)
