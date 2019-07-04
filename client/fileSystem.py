@@ -119,7 +119,7 @@ class Node:
         """
         Remove a node from the tree with root in the node.
         :param treePath: path to follow to reach the node that will be removed
-        :param removeFile: boolean value, if True remove also the file Object in the node
+        :param removeFileObj: boolean value, if True remove also the file Object in the node
         :return: void
         """
 
