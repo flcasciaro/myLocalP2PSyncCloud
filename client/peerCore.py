@@ -22,7 +22,7 @@ if "networking" not in sys.modules:
     import shared.networking as networking
 
 # Obtain script path and script name, it will be useful to manage filepaths
-scriptPath, scriptName = os.path.split((os.path.abspath(__file__)))
+scriptPath, scriptName = os.path.split((os.path.abspath(__file__).replace("\\", "/")))
 scriptPath += "/"
 
 # Set session files' paths
@@ -571,7 +571,7 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
 
     for treePath in localTreePaths:
         if treePath not in serverTreePaths:
-            localGroupTree.removeNode(treePath)
+            localGroupTree.removeNode(treePath, True)
 
 
 def addFiles(groupName, filepaths, directory):
