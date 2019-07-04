@@ -21,7 +21,7 @@ statusLabel = "ROLE: {} \t PEERS (ACTIVE/TOTAL): {}/{}"
 MAX_TRY = 3
 
 # define the number of seconds among two GUI refresh operation
-REFRESHING_TIME = 15
+REFRESHING_TIME = 10
 
 
 class myP2PSync(QMainWindow):
@@ -549,15 +549,32 @@ class myP2PSync(QMainWindow):
         peersList = peerCore.retrievePeers(self.groupName, selectAll=True)
 
         if peersList is not None:
+
+            selectedItem = self.peersList.currentItem()
+            if selectedItem is not None:
+                selectedItemName = selectedItem.text(0)
+            else:
+                # no item selected
+                selectedItemName = ""
+
             self.peersList.clear()
             for peer in peersList:
                 status = "Active" if peer["active"] else "NotActive"
                 item = QTreeWidgetItem([peer["peerID"], peer["role"], status])
                 self.peersList.addTopLevelItem(item)
+                if peer["peerID"] == selectedItemName:
+                    self.peersList.setCurrentItem(item)
         else:
             QMessageBox.about(self, "Error", "Error while retrieving list of peers!")
 
     def fillFileList(self):
+
+        selectedItem = self.fileList.currentItem()
+        if selectedItem is not None:
+            selectedItemName = selectedItem.text(0)
+        else:
+            # no item selected
+            selectedItemName = ""
 
         self.fileList.clear()
 
@@ -566,7 +583,15 @@ class myP2PSync(QMainWindow):
             return
 
         for node in groupTree.childs.values():
-            self.fileList.addTopLevelItem(generateItem(node))
+            self.fileList.addTopLevelItem(generateFileListItem(node))
+
+        allItems = self.fileList.findItems("*", Qt.MatchWrap | Qt.MatchWildcard | Qt.MatchRecursive)
+        for item in allItems:
+            item.setExpanded(True)
+            if item.text(0) == selectedItemName:
+                # print(item.text(0) + "   " + selectedItemName + "   match found")
+                self.fileList.setCurrentItem(item)
+
 
     def addFileHandler(self):
 
@@ -907,17 +932,16 @@ class mySig(QObject):
         self.refresh.emit()
 
 
-def generateItem(node):
+def generateFileListItem(node):
     if node.isDir:
         item = QTreeWidgetItem([node.nodeName, "", "", "", ""])
         for child in node.childs.values():
-            item.addChild(generateItem(child))
+            item.addChild(generateFileListItem(child))
     else:
         filesize, syncStatus = getFileLabels(node.file)
         item = QTreeWidgetItem([node.file.filename, node.file.filepath, filesize,
                                 node.file.getLastModifiedTime(), syncStatus])
 
-    item.setExpanded(True)
     return item
 
 
