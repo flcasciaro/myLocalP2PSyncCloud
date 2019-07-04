@@ -1,8 +1,10 @@
-"""This code handles file-sharing operations in myP2PSync peers.
-@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""
+Project: myP2PSync
+This code handles file-sharing operations in myP2PSync peers.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
+"""
 
 import os
-import shutil
 import socket
 import sys
 import time
@@ -68,7 +70,10 @@ def sendChunk(message, thread):
     fileNode = peerCore.localFileTree.getGroup(groupName).findNode(fileTreePath)
 
     if fileNode is not None:
+
         file = fileNode.file
+        newFilePath = getNewFilePath(file)
+
         if file.timestamp == timestamp:
             if chunkID in file.availableChunks:
 
@@ -78,48 +83,32 @@ def sendChunk(message, thread):
                     chunkSize = CHUNK_SIZE
 
                 if file.status == "S":
-                    # peer has the whole file -> open and send it
+                    # peer has the whole file
+                    filepath = file.filepath
+                else:
+                    # file status is 'D'
+                    # peer has still the temporary version of the file
+                    # where it is collecting chunks
+                    filepath = newFilePath
+
+                try:
+                    f = open(filepath, 'rb')
+                    offset = chunkID * CHUNK_SIZE
+                    f.seek(offset)
+
+                    dataChunk = f.read(chunkSize)
 
                     try:
-                        f = open(file.filepath, 'rb')
-                        offset = chunkID * CHUNK_SIZE
-                        f.seek(offset)
+                        error = False
+                        answer = "OK - I'M SENDING IT"
+                        networking.mySend(thread.clientSock, answer)
+                        networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
+                    except (socket.timeout, RuntimeError):
+                        print("Error while sending chunk {}".format(chunkID))
 
-                        dataChunk = f.read(chunkSize)
-
-                        try:
-                            error = False
-                            answer = "OK - I'M SENDING IT"
-                            networking.mySend(thread.clientSock, answer)
-                            networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
-                        except (socket.timeout, RuntimeError):
-                            print("Error while sending chunk {}".format(chunkID))
-
-                        f.close()
-                    except FileNotFoundError:
-                        answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
-
-                if file.status == "D":
-                    # peer is still downloading the file -> send chunk from tmp file
-
-                    try:
-                        chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
-
-                        f = open(chunkPath, 'rb')
-
-                        dataChunk = f.read(chunkSize)
-
-                        try:
-                            error = False
-                            answer = "OK - I'M SENDING IT"
-                            networking.mySend(thread.clientSock, answer)
-                            networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
-                        except (socket.timeout, RuntimeError):
-                            print("Error while sending chunk {}".format(chunkID))
-
-                        f.close()
-                    except FileNotFoundError:
-                        answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
+                    f.close()
+                except FileNotFoundError:
+                    answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
             else:
                 answer = "ERROR - UNAVAILABLE CHUNK"
         else:
@@ -192,7 +181,7 @@ def downloadFile(file, key):
     file.initDownload()
 
     unavailable = 0
-    tmpDirPath = getTmpDirPath(file)
+    newFilePath = getNewFilePath(file)
 
     # ask for the missing peers while the missing list is not empty
     while len(file.missingChunks) > 0 and unavailable < MAX_UNAVAILABLE:
@@ -344,7 +333,7 @@ def downloadFile(file, key):
             threadChunksList = threadInfo[i]["chunksList"]
             peerPublicAddr = threadInfo[i]["peer"]["address"]
 
-            t = Thread(target=getChunks, args=(file, threadChunksList, peerPublicAddr, tmpDirPath))
+            t = Thread(target=getChunks, args=(file, threadChunksList, peerPublicAddr, newFilePath))
             threads.append(t)
             t.start()
 
@@ -369,16 +358,13 @@ def downloadFile(file, key):
 
     else:
         # all chunks have been collected
-        if mergeChunks(file, tmpDirPath):
-            file.status = "S"
-            # force OS file timestamp to be file.timestamp
-            os.utime(file.filepath, (file.timestamp, file.timestamp))
-            file.iHaveIt()
-            print("Synchronization of {} successfully terminated".format(file.filename))
-            exitStatus = syncScheduler.SYNC_SUCCESS
-        else:
-            # merge fails
-            exitStatus = syncScheduler.SYNC_FAILED
+        endDownload(file, newFilePath)
+        file.status = "S"
+        # force OS file timestamp to be file.timestamp
+        os.utime(file.filepath, (file.timestamp, file.timestamp))
+        file.iHaveIt()
+        print("Synchronization of {} successfully terminated".format(file.filename))
+        exitStatus = syncScheduler.SYNC_SUCCESS
 
     # this will terminate checkThread
     syncScheduler.stopSyncThreadIfRunning(key, exitStatus)
@@ -410,7 +396,7 @@ def getChunksList(file, peerAddr):
         return chunksList
 
 
-def getChunks(file, chunksList, peerAddr, tmpDirPath):
+def getChunks(file, chunksList, peerAddr, newFilepath):
 
 
     s = networking.createConnection(peerAddr)
@@ -447,17 +433,11 @@ def getChunks(file, chunksList, peerAddr, tmpDirPath):
 
         try:
             peerCore.pathCreationLock.acquire()
-            if not os.path.exists(tmpDirPath):
-                print("Creating the path: " + tmpDirPath)
-                os.makedirs(tmpDirPath)
+            f = open(newFilepath, 'wb')
             peerCore.pathCreationLock.release()
 
-            chunkPath = tmpDirPath + "chunk" + str(chunkID)
-
-            f = open(chunkPath, 'wb')
-
+            f.seek(chunkID*CHUNK_SIZE)
             f.write(data)
-
             f.close()
 
             file.missingChunks.remove(chunkID)
@@ -469,50 +449,20 @@ def getChunks(file, chunksList, peerAddr, tmpDirPath):
     networking.closeConnection(s, peerCore.peerID)
 
 
-def mergeChunks(file, tmpDirPath):
-    """
+def endDownload(file, newFilepath):
 
-    :param file:
-    :param tmpDirPath:
-    :return: boolean
-    """
-
-    newFilePath = getNewFilePath(file)
-
-    # merge chunks writing each chunks in the new file
-    try:
-
-        dirPath, __ = os.path.split(newFilePath)
+    if file.filesize == 0:
+        # create an empty file
         peerCore.pathCreationLock.acquire()
-        if not os.path.exists(dirPath):
-            print("Creating the path: " + dirPath)
-            os.makedirs(dirPath)
+        f = open(newFilepath, 'wb')
+        f.close()
         peerCore.pathCreationLock.release()
-
-        f1 = open(newFilePath, 'wb')
-        if file.filesize > 0:
-            for chunkID in range(0, file.chunksNumber):
-                chunkPath = tmpDirPath + "chunk" + str(chunkID)
-                with open(chunkPath, 'rb') as f2:
-                    f1.write(f2.read())
-        f1.close()
-    except FileNotFoundError:
-        print("Error while creating the new file")
-        return False
 
     # remove previous version of the file (if any)
     if os.path.exists(file.filepath):
         os.remove(file.filepath)
 
-    os.rename(newFilePath, file.filepath)
-
-    # remove chunks directory
-    if file.filesize > 0:
-        shutil.rmtree(tmpDirPath)
-
-    print("Chunks of {} successfully merged".format(file.filename))
-
-    return True
+    os.rename(newFilepath, file.filepath)
 
 
 def getNewFilePath(file):
@@ -543,29 +493,3 @@ def getNewFilePath(file):
         newFilePath += splitFilename[1]
 
     return newFilePath
-
-
-def getTmpDirPath(file):
-    """
-    Build the new temporary directory paths
-               ex.
-               file.filepath = home/prova.txt
-               filenameWoE = prova
-               fileExtension = splitFilename[1] = txt
-               dirPath = home/
-               tmpDirPath = home/prova_tmp/
-    :param file: File object
-    :return: string representing the path
-    """
-
-    # split filepath into directoryPath and filename
-    (dirPath, filename) = os.path.split(file.filepath)
-    # remove extension from the filename (if any)
-    # WoE stands for Without Extension
-    splitFilename = filename.split(".")
-    filenameWoE = splitFilename[0]
-
-    # directory path where the chunks have been stored
-    tmpDirPath = dirPath + "/" + filenameWoE + "_tmp/"
-
-    return tmpDirPath
