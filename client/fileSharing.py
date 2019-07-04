@@ -550,10 +550,10 @@ def getTmpDirPath(file):
     Build the new temporary directory paths
                ex.
                file.filepath = home/prova.txt
-               filenameWE = prova
+               filenameWoE = prova
                fileExtension = splitFilename[1] = txt
                dirPath = home/
-               tmpDirPath = home/prova_new_tmp/
+               tmpDirPath = home/prova_tmp/
     :param file: File object
     :return: string representing the path
     """
