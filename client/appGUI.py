@@ -722,7 +722,7 @@ class myP2PSync(QMainWindow):
 
                 if oldTimestamp < file.timestamp:
                     files.append((file, file.timestamp))
-                    if peerCore.syncFiles(self.groupName, files):
+                    if peerCore.updateFiles(self.groupName, files):
                         self.addLogMessage("File {} synchronized".format(file.filename))
                         self.loadFileManager()
                     else:
@@ -763,7 +763,7 @@ class myP2PSync(QMainWindow):
 
                 if len(files) > 0:
 
-                    if peerCore.syncFiles(self.groupName, files):
+                    if peerCore.updateFiles(self.groupName, files):
                         self.addLogMessage("Dir {} synchronized".format(dirName))
                         self.loadFileManager()
                     else:
@@ -808,7 +808,7 @@ class myP2PSync(QMainWindow):
                     files.append((file, file.timestamp))
 
             if len(files) > 0:
-                if peerCore.syncFiles(self.groupName, files):
+                if peerCore.updateFiles(self.groupName, files):
                     self.addLogMessage("All files have been synchronized")
                     self.loadFileManager()
                 else:

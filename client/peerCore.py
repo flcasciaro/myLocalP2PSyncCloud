@@ -542,8 +542,13 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
             myFile.syncLock.release()
 
         else:
+
             # file not found locally, add it
-            path = scriptPath + "filesSync/" + groupName
+            path = scriptPath + "filesSync/" + groupName + '/'
+
+            tmp, filename = os.path.split(treePath)
+            filepath = path + "/" + treePath
+            path += tmp
 
             # create the path if it doesn't exist
             pathCreationLock.acquire()
@@ -551,9 +556,6 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
                 print("Creating the path: " + path)
                 os.makedirs(path)
             pathCreationLock.release()
-
-            filename = treePath.split("/")[-1]
-            filepath = path + "/" + treePath
 
             # create file Object
             file = fileManagement.File(groupName=groupName, treePath=treePath,
@@ -746,7 +748,7 @@ def removeFiles(groupName, treePaths):
         return True
 
 
-def syncFiles(groupName, files):
+def updateFiles(groupName, files):
     """
     Update a list of file in the synchronization group,
     making them ready to be acknowledged from other peers.
