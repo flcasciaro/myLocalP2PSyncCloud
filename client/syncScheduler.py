@@ -275,7 +275,12 @@ def addedFiles(message):
             if peerCore.groupsList[groupName]["status"] == "ACTIVE":
                 for fileInfo in filesInfo:
 
-                    path = peerCore.scriptPath + "filesSync/" + groupName
+                    path = peerCore.scriptPath + "filesSync/" + groupName + '/'
+
+                    treePath = fileInfo["treePath"]
+                    tmp, filename = os.path.split(treePath)
+                    filepath = path + "/" + treePath
+                    path += tmp
 
                     # create the path if it doesn't exist
                     peerCore.pathCreationLock.acquire()
@@ -283,10 +288,6 @@ def addedFiles(message):
                         print("Creating the path: " + path)
                         os.makedirs(path)
                     peerCore.pathCreationLock.release()
-
-                    treePath = fileInfo["treePath"]
-                    filename = treePath.split("/")[-1]
-                    filepath = path + "/" + treePath
 
                     # create file Object
                     file = fileManagement.File(groupName=groupName, treePath=treePath,
