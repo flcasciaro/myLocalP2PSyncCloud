@@ -229,7 +229,7 @@ class SocketServerThread(Thread):
             if self.clientSock:
                 # Check if the client is still connected and if data is available:
                 try:
-                    rdyRead, rdyWrite, sockErr = select.select([self.clientSock, ], [self.clientSock, ], [], 5)
+                    rdyRead, __, __ = select.select([self.clientSock, ], [self.clientSock, ], [], 5)
                 except select.error:
                     print('[Thr {}] Select() failed on socket with {}'.format(self.number, self.clientAddr))
                     self.stop()

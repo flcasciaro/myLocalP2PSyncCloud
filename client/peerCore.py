@@ -435,11 +435,6 @@ def startPeer():
     global myPortNumber
     myPortNumber = server.port
 
-    # if ipaddress.ip_address(myIP).is_private:
-    #     # private address: enable port forwarding
-    #     cmd = "upnpc -a {} {} {} TCP > {}upnpcLog.txt".format(myIP, myPortNumber, myPortNumber, scriptPath)
-    #     os.system(cmd)
-
     s = networking.createConnection(serverZTAddr)
     if s is None:
         return None
@@ -449,19 +444,11 @@ def startPeer():
     try:
         message = str(peerID) + " " + "HERE {} {}".format(zeroTierIP, myPortNumber)
         networking.mySend(s, message)
-        # get reply into an "ignore" variable
-        answer = networking.myRecv(s)
+        __ = networking.myRecv(s)
         networking.closeConnection(s, peerID)
     except (socket.timeout, RuntimeError):
         networking.closeConnection(s, peerID)
         return None
-
-    if answer.split(" ", 1)[0] == 'ERROR':
-        print("Received from the server: ", answer)
-        return None
-    else:
-        global publicIP
-        publicIP = answer.split(" ", 2)[2]
 
     return server
 
