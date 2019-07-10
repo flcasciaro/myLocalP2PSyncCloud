@@ -9,7 +9,7 @@ import os
 import socket
 import sys
 import time
-from random import randint, random
+from random import randint, shuffle
 from threading import Thread
 
 import peerCore
@@ -284,14 +284,11 @@ def downloadFile(file, key):
 
         # random.shuffle() guarantees that when the number of active peers
         # is bigger than MAX_PEERS different peers are selected in different iterations
-        indices = range(0, len(activePeers))
-        random.shuffle(indices)
+        shuffle(activePeers)
 
         # ask each peer which chunks it has and collect informations
         # in order to apply the rarest-first approach
-        for i in indices:
-
-            peer = activePeers[i]
+        for peer in activePeers:
 
             # limits the number of peers considered
             if j == MAX_PEERS:
