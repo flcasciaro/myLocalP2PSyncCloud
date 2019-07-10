@@ -581,18 +581,17 @@ def addFiles(groupName, filepaths, directory):
     filesInfoWFP = list()
 
     if directory == "":
-        # it's just a single file
-        filepath = filepaths.pop()
-        fileInfo = dict()
-        # split filepath into directoryPath and filename, saving only the latter
-        __, fileInfo["treePath"] = os.path.split(filepath)
-        fileInfo["filepath"] = filepath
-        fileInfo["filesize"], fileInfo["timestamp"] = fileManagement.getFileStat(filepath)
-        filesInfo.append(fileInfo)
+        for filepath in filepaths:
+            fileInfo = dict()
+            # split filepath into directoryPath and filename, saving only the latter
+            __, fileInfo["treePath"] = os.path.split(filepath)
+            fileInfo["filepath"] = filepath
+            fileInfo["filesize"], fileInfo["timestamp"] = fileManagement.getFileStat(filepath)
+            filesInfo.append(fileInfo)
 
-        fileInfoWFP = fileInfo.copy()
-        del fileInfoWFP["filepath"]
-        filesInfoWFP.append(fileInfoWFP)
+            fileInfoWFP = fileInfo.copy()
+            del fileInfoWFP["filepath"]
+            filesInfoWFP.append(fileInfoWFP)
 
     else:
         # it's a directory
@@ -629,6 +628,7 @@ def addFiles(groupName, filepaths, directory):
 
     if answer.split(" ", 1)[0] == "ERROR":
         # server replied with an error message: return False
+        print("Received from the server: ", answer)
         return False
     else:
 

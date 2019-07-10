@@ -596,28 +596,33 @@ class myP2PSync(QMainWindow):
     def addFileHandler(self):
 
         dlg = QFileDialog()
-        file = dlg.getOpenFileName(self, "Add file to the group", "/")
-        if file[0] == "":
+        files = dlg.getOpenFileNames(self, "Add file to the group", "/")
+        if len(files[0]) == 0:
             # no file picked
             return
 
-        # get only the filename (remove dir path)
-        filename = file[0].split("/")[-1]
+        filepaths = list()
+        filenames = ""
 
-        if len(filename.split(" ")) == 1:
-            # convert to a "UNIX-like" path
-            filepath = file[0].replace("\\", "/")
+        for file in files[0]:
+            # get only the filename (remove dir path)
+            filename = file.split("/")[-1]
 
-            filepaths = list()
-            filepaths.append(filepath)
+            if len(filename.split(" ")) == 1:
+                # convert to a "UNIX-like" path
+                filepath = file.replace("\\", "/")
+                filepaths.append(filepath)
+                filenames = filenames + " " + filename + ","
+            else:
+                QMessageBox.about(self, "Error", "Cannot add file {}.. \
+                                    filename cannot contains spaces!".format(filename))
 
+        if len(filepaths) > 0:
             if peerCore.addFiles(self.groupName, filepaths, directory=""):
                 self.loadFileManager()
-                self.addLogMessage("File {} added to group {}".format(filename, self.groupName))
+                self.addLogMessage("Files {} added to group {}".format(filenames[:-1], self.groupName))
             else:
-                QMessageBox.about(self, "Error", "Cannot add the selected file!")
-        else:
-            QMessageBox.about(self, "Error", "Cannot add the selected file.. filename cannot contains spaces!")
+                QMessageBox.about(self, "Error", "Cannot add the selected files!")
 
     def addDirHandler(self):
 
