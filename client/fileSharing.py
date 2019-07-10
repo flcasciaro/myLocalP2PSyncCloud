@@ -297,7 +297,7 @@ def downloadFile(file, key):
 
             # ask chunks list and record RTT associated to the peer
             startRequest = time.time()
-            chunksList = getChunksList(file, (peer["IP"], peer["port"]))
+            chunksList = getChunksList(file, peer["address"])
             endRequest = time.time()
 
             if chunksList is not None:
@@ -442,7 +442,7 @@ def downloadFile(file, key):
         # start threads
         for i in range(0, busyThreads):
             threadChunksList = threadInfo[i]["chunksList"]
-            peerAddr = (threadInfo[i]["peer"]["IP"], threadInfo[i]["peer"]["port"])
+            peerAddr = threadInfo[i]["peer"]["address"]
 
             t = Thread(target=getChunks, args=(file, threadChunksList, peerAddr, newFilePath))
             threads.append(t)
