@@ -18,6 +18,9 @@ SIZE_LENGTH = 16
 BUFSIZE = 4096
 TIMEOUT = 3.0
 
+# type of encoding used in order to map string to bytes
+ENCODING_TYPE = 'latin-1'
+
 
 def getMyIP():
     """
@@ -141,7 +144,7 @@ def mySend(sock, data):
     sock.settimeout(TIMEOUT)
 
     # data is a string message: it needs to be converted to bytes
-    data = str(data).encode('utf-8')
+    data = str(data).encode(ENCODING_TYPE)
 
     # get size of the message
     size = len(data)
@@ -150,7 +153,7 @@ def mySend(sock, data):
     # e.g. size = 123
     #      strSize = 0000000000000123
     strSize = str(size).zfill(SIZE_LENGTH)
-    strSize = strSize.encode('utf-8')
+    strSize = strSize.encode(ENCODING_TYPE)
 
     # send the size of the data
     totalSent = 0
@@ -200,7 +203,7 @@ def myRecv(sock):
         if chunk == '':
             raise RuntimeError("sock connection broken")
         bytesRec += len(chunk)
-        chunks.append(chunk.decode('utf-8'))
+        chunks.append(chunk.decode(ENCODING_TYPE))
 
     # eventually join chunks
     dataSize = int(''.join(chunks))
@@ -217,7 +220,7 @@ def myRecv(sock):
         if chunk == '':
             raise RuntimeError("sock connection broken")
         bytesRec += len(chunk)
-        chunks.append(chunk.decode('utf-8'))
+        chunks.append(chunk.decode(ENCODING_TYPE))
 
     # eventually join chunks
     data = ''.join(chunks)
