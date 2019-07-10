@@ -208,6 +208,8 @@ def startFileSync(file, taskTimestamp):
                 # wait for other threads termination (if any)
                 time.sleep(1)
                 del file
+                syncScheduler.removeSyncThread(key)
+                return
 
             elif state == syncScheduler.FILE_UPDATED:
                 # wait for other threads termination (if any)
