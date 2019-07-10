@@ -9,7 +9,7 @@ import os
 import socket
 import sys
 import time
-from random import randint, shuffle
+from random import randint, random, shuffle
 from threading import Thread
 
 import peerCore
@@ -303,7 +303,9 @@ def downloadFile(file, key):
 
                 j += 1
                 peer["RTT"] = endRequest - startRequest
-                if peer["RTT"] < minRTT or minRTT is None:
+                if minRTT is None:
+                    minRTT = peer["RTT"]
+                elif peer["RTT"] < minRTT:
                     minRTT = peer["RTT"]
 
                 # clean the list from already available chunks
