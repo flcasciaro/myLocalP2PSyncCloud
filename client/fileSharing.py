@@ -284,7 +284,9 @@ def downloadFile(file, key):
 
         # random.shuffle() guarantees that when the number of active peers
         # is bigger than MAX_PEERS different peers are selected in different iterations
-        for peer in random.shuffle(activePeers):
+        random.shuffle(activePeers)
+
+        for peer in activePeers:
             # ask each peer which chunks it has and collect informations
             # in order to apply the rarest-first approach
 
