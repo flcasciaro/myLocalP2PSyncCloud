@@ -35,6 +35,13 @@ MAX_CHUNKS_PER_THREAD = 50
 # time between two consecutive checks on the synchronization thread status
 CHECK_PERIOD = 1.0
 
+# parameters for chunks random discard
+INITIAL_TRESHOLD = 0.5
+TRESHOLD_INC_STEP = 0.02
+
+# maximum number of getChunk request leading to an error allowed before to quit a connection
+MAX_CONSECUTIVE_ERRORS = 3
+
 
 def sendChunksList(message, thread):
     """
@@ -354,7 +361,7 @@ def downloadFile(file, key):
             threshold = 1
         else:
             # use random discard
-            threshold = 0.7
+            threshold = INITIAL_TRESHOLD
 
         # check synchronization status
         if file.stopSync:
@@ -457,7 +464,7 @@ def downloadFile(file, key):
             threads[i].join()
 
         # decrease discard probability
-        threshold += 0.1
+        threshold += TRESHOLD_INC_STEP
 
         file.setProgress()
 
@@ -540,10 +547,15 @@ def getChunks(file, chunksList, peerAddr, newFilepath):
     if s is None:
         return
 
+    consecutiveErrors = 0
+
     for chunkID in chunksList:
 
         # check eventual stop forced from main thread
         if file.stopSync:
+            break
+
+        if consecutiveErrors == MAX_CONSECUTIVE_ERRORS:
             break
 
         # evaluate chunks size
@@ -559,8 +571,11 @@ def getChunks(file, chunksList, peerAddr, newFilepath):
             networking.mySend(s, message)
             answer = networking.myRecv(s)
         except (socket.timeout, RuntimeError, ValueError):
-            print("Error receiving chunk {}".format(chunkID))
+            consecutiveErrors += 1
+            print("Error receiving message about chunk {}".format(chunkID))
             continue
+
+        consecutiveErrors = 0
 
         if answer.split(" ")[0] == "ERROR":
             # error: consider next chunks
@@ -570,6 +585,7 @@ def getChunks(file, chunksList, peerAddr, newFilepath):
             # success: get the chunk
             data = networking.recvChunk(s, chunkSize)
         except (socket.timeout, RuntimeError):
+            consecutiveErrors += 1
             print("Error receiving chunk {}".format(chunkID))
             continue
 
