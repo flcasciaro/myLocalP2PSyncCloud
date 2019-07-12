@@ -136,7 +136,7 @@ def getServerZTAddr():
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -161,7 +161,7 @@ def retrieveGroups():
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -195,7 +195,7 @@ def restoreGroup(groupName):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -257,7 +257,7 @@ def joinGroup(groupName, token):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -303,7 +303,7 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -343,7 +343,7 @@ def changeRole(groupName, targetPeerID, action):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -383,7 +383,7 @@ def retrievePeers(groupName, selectAll):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return None
 
@@ -446,7 +446,7 @@ def startPeer():
         networking.mySend(s, message)
         __ = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return None
 
@@ -464,7 +464,7 @@ def initGroupLocalFileTree(groupName):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return
 
@@ -622,7 +622,7 @@ def addFiles(groupName, filepaths, directory):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -665,7 +665,7 @@ def addFiles(groupName, filepaths, directory):
                 networking.mySend(s, message)
                 __ = networking.myRecv(s)
                 networking.closeConnection(s, peerID)
-            except (socket.timeout, RuntimeError):
+            except (socket.timeout, RuntimeError, ValueError):
                 networking.closeConnection(s, peerID)
                 continue
 
@@ -690,7 +690,7 @@ def removeFiles(groupName, treePaths):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -728,7 +728,7 @@ def removeFiles(groupName, treePaths):
                 networking.mySend(s, message)
                 __ = networking.myRecv(s)
                 networking.closeConnection(s, peerID)
-            except (socket.timeout, RuntimeError):
+            except (socket.timeout, RuntimeError, ValueError):
                 networking.closeConnection(s, peerID)
                 continue
 
@@ -765,7 +765,7 @@ def updateFiles(groupName, files):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -813,7 +813,7 @@ def updateFiles(groupName, files):
                 networking.mySend(s, message)
                 __ = networking.myRecv(s)
                 networking.closeConnection(s, peerID)
-            except (socket.timeout, RuntimeError):
+            except (socket.timeout, RuntimeError, ValueError):
                 networking.closeConnection(s, peerID)
                 continue
 
@@ -846,7 +846,7 @@ def leaveGroup(groupName):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -882,7 +882,7 @@ def disconnectGroup(groupName):
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 
@@ -919,7 +919,7 @@ def peerExit():
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         networking.closeConnection(s, peerID)
         return False
 

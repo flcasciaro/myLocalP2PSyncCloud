@@ -30,7 +30,7 @@ MAX_PEERS = 10
 
 # parameters used to download the file
 MAX_THREADS = 5
-MAX_CHUNKS_PER_THREAD = 20
+MAX_CHUNKS_PER_THREAD = 50
 
 # time between two consecutive checks on the synchronization thread status
 CHECK_PERIOD = 1.0
@@ -72,8 +72,8 @@ def sendChunksList(message, thread):
 
     try:
         networking.mySend(thread.clientSock, answer)
-    except (socket.timeout, RuntimeError):
-        return
+    except (socket.timeout, RuntimeError, ValueError):
+        print("Error while sending: ", answer)
 
 
 def sendChunk(message, thread):
@@ -130,7 +130,7 @@ def sendChunk(message, thread):
                         networking.mySend(thread.clientSock, answer)
                         # send chunk
                         networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
-                    except (socket.timeout, RuntimeError):
+                    except (socket.timeout, RuntimeError, ValueError):
                         print("Error while sending chunk {}".format(chunkID))
 
                     f.close()
@@ -145,7 +145,10 @@ def sendChunk(message, thread):
 
     if error:
         # send error answer: other peer will not wait for the chunk
-        networking.mySend(thread.clientSock, answer)
+        try:
+            networking.mySend(thread.clientSock, answer)
+        except (socket.timeout, RuntimeError, ValueError):
+            print("Error while sending: ", answer)
 
 
 def startFileSync(file, taskTimestamp):
@@ -507,7 +510,7 @@ def getChunksList(file, peerAddr):
         networking.mySend(s, message)
         data = networking.myRecv(s)
         networking.closeConnection(s, peerCore.peerID)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         print("Error while getting chunks list")
         networking.closeConnection(s, peerCore.peerID)
         return None
@@ -555,7 +558,7 @@ def getChunks(file, chunksList, peerAddr, newFilepath):
                       "CHUNK {} {} {} {}".format(file.groupName, file.treePath, file.timestamp, chunkID)
             networking.mySend(s, message)
             answer = networking.myRecv(s)
-        except (socket.timeout, RuntimeError):
+        except (socket.timeout, RuntimeError, ValueError):
             print("Error receiving chunk {}".format(chunkID))
             continue
 

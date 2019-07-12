@@ -121,7 +121,7 @@ def closeConnection(s, peerID):
         mySend(s, message)
         # get the answer into an "ignore" variable
         __ = myRecv(s)
-    except (socket.timeout, RuntimeError):
+    except (socket.timeout, RuntimeError, ValueError):
         pass
 
     # close the socket
@@ -206,7 +206,10 @@ def myRecv(sock):
         chunks.append(chunk.decode(ENCODING_TYPE))
 
     # eventually join chunks
-    dataSize = int(''.join(chunks))
+    try:
+        dataSize = int(''.join(chunks))
+    except ValueError:
+        raise ValueError
 
     # read data until dataSize bytes have been received
     chunks = list()
