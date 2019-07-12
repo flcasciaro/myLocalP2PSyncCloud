@@ -958,7 +958,7 @@ def getFileLabels(file):
     elif file.filesize < 1024 * 1048576:
         filesize = str(int(file.filesize / 1048576)) + " MB"
     else:
-        filesize = str(file.filesize / (1024 * 1048576)) + " GB"
+        filesize = str(int(file.filesize / (1024 * 1048576))) + " GB"
 
     if file.status == "S":
         syncStatus = "Synchronized"
