@@ -16,7 +16,7 @@ zeroTierFile = "tmpZerotier.txt"
 # constants used in send/receive data over sockets
 SIZE_LENGTH = 16
 BUFSIZE = 4096
-TIMEOUT = 3.0
+TIMEOUT = 5.0
 
 # type of encoding used in order to map string to bytes
 ENCODING_TYPE = 'latin-1'
