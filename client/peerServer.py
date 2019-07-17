@@ -1,5 +1,8 @@
-"""This code handles the server functions of a peer in myP2PSync.
-@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""
+Project: myP2PSync
+This code handles the server functions of a peer in myP2PSync.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
+"""
 
 import os
 import select

@@ -1,4 +1,5 @@
 """
+Project: myP2PSync
 This code manages all the main functions of myP2PSync clients.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
 """
@@ -217,7 +218,7 @@ def restoreGroup(groupName):
             localFileTree.addGroup(fileSystem.Node(groupName, True))
 
         # initialize file list for the group
-        startSync(groupName)
+        startGroupSync(groupName)
 
         return True
 

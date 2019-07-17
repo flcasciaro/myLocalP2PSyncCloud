@@ -1,5 +1,8 @@
-"""This code handles file-related operations in myP2PSync peers.
-@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""
+Project: myP2PSync
+This code handles file-related operations in myP2PSync peers.
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
+"""
 
 import datetime
 import math
