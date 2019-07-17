@@ -93,7 +93,7 @@ def createConnection(addr):
     """
 
     # cast port number to integer
-    addr = (addr[0],int(addr[1]))
+    addr = (addr[0], int(addr[1]))
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.settimeout(5)

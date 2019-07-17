@@ -1,7 +1,6 @@
 """This code handles file-related operations in myP2PSync peers.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
-
 import datetime
 import math
 import os
@@ -9,48 +8,54 @@ import stat
 from threading import Lock
 
 # chunk size is fixed and equal for all the file
-CHUNK_SIZE = 1048576          #    1 MB
+CHUNK_SIZE = 1048576  # 1 MB
+
 
 class File:
+    """
+    Class used to represent a sync file.
+    """
 
     def __init__(self, groupName, treePath, filename, filepath, filesize, timestamp, status, previousChunks):
 
         # main properties (retrieved and stored in the session file)
         self.groupName = groupName
-        self.treePath = treePath                # path in the fileTree used to reach the fileNode   e.g. dir1/dir2/file.txt
-        self.filename = filename                # name of the file                                  e.g. file.txt
-        self.filepath = filepath                # real path of the file                             e.g. C://home/dir1/dir2/file.txt
-        self.filesize = int(filesize)
-        self.timestamp = int(timestamp)
-        self.status = status
-        self.previousChunks = previousChunks
+        self.treePath = treePath  # path in the fileTree used to reach the fileNode   e.g. dir1/dir2/file.txt
+        self.filename = filename  # name of the file                                  e.g. file.txt
+        self.filepath = filepath  # real path of the file                             e.g. C://home/dir1/dir2/file.txt
+        self.filesize = int(filesize)  # filesize as number of bytes
+        self.timestamp = int(timestamp)  # version of the file
+        self.status = status  # status can be 'S' (synchronized) or 'D' (download, requires synchronization)
+        self.previousChunks = previousChunks  # list of chunks already collected of the file after a partial sync process
 
         # properties used for the file-sharing
-        self.lastChunkSize = 0
-        self.chunksNumber = 0
-        self.missingChunks = None
-        self.availableChunks = None
-        self.progress = 0
+        self.lastChunkSize = 0  # size of the last chunk, can be different from CHUNK_SIZE
+        self.chunksNumber = 0  # number of chunks that compose the file
+        self.missingChunks = None  # list of chunks not retrieved yet
+        self.availableChunks = None  # list of chunks already retrieved
+        self.progress = 0  # synchronization progress: 0% (syncStart) -> 100% (syncComplete)
 
-        # used to lock the sync: avoid overlapping of sync process
-        self.syncLock = Lock()
-        self.stopSync = False
-
+        self.syncLock = Lock()  # internal lock of the File object: used to synchronize threads acting on the file
+        self.stopSync = False  # boolean value used to eventually stop a synchronization
 
     def getLastModifiedTime(self):
-        """convert the timestamp into a Y/M/D h/m/s datetime"""
+        """
+        Convert the timestamp property into a Y/M/D h/m/s datetime.
+        """
+
         lastModifiedTime = datetime.datetime.fromtimestamp(self.timestamp)
         return str(lastModifiedTime)
 
-
     def updateFileStat(self):
         """
-        Update file stats retrieving OS values if the file is not
-        currently used by asynchronization thread and if the local version
-        is the newest of the system (another peer can already have uploaded
-        a newer version).
+        Update file stats retrieving OS values.
+        Doesn't perform the action if the file is used by another sync thread
+        or if the OS timestamp is smaller than the property timestamp
+        (this last case can happens if another peer has already
+        pushed an updated version of the file)
         :return: void
         """
+
         if self.syncLock.acquire(blocking=False):
             try:
                 st = os.stat(self.filepath)
@@ -62,23 +67,32 @@ class File:
             except OSError:
                 print("File not found")
             self.syncLock.release()
-            
 
     def setProgress(self):
+        """
+        Set the progress property as function of the current status of a synchronization.
+        :return: void
+        """
         try:
-            self.progress = math.floor((len(self.availableChunks) / self.chunksNumber) * 100 )
+            self.progress = math.floor((len(self.availableChunks) / self.chunksNumber) * 100)
         except ZeroDivisionError:
-            #empty file
+            # empty file
             self.progress = 100
 
-    def initDownload(self):
-        """initialize all the properties in order to work as peer (download/upload)"""
-        try:
-            self.chunksNumber = math.ceil(self.filesize / CHUNK_SIZE)
-            self.lastChunkSize = self.filesize % CHUNK_SIZE
-        except ZeroDivisionError:
+    def initSync(self):
+        """
+        Initialize properties useful to download and upload chunks of the file.
+        :return: void
+        """
+
+        if self.filesize == 0:
+            # empty file
             self.chunksNumber = 0
             self.lastChunkSize = 0
+        else:
+            # calculate chunks number and last chunks size
+            self.chunksNumber = math.ceil(self.filesize / CHUNK_SIZE)
+            self.lastChunkSize = self.filesize % CHUNK_SIZE
 
         self.missingChunks = list()
         self.availableChunks = list()
@@ -91,14 +105,19 @@ class File:
         self.previousChunks = list()
         self.setProgress()
 
-    def iHaveIt(self):
-        """initialize all the properties in order to work as a seed for the file"""
-        try:
-            self.chunksNumber = math.ceil(self.filesize / CHUNK_SIZE)
-            self.lastChunkSize = self.filesize % CHUNK_SIZE
-        except ZeroDivisionError:
+    def initSeed(self):
+        """
+        Initialize all the properties in order to work as a seed for the file
+        """
+
+        if self.filesize == 0:
+            # empty file
             self.chunksNumber = 0
             self.lastChunkSize = 0
+        else:
+            # calculate chunks number and last chunks size
+            self.chunksNumber = math.ceil(self.filesize / CHUNK_SIZE)
+            self.lastChunkSize = self.filesize % CHUNK_SIZE
 
         self.previousChunks = list()
         self.missingChunks = list()
@@ -110,11 +129,13 @@ class File:
 
 
 def getFileStat(filepath):
-    """This function returnes filesize and lastModifiedTime of a parameter filepath"""
+    """
+    Returns filesize and lastModifiedTime of a file with filepath equal to the argument
+    :param filepath: filepath string
+    :return: filesize value, lastModifiedTime timestamp
+    """
     try:
         st = os.stat(filepath)
         return st[stat.ST_SIZE], st[stat.ST_MTIME]
     except OSError:
         return None, None
-
-

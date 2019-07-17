@@ -112,7 +112,8 @@ def setServerCoordinates(coordinates):
     """
     Set server coordinates reading them from a string
     :param coordinates: is a string like <IPaddress>:<PortNumber>
-    :return: void
+    :return: boolean (True for success, False for failure due to a
+                        bad format of the cocrdinate string)
     """
 
     global serverAddr
@@ -123,6 +124,11 @@ def setServerCoordinates(coordinates):
         return False
 
 def getServerZTAddr():
+    """
+    Retrives the ZeroTier IP address from the server
+    and set the associated global variable serverZTAddr
+    :return: void
+    """
 
     global serverZTAddr
 
@@ -211,7 +217,7 @@ def restoreGroup(groupName):
             localFileTree.addGroup(fileSystem.Node(groupName, True))
 
         # initialize file list for the group
-        initGroupLocalFileTree(groupName)
+        startSync(groupName)
 
         return True
 
@@ -273,7 +279,7 @@ def joinGroup(groupName, token):
             localFileTree.addGroup(fileSystem.Node(groupName, True))
 
         # initialize file list for the group
-        initGroupLocalFileTree(groupName)
+        startGroupSync(groupName)
 
         return True
 
@@ -333,6 +339,7 @@ def changeRole(groupName, targetPeerID, action):
     :param action: can be ADD_MASTER, CHANGE_MASTER, TO_RW, TO_RO
     :return: boolean (True for success, False for any error)
     """
+
     s = networking.createConnection(serverZTAddr)
     if s is None:
         return False
@@ -417,11 +424,14 @@ def startPeer():
     schedulerThread.daemon = True
     schedulerThread.start()
     
+    # join the ZeroTier virtual network
     zeroTierIP = networking.joinNetwork()
 
+    # retrieve ZT IP address of the server
     getServerZTAddr()
 
-    # create a server thread passing only the IP address of the machine
+    # create a server thread which will ask on all the IP addresses
+    # including the ZeroTier IP address
     # port will be choose among available ones
     server = peerServer.Server()
     server.daemon = True
@@ -453,12 +463,23 @@ def startPeer():
     return server
 
 
-def initGroupLocalFileTree(groupName):
+def startGroupSync(groupName):
+    """
+    Starts eventual required synchronization in a specific group.
+    First of all, it retrieves files information from the server.
+    Information retrieved are compared to local information
+    belonging to a previous session of the group (if any)
+    in order to detect added/removed/updated files, reacting
+    properly to these events
+    :param groupName: selected group
+    :return: void
+    """
 
     s = networking.createConnection(serverZTAddr)
     if s is None:
         return
 
+    # retrieves information
     try:
         message = str(peerID) + " " + "GET_FILES {}".format(groupName)
         networking.mySend(s, message)
@@ -476,12 +497,15 @@ def initGroupLocalFileTree(groupName):
         # split operation in order to skip the initial 'OK -'
         updatedFileList = eval(answer.split(" ", 2)[2])
 
+    # call the function that evaluates the information retrieved from the server
+    # comparing them with local information about a previous session (if it exists)
     updateLocalGroupTree(groupName, localFileTree.getGroup(groupName), updatedFileList)
 
 
 def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
     """
-    Compare updatedFileList with localGroupTree in order to find differences.
+    Compare updatedFileList (retrieved from the server) with
+    localGroupTree (previous session info) in order to find differences.
     e.g. a file in the server has a bigger timestamp, peer need to synchronize it
     e.g. a file in the server is not present locally, peer need to add it and synchronize
     e.g. a file present locally is not present anymore in the server, peer need to remove it
@@ -499,26 +523,31 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
         treePath = fileInfo["treePath"]
         serverTreePaths.append(treePath)
 
+        # retrieve file node in the local tree
         localNode = localGroupTree.findNode(treePath)
 
         if localNode is not None:
+            # node found: file already added, verify if it needs a sync operation
 
             myFile = localNode.file
 
             myFile.syncLock.acquire()
 
             if myFile.timestamp == fileInfo["timestamp"] and myFile.status == "S":
+                # file is synchronized
                 if myFile.availableChunks is None:
                     # now the peer is able to upload chunks
-                    myFile.iHaveIt()
+                    myFile.initSeed()
 
             if myFile.timestamp == fileInfo["timestamp"] and myFile.status == "D":
+                # file have been not synchronized yet e.g. partial sync
                 myFile.status = "D"
                 task = syncScheduler.syncTask(groupName, myFile.treePath, myFile.timestamp)
                 syncScheduler.appendTask(task)
 
             elif myFile.timestamp < fileInfo["timestamp"]:
-                # my file version is not the last one
+                # local version is not the last one
+                # put file into a synchronization status
                 myFile.timestamp = int(fileInfo["timestamp"])
                 myFile.filesize = int(fileInfo["filesize"])
                 myFile.previousChunks = list()
@@ -552,12 +581,17 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
 
             localGroupTree.addNode(treePath, file)
 
+            # add synchronization task to the scheduler queue
             task = syncScheduler.syncTask(groupName, file.treePath, file.timestamp)
             syncScheduler.appendTask(task)
 
-    # check if there are removed files
+
+    # extract from the group file tree the list of all the file
     localTreePaths = localGroupTree.getFileTreePaths()
 
+    # check if there are removed files:
+    # file has been removed if it present in the local list
+    # but it's not present in server updated list
     for treePath in localTreePaths:
         if treePath not in serverTreePaths:
             localGroupTree.removeNode(treePath, True)
@@ -647,7 +681,7 @@ def addFiles(groupName, filepaths, directory):
 
             groupTree.addNode(treePath, file)
 
-            file.iHaveIt()
+            file.initSeed()
 
         # retrieve the list of active peers for the file
         activePeers = retrievePeers(groupName, selectAll=False)
@@ -786,7 +820,7 @@ def updateFiles(groupName, files):
             if file.syncLock.acquire(blocking=False):
                 # file not used by any sinchronization process
                 file.status = "S"
-                file.iHaveIt()
+                file.initSeed()
                 file.syncLock.release()
             else:
                 # file is currently in synchronization
@@ -819,19 +853,31 @@ def updateFiles(groupName, files):
 
         return True
 
-def waitSyncAndUpdate(file, timestamp):
 
+def waitSyncAndUpdate(file, timestamp):
+    """
+    Wait until the file lock is released and then update the file object
+    :param file: File object to update
+    :param timestamp: timestamp of the update operation
+    :return: void
+    """
+
+    # iterate until the lock is blocked
+    # sleeping for 0.5 second after a False check
     while not file.syncLock.acquire(blocking=False):
         time.sleep(0.5)
+
     if timestamp == file.timestamp:
+        # equals timestamp, operation still valid
         file.status = "S"
-        file.iHaveIt()
+        file.initSeed()
     file.syncLock.release()
 
 
 def leaveGroup(groupName):
     """
-    Leave a group by sending a request to the server
+    Leave a group by sending a request to the server.
+    Stop eventual running sync threads.
     :param groupName: name of the group that will be left
     :return: boolean (True for success, False for any error)
     """
@@ -867,7 +913,8 @@ def leaveGroup(groupName):
 
 def disconnectGroup(groupName):
     """
-    Disconnect the peer from the group (the group becomes restorable)    
+    Disconnect the peer from the group (the group becomes restorable).
+    Stop eventual running sync threads.
     :param groupName: name of the group from which the peer want to disconnect
     :return: boolean (True for success, False for any error)
     """
@@ -936,14 +983,10 @@ def peerExit():
         # stop every working synchronization thread
         syncScheduler.stopAllSyncThreads(syncScheduler.SYNC_STOPPED)
 
-        # if ipaddress.ip_address(myIP).is_private:
-        #     # disable port forwarding
-        #     cmd = 'upnpc -d {} TCP > {}upnpcLog.txt'.format(myPortNumber, scriptPath)
-        #     os.system(cmd)
-
+        # leave ZetoTier network
         networking.leaveNetwork()
 
-        # wait for thread termination
+        # wait for eventual sync threads termination
         time.sleep(3)
 
         # save session status

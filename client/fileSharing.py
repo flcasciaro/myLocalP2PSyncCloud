@@ -250,7 +250,7 @@ def downloadFile(file, key):
     """
 
     # initialize download parameters e.g. chunksNumber and chunks list
-    file.initDownload()
+    file.initSync()
 
     unavailable = 0
     newFilePath = getNewFilePath(file)
@@ -488,7 +488,7 @@ def downloadFile(file, key):
         file.status = "S"
         # force OS file timestamp to be file.timestamp
         os.utime(file.filepath, (file.timestamp, file.timestamp))
-        file.iHaveIt()
+        file.initSeed()
         print("Synchronization of {} successfully terminated".format(file.filename))
         print("Synchronization completed in {} seconds".format(math.floor(endTime - startTime)))
         exitStatus = syncScheduler.SYNC_SUCCESS
