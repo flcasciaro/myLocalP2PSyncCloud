@@ -83,7 +83,7 @@ def joinGroup(request, groups, peerID):
     :param request: "JOIN <groupName> <token>"
     :param groups: server data structure
     :param peerID: id of the peer
-    :return:
+    :return: string message
     """
 
     groupName = request.split()[1]
@@ -107,9 +107,16 @@ def joinGroup(request, groups, peerID):
 
 
 def createGroup(request, groups, groupsLock, peerID):
-    """This function allows a peer to create a new synchronization group
+    """
+    This function allows a peer to create a new synchronization group
     specifying the groupName and the tokens. The creator peer become also the master
-    of the new group."""
+    of the new group.
+    :param request: "CREATE <groupName> <tokenRW> <tokenRO>"
+    :param groups: server data structure
+    :param groupsLock: lock on groups
+    :param peerID: id of the peer
+    :return: string message
+    """
 
     newGroupName = request.split()[2]
     newGroupTokenRW = request.split()[4]

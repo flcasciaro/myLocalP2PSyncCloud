@@ -407,7 +407,7 @@ def retrievePeers(groupName, selectAll):
 
 def startPeer():
     """
-    Load previous session information.
+    Load previous session information about files.
     Start a server thread on a free port.
     Finally send coordinates to central server in order to be
     reachable from other peers.
