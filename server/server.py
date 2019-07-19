@@ -357,7 +357,6 @@ if __name__ == '__main__':
 
     # joins ZeroTier network
     zeroTierIP = networking.joinNetwork()
-    print("Server's ZeroTier IP: ", zeroTierIP)
 
     # run the server until CTRL+C interrupt
     server = Server(PORT_NUMBER)
