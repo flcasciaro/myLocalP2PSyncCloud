@@ -564,8 +564,6 @@ class myP2PSync(QMainWindow):
                 self.peersList.addTopLevelItem(item)
                 if peer["peerID"] == selectedItemName:
                     self.peersList.setCurrentItem(item)
-        else:
-            QMessageBox.about(self, "Error", "Error while retrieving list of peers!")
 
     def fillFileList(self):
 
@@ -591,7 +589,6 @@ class myP2PSync(QMainWindow):
             if item.text(0) == selectedItemName:
                 # print(item.text(0) + "   " + selectedItemName + "   match found")
                 self.fileList.setCurrentItem(item)
-
 
     def addFileHandler(self):
 
