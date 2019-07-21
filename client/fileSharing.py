@@ -596,7 +596,9 @@ def getChunks(file, chunksList, peerAddr, newFilepath):
             peerCore.pathCreationLock.release()
 
             # write chunk into new file
-            f.seek(chunkID*CHUNK_SIZE)
+            offset = chunkID * CHUNK_SIZE
+            f.seek(offset)
+            print("Writing in position ", offset)
             f.write(data)
             f.close()
 
