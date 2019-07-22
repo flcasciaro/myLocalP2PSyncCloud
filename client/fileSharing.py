@@ -187,14 +187,16 @@ def startFileSync(file, taskTimestamp):
     print("Starting synchronization of", file.filename)
     key = file.groupName + "_" + file.treePath
 
+    state = syncScheduler.getThreadState(key)
+    print("in sync: ", state)
+
     # start download thread
     t = Thread(target=downloadFile, args=(file, key))
     t.daemon = True
     t.start()
-    state = syncScheduler.getThreadState(key)
-    print("in sync: ", state)
 
     file.stopSync = False
+
     while True:
         # check thread status
         state = syncScheduler.getThreadState(key)
@@ -265,6 +267,7 @@ def downloadFile(file, key):
 
         # check synchronization status
         if file.stopSync:
+            print("download stopped")
             unavailable = MAX_UNAVAILABLE
             break
 
