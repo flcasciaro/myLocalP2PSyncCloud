@@ -40,7 +40,7 @@ INITIAL_TRESHOLD = 0.5
 TRESHOLD_INC_STEP = 0.02
 
 # maximum number of getChunk request leading to an error allowed before to quit a connection
-MAX_CONSECUTIVE_ERRORS = 3
+MAX_ERRORS = 3
 
 
 def sendChunksList(message, thread):
@@ -548,7 +548,7 @@ def getChunks(file, chunksList, peerAddr, newFilepath):
     if s is None:
         return
 
-    consecutiveErrors = 0
+    errors = 0
 
     for chunkID in chunksList:
 
@@ -556,7 +556,7 @@ def getChunks(file, chunksList, peerAddr, newFilepath):
         if file.stopSync:
             break
 
-        if consecutiveErrors == MAX_CONSECUTIVE_ERRORS:
+        if errors == MAX_ERRORS:
             break
 
         # evaluate chunks size
@@ -572,21 +572,20 @@ def getChunks(file, chunksList, peerAddr, newFilepath):
             networking.mySend(s, message)
             answer = networking.myRecv(s)
         except (socket.timeout, RuntimeError, ValueError):
-            consecutiveErrors += 1
+            errors += 1
             print("Error receiving message about chunk {}".format(chunkID))
             continue
 
-        consecutiveErrors = 0
-
         if answer.split(" ")[0] == "ERROR":
             # error: consider next chunks
+            errors += 1
             continue
 
         try:
             # success: get the chunk
             data = networking.recvChunk(s, chunkSize)
         except (socket.timeout, RuntimeError):
-            consecutiveErrors += 1
+            errors += 1
             print("Error receiving chunk {}".format(chunkID))
             continue
 
