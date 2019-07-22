@@ -96,6 +96,8 @@ class File:
             # calculate chunks number and last chunks size
             self.chunksNumber = math.ceil(self.filesize / CHUNK_SIZE)
             self.lastChunkSize = self.filesize % CHUNK_SIZE
+            if self.lastChunkSize == 0:
+                self.lastChunkSize = CHUNK_SIZE
 
         self.missingChunks = list()
         self.availableChunks = list()
@@ -121,6 +123,8 @@ class File:
             # calculate chunks number and last chunks size
             self.chunksNumber = math.ceil(self.filesize / CHUNK_SIZE)
             self.lastChunkSize = self.filesize % CHUNK_SIZE
+            if self.lastChunkSize == 0:
+                self.lastChunkSize = CHUNK_SIZE
 
         self.previousChunks = list()
         self.missingChunks = list()
