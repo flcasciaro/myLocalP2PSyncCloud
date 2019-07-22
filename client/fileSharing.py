@@ -719,7 +719,7 @@ def getTmpDirPath(file):
                filenameWE = prova
                fileExtension = splitFilename[1] = txt
                dirPath = home/
-               tmpDirPath = home/prova_new_tmp/
+               tmpDirPath = home/prova_tmp/
     :param file: File object
     :return: string representing the path
     """
