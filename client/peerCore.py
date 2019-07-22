@@ -1,6 +1,6 @@
 """
 Project: myP2PSync
-This code manages all the main functions of myP2PSync clients.
+This code manages all the main functions of myP2PSync peers.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
 """
 

@@ -1,5 +1,9 @@
-"""This code handles the client GUI of myP2PSync peers.
-@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+"""
+Project: myP2PSync
+This code handles the client of a myP2PSync user.
+Can be run using: (sudo) python3 pathTo/myP2PSyncClient.py
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
+"""
 
 import datetime
 import os

@@ -1,4 +1,7 @@
-"""This code handles the tracking server management.
+"""
+Project: myP2PSync
+This code runs a tracking server instance.
+Can be run using: (sudo) python3 pathTo/myP2PSyncServer.py
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
 
 import json
@@ -167,8 +170,8 @@ class Server:
         self.counter = 0  # Will be used to give a number to each thread, can be improved (re-assigning free number)
         self.__stop = False
 
-        """ Accept an incoming connection.
-        Start a new SocketServerThread that will handle the communication. """
+        # Accept an incoming connection.
+        # Start a new SocketServerThread that will handle the communication.
         print('Starting socket server (host {}, port {})'.format(self.host, self.port))
 
         while not self.__stop:
@@ -246,6 +249,7 @@ class SocketServerThread(Thread):
                         # Strip newlines just for output clarity
                         message = readData.rstrip()
                         messageFields = message.split(' ', 1)
+                        # divide peerID from the request
                         peerID = messageFields[0]
                         request = messageFields[1]
                         self.manageRequest(request, peerID)
@@ -255,6 +259,7 @@ class SocketServerThread(Thread):
         self.close()
 
     def stop(self):
+        """ Stop the socket server thread."""
         self.__stop = True
 
     def close(self):
@@ -328,11 +333,11 @@ class SocketServerThread(Thread):
             networking.mySend(self.clientSock, answer)
 
         elif action == "LEAVE":
-            answer = reqHandlers.leaveGroup(groups, groupsLock, request.split()[2], peerID)
+            answer = reqHandlers.leaveGroup(request, groups, groupsLock, peerID)
             networking.mySend(self.clientSock, answer)
 
         elif action == "DISCONNECT":
-            answer = reqHandlers.disconnectGroup(groups, groupsLock, request.split()[2], peerID)
+            answer = reqHandlers.disconnectGroup(request, groups, groupsLock, peerID)
             networking.mySend(self.clientSock, answer)
 
         elif action == "EXIT":
