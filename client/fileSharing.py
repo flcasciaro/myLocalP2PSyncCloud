@@ -598,7 +598,6 @@ def getChunks(file, chunksList, peerAddr, newFilepath):
             # write chunk into new file
             offset = chunkID * CHUNK_SIZE
             f.seek(offset)
-            print("Writing in position ", offset)
             f.write(data)
             f.close()
 
