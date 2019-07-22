@@ -129,8 +129,8 @@ def sendChunk(message, thread):
                         try:
                             error = False
                             answer = "OK - I'M SENDING IT"
-                            networking.mySend(thread.client_sock, answer)
-                            networking.sendChunk(thread.client_sock, dataChunk, chunkSize)
+                            networking.mySend(thread.clientSock, answer)
+                            networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
                         except (socket.timeout, RuntimeError):
                             print("Error while sending chunk {}".format(chunkID))
 
@@ -151,8 +151,8 @@ def sendChunk(message, thread):
                         try:
                             error = False
                             answer = "OK - I'M SENDING IT"
-                            networking.mySend(thread.client_sock, answer)
-                            networking.sendChunk(thread.client_sock, dataChunk, chunkSize)
+                            networking.mySend(thread.clientSock, answer)
+                            networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
                         except (socket.timeout, RuntimeError):
                             print("Error while sending chunk {}".format(chunkID))
 
