@@ -120,7 +120,7 @@ def scheduler():
                 else:
                     # file is already in sync but the new task refers to a new version
                     # re-append this task in order to allow a new sync in the future
-                    print("Re-appending task: ", task.toString())
+                    # print("Re-appending task: ", task.toString())
                     appendTask(task)
 
             time.sleep(1)
