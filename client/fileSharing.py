@@ -187,15 +187,12 @@ def startFileSync(file, taskTimestamp):
     print("Starting synchronization of", file.filename)
     key = file.groupName + "_" + file.treePath
 
-    state = syncScheduler.getThreadState(key)
-    print("in sync: ", state)
+    file.stopSync = False
 
     # start download thread
     t = Thread(target=downloadFile, args=(file, key))
     t.daemon = True
     t.start()
-
-    file.stopSync = False
 
     while True:
         # check thread status
@@ -267,7 +264,6 @@ def downloadFile(file, key):
 
         # check synchronization status
         if file.stopSync:
-            print("download stopped")
             unavailable = MAX_UNAVAILABLE
             break
 
@@ -482,7 +478,6 @@ def downloadFile(file, key):
         # re-append task: if the group is no longer active or the file has been removed
         # the scheduler will detect it and it will skip the append operation
         state = syncScheduler.getThreadState(key)
-        print("in download:", state)
         if state != syncScheduler.FILE_REMOVED and state != syncScheduler.FILE_UPDATED:
             reloadTask = syncScheduler.syncTask(file.groupName, file.treePath, file.timestamp)
             syncScheduler.appendTask(reloadTask, True)
