@@ -4,6 +4,7 @@ This code handles file-sharing operations (upload, download) in myP2PSync peers.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
 """
 
+import hashlib
 import math
 import os
 import shutil
@@ -128,7 +129,7 @@ def sendChunk(message, thread):
 
                         try:
                             error = False
-                            answer = "OK - I'M SENDING IT"
+                            answer = "OK - {}".format(hashlib.md5(dataChunk).hexdigest())
                             networking.mySend(thread.clientSock, answer)
                             networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
                         except (socket.timeout, RuntimeError):
@@ -599,7 +600,12 @@ def getChunks(file, chunksList, peerAddr, tmpDirPath):
 
         try:
             # success: get the chunk
+            checksumSent = answer.split()[2]
             data = networking.recvChunk(s, chunkSize)
+            checksumLocal = hashlib.md5(data).hexdigest()
+            if checksumSent != checksumLocal:
+                print("Unvalid checksum for chunk {}".format(chunkID))
+                continue
         except (socket.timeout, RuntimeError):
             errors += 1
             print("Error receiving chunk {}".format(chunkID))
