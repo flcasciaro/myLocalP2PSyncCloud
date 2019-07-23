@@ -418,7 +418,7 @@ def chunksScheduler(dl, file):
                 j += 1
 
                 # clean the list from already available chunks
-                chunksList = [chunk for chunk in chunksList if chunk not in file.availableChunks]
+                chunksList = [chunk for chunk in chunksList if chunk in file.missingChunks]
 
                 # fill chunk_peers and chunksCounter
                 for chunk in chunksList:
@@ -525,6 +525,7 @@ def getChunks(dl, file, peer, tmpDirPath):
 
         dl.lock.acquire()
 
+        print("creating chunk list, dl.complete = ", dl.complete)
         for chunk in dl.rarestFirstChunksList:
             if len(chunksList) >= MAX_CHUNKS_PER_THREAD:
                 break
@@ -606,7 +607,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                     f.close()
 
                     file.missingChunks.remove(chunkID)
-                    print("Removing chunk {} from missing chunks {}".format(chunkID, file.missingChunks))
+                    print("Removed chunk {} from missing chunks {}".format(chunkID, file.missingChunks))
                     file.availableChunks.append(chunkID)
                     dl.scheduledChunks.remove(chunkID)
 
