@@ -36,7 +36,7 @@ MAX_PEERS = 10
 
 # parameters used to download the file
 MAX_THREADS = 5
-MAX_CHUNKS_PER_THREAD = 50
+MAX_CHUNKS_PER_THREAD = 30
 
 # time between two consecutive checks on the synchronization thread status
 CHECK_PERIOD = 1.0
@@ -496,12 +496,14 @@ def getChunks(dl, file, peer, tmpDirPath):
 
     peerAddr = peer["address"]
 
-    if len(file.availableChunks) + dl.scheduledChunksCount <= 0.7 * file.chunksNumber:
-        # use random discard
-        threshold = INITIAL_TRESHOLD
-    else:
+    if len(file.availableChunks) + dl.scheduledChunksCount >= 0.7 * file.chunksNumber\
+            or len(file.missingChunks) <= MAX_CHUNKS_PER_THREAD:
         # don't use random discard
         threshold = 1
+
+    else:
+        # use random discard
+        threshold = INITIAL_TRESHOLD
 
     # connect to remote peer
     s = networking.createConnection(peerAddr)
@@ -520,7 +522,9 @@ def getChunks(dl, file, peer, tmpDirPath):
         for chunk in dl.rarestFirstChunksList:
             if len(chunksList) >= MAX_CHUNKS_PER_THREAD:
                 break
-            if len(file.availableChunks) + dl.scheduledChunksCount <= 0.7 * file.chunksNumber and random() > threshold:
+            if len(file.missingChunks) > MAX_CHUNKS_PER_THREAD \
+                    and len(file.availableChunks) + dl.scheduledChunksCount <= 0.7 * file.chunksNumber\
+                    and random() > threshold:
                 # discard this chunk
                 continue
             if peer in dl.chunksToPeers[chunk]:
