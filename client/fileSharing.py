@@ -24,7 +24,7 @@ if "networking" not in sys.modules:
 
 
 # define the period of time between 2 consecutive refreshes of the chunksList
-REFRESH_LIST_PERIOD = 10
+REFRESH_LIST_PERIOD = 15
 
 # maximum number of attempts before quitting a synchronization
 MAX_UNAVAILABLE = 5
@@ -418,8 +418,7 @@ def chunksScheduler(dl, file):
                 j += 1
 
                 # clean the list from already available chunks
-                chunksList = [chunk for chunk in chunksList if (chunk not in file.availableChunks
-                                                                and chunk not in dl.scheduledChunks)]
+                chunksList = [chunk for chunk in chunksList if chunk not in file.availableChunks]
 
                 # fill chunk_peers and chunksCounter
                 for chunk in chunksList:
@@ -439,12 +438,10 @@ def chunksScheduler(dl, file):
 
         dl.lock.acquire()
 
-        dl.rarestFirstChunksList = set(sorted(chunksCounter, key=chunksCounter.get))
-        for chunk in chunksToPeers:
-            try:
-                dl.chunksToPeers[chunk] = chunksToPeers[chunk]
-            except KeyError:
-                pass
+        for chunk in sorted(chunksCounter, key=chunksCounter.get):
+            if chunk not in dl.scheduledChunks:
+                dl.rarestFirstChunksList.add(chunk)
+            dl.chunksToPeers[chunk] = chunksToPeers[chunk]
         dl.activePeers = activePeers
 
         dl.lock.release()
