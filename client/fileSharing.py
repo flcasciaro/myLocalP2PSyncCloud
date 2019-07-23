@@ -369,6 +369,7 @@ def chunksScheduler(dl, file):
 
         # check synchronization status
         if file.stopSync:
+            unavailable = MAX_UNAVAILABLE
             break
 
         # retrieve the list of active peers for the file
@@ -443,13 +444,14 @@ def chunksScheduler(dl, file):
 
         for i in range(0, REFRESH_LIST_PERIOD):
             if file.stopSync:
+                unavailable = MAX_UNAVAILABLE
                 break
             else:
                 file.setProgress()
                 time.sleep(1)
 
     if unavailable == MAX_UNAVAILABLE:
-            dl.unavailable = True
+        dl.unavailable = True
     else:
         dl.complete = True
 
@@ -500,7 +502,6 @@ def getChunks(dl, file, peer, tmpDirPath):
     else:
         # don't use random discard
         threshold = 1
-
 
     # connect to remote peer
     s = networking.createConnection(peerAddr)
