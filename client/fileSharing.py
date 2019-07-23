@@ -450,6 +450,8 @@ def chunksScheduler(dl, file):
             if file.stopSync:
                 unavailable = MAX_UNAVAILABLE
                 break
+            if len(file.missingChunks) == 0:
+                break
             else:
                 file.setProgress()
                 time.sleep(1)
@@ -602,7 +604,6 @@ def getChunks(dl, file, peer, tmpDirPath):
                     f = open(chunkPath, 'wb')
                     f.write(data)
                     f.close()
-
 
                     file.missingChunks.remove(chunkID)
                     file.availableChunks.append(chunkID)
