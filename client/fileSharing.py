@@ -604,7 +604,10 @@ def getChunks(dl, file, peer, tmpDirPath):
                     f.write(data)
                     f.close()
 
-                    file.missingChunks.remove(chunkID)
+                    try:
+                        file.missingChunks.remove(chunkID)
+                    except ValueError:
+                        print(chunkID)
                     file.availableChunks.append(chunkID)
                     dl.scheduledChunksCount -= 1
 
