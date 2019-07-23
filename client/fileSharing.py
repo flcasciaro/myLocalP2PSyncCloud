@@ -439,7 +439,11 @@ def chunksScheduler(dl, file):
         dl.lock.acquire()
 
         dl.rarestFirstChunksList = set(sorted(chunksCounter, key=chunksCounter.get))
-        dl.chunksToPeers = chunksToPeers
+        for chunk in chunksToPeers:
+            try:
+                dl.chunksToPeers[chunk] = chunksToPeers[chunk]
+            except KeyError:
+                pass
         dl.activePeers = activePeers
 
         dl.lock.release()
