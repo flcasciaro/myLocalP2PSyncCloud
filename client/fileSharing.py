@@ -494,7 +494,7 @@ def getChunks(dl, file, peer, tmpDirPath):
 
     peerAddr = peer["address"]
 
-    if file.availableChunks + dl.scheduledChunksCount <= 0.7 * file.chunksNumber:
+    if len(file.availableChunks) + dl.scheduledChunksCount <= 0.7 * file.chunksNumber:
         # use random discard
         threshold = INITIAL_TRESHOLD
     else:
@@ -519,7 +519,7 @@ def getChunks(dl, file, peer, tmpDirPath):
         for chunk in dl.rarestFirstChunksList:
             if len(chunksList) >= MAX_CHUNKS_PER_THREAD:
                 break
-            if file.availableChunks + dl.scheduledChunksCount <= 0.7 * file.chunksNumber and random() > threshold:
+            if len(file.availableChunks) + dl.scheduledChunksCount <= 0.7 * file.chunksNumber and random() > threshold:
                 # discard this chunk
                 continue
             if peer in dl.chunksToPeers[chunk]:
