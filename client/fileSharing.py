@@ -524,8 +524,10 @@ def getChunks(dl, file, peer, tmpDirPath):
                 continue
             if peer in dl.chunksToPeers[chunk]:
                 chunksList.append(chunk)
-                dl.rarestFirstChunksList.remove(chunk)
                 dl.scheduledChunksCount += 1
+
+        for chunk in chunksList:
+            dl.rarestFirstChunksList.remove(chunk)
 
         dl.lock.release()
 
@@ -556,14 +558,12 @@ def getChunks(dl, file, peer, tmpDirPath):
                     answer = networking.myRecv(s)
                 except (socket.timeout, RuntimeError, ValueError):
                     print("Error receiving message about chunk {}".format(chunkID))
-                    dl.rarestFirstChunksList.add(chunkID)
-                    dl.scheduledChunksCount -= 1
+                    errorOnGetChunk(dl, chunkID)
                     continue
 
                 if answer.split(" ")[0] == "ERROR":
                     # error: consider next chunks
-                    dl.rarestFirstChunksList.add(chunkID)
-                    dl.scheduledChunksCount -= 1
+                    errorOnGetChunk(dl, chunkID)
                     continue
 
                 try:
@@ -583,8 +583,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                     #     continue
                 except (socket.timeout, RuntimeError):
                     print("Error receiving chunk {}".format(chunkID))
-                    dl.rarestFirstChunksList.add(chunkID)
-                    dl.scheduledChunksCount -= 1
+                    errorOnGetChunk(dl, chunkID)
                     continue
 
                 try:
@@ -605,13 +604,17 @@ def getChunks(dl, file, peer, tmpDirPath):
                     dl.scheduledChunksCount -= 1
 
                 except FileNotFoundError:
-                    dl.rarestFirstChunksList.add(chunkID)
-                    dl.scheduledChunksCount -= 1
+                    errorOnGetChunk(dl, chunkID)
                     continue
 
     networking.closeConnection(s, peerCore.peerID)
 
 
+def errorOnGetChunk(dl, chunkID):
+    dl.lock.acquire()
+    dl.rarestFirstChunksList.add(chunkID)
+    dl.scheduledChunksCount -= 1
+    dl.lock.release()
 
 def mergeChunks(file, tmpDirPath):
     """
