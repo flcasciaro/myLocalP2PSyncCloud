@@ -448,7 +448,8 @@ def chunksScheduler(dl, file):
 
     if unavailable == MAX_UNAVAILABLE:
             dl.unavailable = True
-
+    else:
+        dl.complete = True
 
 
 
@@ -489,7 +490,6 @@ def getChunksList(file, peerAddr):
 
 def getChunks(dl, file, peer, tmpDirPath):
 
-    peerID = peer["peerID"]
     peerAddr = peer["address"]
 
     if file.availableChunks + dl.scheduledChunksCount <= 0.7 * file.chunksNumber:
@@ -505,7 +505,10 @@ def getChunks(dl, file, peer, tmpDirPath):
     if s is None:
         return
 
-    while not dl.syncComplete:
+    while not dl.complete:
+
+        if file.stopSync:
+            break
 
         chunksList = list()
 
@@ -517,7 +520,7 @@ def getChunks(dl, file, peer, tmpDirPath):
             if file.availableChunks + dl.scheduledChunksCount <= 0.7 * file.chunksNumber and random() > threshold:
                 # discard this chunk
                 continue
-            if peerID in dl.chunksToPeers[chunk]:
+            if peer in dl.chunksToPeers[chunk]:
                 chunksList.append(chunk)
                 dl.rarestFirstChunksList.remove(chunk)
                 dl.scheduledChunksCount += 1
@@ -536,15 +539,11 @@ def getChunks(dl, file, peer, tmpDirPath):
                     time.sleep(1)
 
         else:
-            errors = 0
 
             for chunkID in chunksList:
 
                 # check eventual stop forced from main thread
                 if file.stopSync:
-                    break
-
-                if errors == MAX_ERRORS:
                     break
 
                 try:
@@ -554,7 +553,6 @@ def getChunks(dl, file, peer, tmpDirPath):
                     networking.mySend(s, message)
                     answer = networking.myRecv(s)
                 except (socket.timeout, RuntimeError, ValueError):
-                    errors += 1
                     print("Error receiving message about chunk {}".format(chunkID))
                     dl.rarestFirstChunksList.add(chunkID)
                     dl.scheduledChunksCount -= 1
@@ -562,7 +560,6 @@ def getChunks(dl, file, peer, tmpDirPath):
 
                 if answer.split(" ")[0] == "ERROR":
                     # error: consider next chunks
-                    errors += 1
                     dl.rarestFirstChunksList.add(chunkID)
                     dl.scheduledChunksCount -= 1
                     continue
@@ -583,7 +580,6 @@ def getChunks(dl, file, peer, tmpDirPath):
                     #     print("Unvalid checksum for chunk {}".format(chunkID))
                     #     continue
                 except (socket.timeout, RuntimeError):
-                    errors += 1
                     print("Error receiving chunk {}".format(chunkID))
                     dl.rarestFirstChunksList.add(chunkID)
                     dl.scheduledChunksCount -= 1
@@ -599,9 +595,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                     chunkPath = tmpDirPath + "chunk" + str(chunkID)
 
                     f = open(chunkPath, 'wb')
-
                     f.write(data)
-
                     f.close()
 
                     file.missingChunks.remove(chunkID)
