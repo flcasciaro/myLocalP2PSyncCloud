@@ -365,6 +365,7 @@ def chunksScheduler(dl, file):
     unavailable = 0
     dl.rarestFirstChunksList = set()
     dl.scheduledChunks = set()
+    dl.chunksToPeers = dict()
 
     while len(file.missingChunks) > 0 and unavailable < MAX_UNAVAILABLE:
 
