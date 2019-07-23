@@ -163,7 +163,7 @@ def sendChunk(message, thread):
 
                         f.close()
                     except FileNotFoundError:
-                        answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
+                        answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE - HERE"
             else:
                 answer = "ERROR - UNAVAILABLE CHUNK"
         else:
