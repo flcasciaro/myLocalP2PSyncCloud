@@ -606,6 +606,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                     f.close()
 
                     file.missingChunks.remove(chunkID)
+                    print("Removing chunk {} from missing chunks {}".format(chunkID, file.missingChunks))
                     file.availableChunks.append(chunkID)
                     dl.scheduledChunks.remove(chunkID)
 
