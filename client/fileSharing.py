@@ -24,7 +24,7 @@ if "networking" not in sys.modules:
 
 
 # define the period of time between 2 consecutive refreshes of the chunksList
-REFRESH_LIST_PERIOD = 15
+REFRESH_LIST_PERIOD = 10
 
 # maximum number of attempts before quitting a synchronization
 MAX_UNAVAILABLE = 5
@@ -262,7 +262,7 @@ class Download:
 
     def __init__(self):
         self.rarestFirstChunksList = None
-        self.scheduledChunksCount = 0
+        self.scheduledChunks = None
         self.chunksToPeers = None
         self.activePeers = None
         self.complete = False
@@ -363,7 +363,8 @@ def syncFail(file, key):
 def chunksScheduler(dl, file):
 
     unavailable = 0
-    dl.rarestFirstChunksList = list()
+    dl.rarestFirstChunksList = set()
+    dl.scheduledChunks = set()
 
     while len(file.missingChunks) > 0 and unavailable < MAX_UNAVAILABLE:
 
@@ -416,7 +417,8 @@ def chunksScheduler(dl, file):
                 j += 1
 
                 # clean the list from already available chunks
-                chunksList = [chunk for chunk in chunksList if chunk not in file.availableChunks]
+                chunksList = [chunk for chunk in chunksList if (chunk not in file.availableChunks
+                                                                and chunk not in dl.scheduledChunks)]
 
                 # fill chunk_peers and chunksCounter
                 for chunk in chunksList:
@@ -496,7 +498,7 @@ def getChunks(dl, file, peer, tmpDirPath):
 
     peerAddr = peer["address"]
 
-    if len(file.availableChunks) + dl.scheduledChunksCount >= 0.7 * file.chunksNumber\
+    if len(file.availableChunks) + len(dl.scheduledChunks) >= 0.7 * file.chunksNumber\
             or len(file.missingChunks) <= MAX_CHUNKS_PER_THREAD:
         # don't use random discard
         threshold = 1
@@ -523,13 +525,13 @@ def getChunks(dl, file, peer, tmpDirPath):
             if len(chunksList) >= MAX_CHUNKS_PER_THREAD:
                 break
             if len(file.missingChunks) > MAX_CHUNKS_PER_THREAD \
-                    and len(file.availableChunks) + dl.scheduledChunksCount <= 0.7 * file.chunksNumber\
+                    and len(file.availableChunks) + len(dl.scheduledChunks) <= 0.7 * file.chunksNumber\
                     and random() > threshold:
                 # discard this chunk
                 continue
             if peer in dl.chunksToPeers[chunk]:
                 chunksList.append(chunk)
-                dl.scheduledChunksCount += 1
+                dl.scheduledChunks.append(chunk)
 
         for chunk in chunksList:
             dl.rarestFirstChunksList.remove(chunk)
@@ -580,12 +582,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                     else:
                         chunkSize = CHUNK_SIZE
 
-                    # checksumSent = answer.split()[2]
                     data = networking.recvChunk(s, chunkSize)
-                    # checksumLocal = hashlib.md5(data).hexdigest()
-                    # if checksumSent != checksumLocal:
-                    #     print("Unvalid checksum for chunk {}".format(chunkID))
-                    #     continue
                 except (socket.timeout, RuntimeError):
                     print("Error receiving chunk {}".format(chunkID))
                     errorOnGetChunk(dl, chunkID)
@@ -604,12 +601,10 @@ def getChunks(dl, file, peer, tmpDirPath):
                     f.write(data)
                     f.close()
 
-                    try:
-                        file.missingChunks.remove(chunkID)
-                    except ValueError:
-                        print(chunkID)
+
+                    file.missingChunks.remove(chunkID)
                     file.availableChunks.append(chunkID)
-                    dl.scheduledChunksCount -= 1
+                    dl.scheduledChunks.remove(chunkID)
 
                 except FileNotFoundError:
                     errorOnGetChunk(dl, chunkID)
@@ -621,7 +616,7 @@ def getChunks(dl, file, peer, tmpDirPath):
 def errorOnGetChunk(dl, chunkID):
     dl.lock.acquire()
     dl.rarestFirstChunksList.add(chunkID)
-    dl.scheduledChunksCount -= 1
+    dl.scheduledChunks.remove(chunkID)
     dl.lock.release()
 
 def mergeChunks(file, tmpDirPath):
