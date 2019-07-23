@@ -575,6 +575,7 @@ def getChunks(dl, file, peer, tmpDirPath):
 
                 if answer.split(" ")[0] == "ERROR":
                     # error: consider next chunks
+                    print("Received:", answer)
                     errorOnGetChunk(dl, chunkID)
                     continue
 
