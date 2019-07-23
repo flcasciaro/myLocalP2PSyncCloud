@@ -295,7 +295,7 @@ def downloadFile(file, key):
 
         activePeers = dl.activePeers
 
-        for peer in activePeers.values():
+        for peer in activePeers:
             getChunksThread = Thread(target = getChunks, args = (dl, file, peer, tmpDirPath))
             getChunksThread.daemon = True
             getChunksThread.start()
