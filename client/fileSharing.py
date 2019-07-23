@@ -531,7 +531,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                 continue
             if peer in dl.chunksToPeers[chunk]:
                 chunksList.append(chunk)
-                dl.scheduledChunks.append(chunk)
+                dl.scheduledChunks.add(chunk)
 
         for chunk in chunksList:
             dl.rarestFirstChunksList.remove(chunk)
