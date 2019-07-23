@@ -285,9 +285,11 @@ def downloadFile(file, key):
     chunksSchedulerThread.daemon = True
     chunksSchedulerThread.start()
 
-    while len(dl.activePeers) == 0:
+    while dl.activePeers is None:
+        time.sleep(0.1)
         if dl.unavailable or file.stopSync:
             unavailable = True
+            break
 
     if not unavailable:
 
