@@ -1,24 +1,2 @@
 [
-    {
-        "nodeName": "ITDepartment",
-        "isDir": true,
-        "childs": [
-            {
-                "nodeName": "100MB.zip",
-                "isDir": false,
-                "childs": [],
-                "info": {
-                    "groupName": "ITDepartment",
-                    "treePath": "100MB.zip",
-                    "filename": "100MB.zip",
-                    "filepath": "C:/Users/FrancescoLorenzo/Desktop/myP2PSync_Files/100MB.zip",
-                    "filesize": 104857600,
-                    "timestamp": 1562773181,
-                    "status": "S",
-                    "previousChunks": []
-                }
-            }
-        ],
-        "info": {}
-    }
 ]
