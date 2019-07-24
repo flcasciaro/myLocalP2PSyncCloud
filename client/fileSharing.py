@@ -24,7 +24,7 @@ if "networking" not in sys.modules:
 
 
 # define the period of time between 2 consecutive refreshes of the chunksList
-REFRESH_LIST_PERIOD = 15
+REFRESH_LIST_PERIOD = 10
 
 # maximum number of attempts before quitting a synchronization
 MAX_UNAVAILABLE = 5
@@ -569,6 +569,8 @@ def getChunks(dl, file, peer, tmpDirPath):
 
             for i in range(0, len(chunksList)):
 
+                chunkID = chunksList[i]
+
                 if errors == MAX_ERRORS:
                     networking.closeConnection(s, peerCore.peerID)
                     # try to re-establish connection
@@ -577,7 +579,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                         # connection broken or peer disconnected
                         for j in range(i, len(chunksList)):
                             chunk = chunksList[j]
-                            errorOnGetChunk(chunk)
+                            errorOnGetChunk(dl, chunk)
                         return
 
 
