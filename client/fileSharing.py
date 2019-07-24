@@ -607,9 +607,12 @@ def getChunks(dl, file, peer, tmpDirPath):
                     f.write(data)
                     f.close()
 
-                    file.missingChunks.remove(chunkID)
-                    file.availableChunks.append(chunkID)
-                    dl.scheduledChunks.remove(chunkID)
+                    try:
+                        file.missingChunks.remove(chunkID)
+                        file.availableChunks.append(chunkID)
+                        dl.scheduledChunks.remove(chunkID)
+                    except ValueError:
+                        pass
 
                 except FileNotFoundError:
                     errorOnGetChunk(dl, chunkID)
