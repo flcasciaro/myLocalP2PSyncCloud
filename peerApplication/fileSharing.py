@@ -36,7 +36,7 @@ MAX_PEERS = 10
 
 # parameters used to download the file
 MAX_THREADS = 5
-MAX_CHUNKS = 125
+MAX_CHUNKS = 75
 
 # time between two consecutive checks on the synchronization thread status
 CHECK_PERIOD = 1.0
@@ -292,9 +292,9 @@ def downloadFile(file, key):
 
         dl = Download()
 
-        chunksSchedulerThread = Thread(target = chunksScheduler, args=(dl,file))
-        chunksSchedulerThread.daemon = True
-        chunksSchedulerThread.start()
+        chunksManagerThread = Thread(target = chunksManager, args=(dl,file))
+        chunksManagerThread.daemon = True
+        chunksManagerThread.start()
 
         while dl.activePeers is None:
             time.sleep(0.1)
@@ -371,7 +371,7 @@ def syncFail(file, key):
     return syncScheduler.SYNC_FAILED
 
 
-def chunksScheduler(dl, file):
+def chunksManager(dl, file):
 
     unavailable = 0
     dl.rarestFirstChunksList = set()

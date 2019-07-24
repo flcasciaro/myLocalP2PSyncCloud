@@ -640,7 +640,7 @@ class myP2PSync(QMainWindow):
         dirName = directory.split("/")[-1]
 
         if len(dirName.split(" ")) == 1:
-            if self.fileList.findItems(dirName, Qt.MatchExactly) is None:
+            if len(self.fileList.findItems(dirName, Qt.MatchExactly)) == 0:
                 filepaths = list()
                 for root, dirs, files in os.walk(directory):
                     for name in files:
