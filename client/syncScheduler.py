@@ -365,7 +365,7 @@ def updatedFiles(message):
                     if fileNode is None:
                         continue
 
-                    if fileNode.file.filestamp > fileInfo["timestamp"]:
+                    if fileNode.file.timestamp > fileInfo["timestamp"]:
                         continue
 
                     if fileNode.file.syncLock.acquire(blocking=False):
