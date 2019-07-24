@@ -189,8 +189,8 @@ class SocketServerThread(Thread):
 
         action = message.split()[0]
 
-        if action != "BYE":
-            print('[Thr {}] [Peer: {}] Received {}'.format(self.number, peerID, message))
+        # if action != "BYE":
+        #     print('[Thr {}] [Peer: {}] Received {}'.format(self.number, peerID, message))
 
         if action == "CHUNKS_LIST":
             fileSharing.sendChunksList(message, self)

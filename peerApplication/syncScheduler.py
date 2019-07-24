@@ -285,7 +285,7 @@ def addedFiles(message):
                     # create the path if it doesn't exist
                     peerCore.pathCreationLock.acquire()
                     if not os.path.exists(path):
-                        print("Creating the path: " + path)
+                        # print("Creating the path: " + path)
                         os.makedirs(path)
                     peerCore.pathCreationLock.release()
 
