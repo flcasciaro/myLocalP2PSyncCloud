@@ -564,7 +564,7 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
             path = scriptPath + "filesSync/" + groupName + '/'
 
             tmp, filename = os.path.split(treePath)
-            filepath = path + "/" + treePath
+            filepath = path + treePath
             path += tmp
 
             # create the path if it doesn't exist

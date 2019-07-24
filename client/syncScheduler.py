@@ -279,7 +279,7 @@ def addedFiles(message):
 
                     treePath = fileInfo["treePath"]
                     tmp, filename = os.path.split(treePath)
-                    filepath = path + "/" + treePath
+                    filepath = path + treePath
                     path += tmp
 
                     # create the path if it doesn't exist
