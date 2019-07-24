@@ -44,7 +44,7 @@ CHECK_PERIOD = 1.0
 # parameters for chunks random discard
 INITIAL_TRESHOLD = 0.5
 TRESHOLD_INC_STEP = 0
-COMPLETION_RATE = 0.8
+COMPLETION_RATE = 0.9
 
 # maximum number of getChunk request leading to an error allowed before to quit a connection
 MAX_ERRORS = 3
