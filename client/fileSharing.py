@@ -162,8 +162,9 @@ def sendChunk(message, thread):
                             print("Error while sending chunk {}".format(chunkID))
 
                         f.close()
-                    except FileNotFoundError:
-                        answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE - HERE"
+                    except FileNotFoundError as err:
+                        answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
+                        print(err)
             else:
                 answer = "ERROR - UNAVAILABLE CHUNK"
         else:
@@ -417,7 +418,7 @@ def chunksScheduler(dl, file):
 
                 j += 1
 
-                # clean the list from already available chunks
+                # clean the list from already retrieved chunks
                 chunksList = [chunk for chunk in chunksList if chunk in file.missingChunks]
 
                 # fill chunk_peers and chunksCounter
@@ -525,7 +526,6 @@ def getChunks(dl, file, peer, tmpDirPath):
 
         dl.lock.acquire()
 
-        print("creating chunk list, dl.complete = ", dl.complete)
         for chunk in dl.rarestFirstChunksList:
             if len(chunksList) >= MAX_CHUNKS_PER_THREAD:
                 break
@@ -549,7 +549,7 @@ def getChunks(dl, file, peer, tmpDirPath):
         if len(chunksList) == 0:
 
             for i in range(0, 5):
-                if file.stopSync:
+                if file.stopSync or dl.complete:
                     break
                 else:
                     time.sleep(1)
@@ -573,7 +573,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                     errorOnGetChunk(dl, chunkID)
                     continue
 
-                if answer.split(" ")[0] == "ERROR":
+                if answer.split()[0] == "ERROR":
                     # error: consider next chunks
                     print("Received:", answer)
                     errorOnGetChunk(dl, chunkID)
@@ -608,7 +608,6 @@ def getChunks(dl, file, peer, tmpDirPath):
                     f.close()
 
                     file.missingChunks.remove(chunkID)
-                    print("Removed chunk {} from missing chunks {}".format(chunkID, file.missingChunks))
                     file.availableChunks.append(chunkID)
                     dl.scheduledChunks.remove(chunkID)
 
