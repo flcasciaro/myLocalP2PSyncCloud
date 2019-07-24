@@ -36,7 +36,7 @@ MAX_PEERS = 10
 
 # parameters used to download the file
 MAX_THREADS = 5
-MAX_CHUNKS = 10
+MAX_CHUNKS = 30
 
 # time between two consecutive checks on the synchronization thread status
 CHECK_PERIOD = 1.0
