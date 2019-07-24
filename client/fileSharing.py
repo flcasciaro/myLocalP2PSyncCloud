@@ -162,9 +162,8 @@ def sendChunk(message, thread):
                             print("Error while sending chunk {}".format(chunkID))
 
                         f.close()
-                    except FileNotFoundError as err:
+                    except FileNotFoundError:
                         answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
-                        print(err)
             else:
                 answer = "ERROR - UNAVAILABLE CHUNK"
         else:
@@ -280,63 +279,73 @@ def downloadFile(file, key):
     tmpDirPath = getTmpDirPath(file)
     activeThreads = 0
 
-    dl = Download()
+    if file.filesize == 0:
+        # all chunks have been collected
+        mergeChunks(file, tmpDirPath)
+        file.status = "S"
+        # force OS file timestamp to be file.timestamp
+        os.utime(file.filepath, (file.timestamp, file.timestamp))
+        file.initSeed()
+        exitStatus = syncSuccess(file, 0)
+    else:
 
-    chunksSchedulerThread = Thread(target = chunksScheduler, args=(dl,file))
-    chunksSchedulerThread.daemon = True
-    chunksSchedulerThread.start()
+        dl = Download()
 
-    while dl.activePeers is None:
-        time.sleep(0.1)
-        if dl.unavailable or file.stopSync:
-            unavailable = True
-            break
+        chunksSchedulerThread = Thread(target = chunksScheduler, args=(dl,file))
+        chunksSchedulerThread.daemon = True
+        chunksSchedulerThread.start()
 
-    if not unavailable:
-
-        activePeers = dl.activePeers
-
-        for peer in activePeers:
-            getChunksThread = Thread(target = getChunks, args = (dl, file, peer, tmpDirPath))
-            getChunksThread.daemon = True
-            getChunksThread.start()
-            activeThreads += 1
-
-        # get download start time
-        startTime = time.time()
-
-        while not dl.complete:
-            for peer in dl.activePeers:
-                if peer not in activePeers and activeThreads < MAX_THREADS:
-                    getChunksThread = Thread(target=getChunks, args=(dl, file, peer, tmpDirPath))
-                    getChunksThread.daemon = True
-                    getChunksThread.start()
-                    activeThreads += 1
-            for peerID in activePeers:
-                if peerID not in dl.activePeers:
-                    activeThreads -= 1
+        while dl.activePeers is None:
+            time.sleep(0.1)
             if dl.unavailable or file.stopSync:
                 unavailable = True
                 break
 
-            activePeers = dl.activePeers
-            time.sleep(1)
-
         if not unavailable:
-            # get end download time
-            endTime = time.time()
 
-            # all chunks have been collected
-            mergeChunks(file, tmpDirPath)
-            file.status = "S"
-            # force OS file timestamp to be file.timestamp
-            os.utime(file.filepath, (file.timestamp, file.timestamp))
-            file.initSeed()
-            exitStatus = syncSuccess(file, math.floor(endTime - startTime))
+            activePeers = dl.activePeers
+
+            for peer in activePeers:
+                getChunksThread = Thread(target = getChunks, args = (dl, file, peer, tmpDirPath))
+                getChunksThread.daemon = True
+                getChunksThread.start()
+                activeThreads += 1
+
+            # get download start time
+            startTime = time.time()
+
+            while not dl.complete:
+                for peer in dl.activePeers:
+                    if peer not in activePeers and activeThreads < MAX_THREADS:
+                        getChunksThread = Thread(target=getChunks, args=(dl, file, peer, tmpDirPath))
+                        getChunksThread.daemon = True
+                        getChunksThread.start()
+                        activeThreads += 1
+                for peerID in activePeers:
+                    if peerID not in dl.activePeers:
+                        activeThreads -= 1
+                if dl.unavailable or file.stopSync:
+                    unavailable = True
+                    break
+
+                activePeers = dl.activePeers
+                time.sleep(1)
+
+            if not unavailable:
+                # get end download time
+                endTime = time.time()
+
+                # all chunks have been collected
+                mergeChunks(file, tmpDirPath)
+                file.status = "S"
+                # force OS file timestamp to be file.timestamp
+                os.utime(file.filepath, (file.timestamp, file.timestamp))
+                file.initSeed()
+                exitStatus = syncSuccess(file, math.floor(endTime - startTime))
+            else:
+                exitStatus = syncFail(file, key)
         else:
             exitStatus = syncFail(file, key)
-    else:
-        exitStatus = syncFail(file, key)
 
 
     # this will terminate checkThread
