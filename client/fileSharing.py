@@ -701,25 +701,19 @@ def getNewFilePath(file):
 
 def getTmpDirPath(file):
     """
-    Build the new temporary directory paths
+    Build the new temporary directory path
                ex.
                file.filepath = home/prova.txt
-               filenameWE = prova
-               fileExtension = splitFilename[1] = txt
                dirPath = home/
-               tmpDirPath = home/prova_tmp/
+               tmpDirPath = home/prova.txt_tmp/
     :param file: File object
     :return: string representing the path
     """
 
     # split filepath into directoryPath and filename
     (dirPath, filename) = os.path.split(file.filepath)
-    # remove extension from the filename (if any)
-    # WoE stands for Without Extension
-    splitFilename = filename.split(".")
-    filenameWoE = splitFilename[0]
 
     # directory path where the chunks have been stored
-    tmpDirPath = dirPath + "/" + filenameWoE + "_tmp/"
+    tmpDirPath = dirPath + "/" + filename + "_tmp/"
 
     return tmpDirPath
