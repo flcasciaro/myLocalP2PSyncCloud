@@ -608,6 +608,8 @@ class myP2PSync(QMainWindow):
         for file in files[0]:
             # get only the filename (remove dir path)
             filename = file.split("/")[-1]
+            if peerCore.localFileTree.getGroup(self.groupName).findNode(filename) is not None:
+                continue
 
             if len(filename.split(" ")) == 1:
                 # convert to a "UNIX-like" path
@@ -643,6 +645,7 @@ class myP2PSync(QMainWindow):
                     # build the filepath and check that it doesn't contain space/s
                     filepath = os.path.join(root, name).replace("\\", "/")
                     if len(filepath.split(" ")) == 1:
+
                         filepaths.append(filepath)
 
             if peerCore.addFiles(self.groupName, filepaths, directory.replace("\\", "/")):

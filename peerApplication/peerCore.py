@@ -681,7 +681,6 @@ def addFiles(groupName, filepaths, directory):
                                        status="S", previousChunks=list())
 
             groupTree.addNode(treePath, file)
-
             file.initSeed()
 
         # retrieve the list of active peers for the file

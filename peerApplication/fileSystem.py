@@ -83,7 +83,7 @@ class Node:
         If a directory node in the middle is not present, the function creates it.
         :param treePath: path to follow to reach where the node will be placed
         :param file: file Object
-        :return: void
+        :return: boolean (True for success, False for failure)
         """
 
         current = self
@@ -97,7 +97,7 @@ class Node:
                 if i == n - 1:
                     # file node found
                     print("NODE ALREADY INSERTED")
-                    return
+                    return False
                 else:
                     current = current.childs[field]
 
@@ -111,7 +111,7 @@ class Node:
                     # add File node
                     node = Node(field, False, file)
                     current.addChild(node)
-                    return
+                    return True
 
 
 
