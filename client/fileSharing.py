@@ -36,7 +36,7 @@ MAX_PEERS = 10
 
 # parameters used to download the file
 MAX_THREADS = 5
-MAX_CHUNKS = 50
+MAX_CHUNKS = 10
 
 # time between two consecutive checks on the synchronization thread status
 CHECK_PERIOD = 1.0
@@ -663,6 +663,9 @@ def mergeChunks(file, tmpDirPath):
     """
 
     newFilePath = getNewFilePath(file)
+
+    # save available chunks in case the merge operations fails or it's stopped
+    file.previousChunks = file.availableChunks
 
     # merge chunks writing each chunks in the new file
     try:
