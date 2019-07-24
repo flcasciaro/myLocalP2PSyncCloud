@@ -1,1 +1,54 @@
-[]
+[
+    {
+        "nodeName": "ITDepartment",
+        "isDir": true,
+        "childs": [
+            {
+                "nodeName": "100MB.zip",
+                "isDir": false,
+                "childs": [],
+                "info": {
+                    "groupName": "ITDepartment",
+                    "treePath": "100MB.zip",
+                    "filename": "100MB.zip",
+                    "filepath": "C:/Users/FrancescoLorenzo/Desktop/myP2PSync_Files/100MB.zip",
+                    "filesize": 104857600,
+                    "timestamp": 1562773181,
+                    "status": "S",
+                    "previousChunks": []
+                }
+            },
+            {
+                "nodeName": "500MB.zip",
+                "isDir": false,
+                "childs": [],
+                "info": {
+                    "groupName": "ITDepartment",
+                    "treePath": "500MB.zip",
+                    "filename": "500MB.zip",
+                    "filepath": "C:/Users/FrancescoLorenzo/Desktop/myP2PSync_Files/500MB.zip",
+                    "filesize": 508950264,
+                    "timestamp": 1562774276,
+                    "status": "S",
+                    "previousChunks": []
+                }
+            },
+            {
+                "nodeName": "1GB.zip",
+                "isDir": false,
+                "childs": [],
+                "info": {
+                    "groupName": "ITDepartment",
+                    "treePath": "1GB.zip",
+                    "filename": "1GB.zip",
+                    "filepath": "C:/Users/FrancescoLorenzo/Desktop/myP2PSync_Files/1GB.zip",
+                    "filesize": 1117923181,
+                    "timestamp": 1562774318,
+                    "status": "S",
+                    "previousChunks": []
+                }
+            }
+        ],
+        "info": {}
+    }
+]
