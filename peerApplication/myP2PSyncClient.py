@@ -626,6 +626,8 @@ class myP2PSync(QMainWindow):
                 self.addLogMessage("Files {} added to group {}".format(filenames[:-1], self.groupName))
             else:
                 QMessageBox.about(self, "Error", "Cannot add the selected files!")
+        else:
+            QMessageBox.about(self, "Error", "Cannot add the selected files!")
 
     def addDirHandler(self):
 
@@ -638,21 +640,24 @@ class myP2PSync(QMainWindow):
         dirName = directory.split("/")[-1]
 
         if len(dirName.split(" ")) == 1:
-            filepaths = list()
-            for root, dirs, files in os.walk(directory):
-                for name in files:
+            if self.fileList.findItems(dirName, Qt.MatchExactly) is None:
+                filepaths = list()
+                for root, dirs, files in os.walk(directory):
+                    for name in files:
 
-                    # build the filepath and check that it doesn't contain space/s
-                    filepath = os.path.join(root, name).replace("\\", "/")
-                    if len(filepath.split(" ")) == 1:
+                        # build the filepath and check that it doesn't contain space/s
+                        filepath = os.path.join(root, name).replace("\\", "/")
+                        if len(filepath.split(" ")) == 1:
 
-                        filepaths.append(filepath)
+                            filepaths.append(filepath)
 
-            if peerCore.addFiles(self.groupName, filepaths, directory.replace("\\", "/")):
-                self.addLogMessage("Directory {} added to group {}".format(dirName, self.groupName))
-                self.loadFileManager()
+                if peerCore.addFiles(self.groupName, filepaths, directory.replace("\\", "/")):
+                    self.addLogMessage("Directory {} added to group {}".format(dirName, self.groupName))
+                    self.loadFileManager()
+                else:
+                    QMessageBox.about(self, "Error", "It was not possible to add the directory {}".format(dirName))
             else:
-                QMessageBox.about(self, "Error", "It was not possible to add the directory {}".format(dirName))
+                QMessageBox.about(self, "Error", "Cannot add the selected directory")
         else:
             QMessageBox.about(self, "Error", "Cannot add the selected directory.. name cannot contains spaces!")
 
