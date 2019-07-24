@@ -565,7 +565,21 @@ def getChunks(dl, file, peer, tmpDirPath):
 
         else:
 
-            for chunkID in chunksList:
+            errors = 0
+
+            for i in range(0, len(chunksList)):
+
+                if errors == MAX_ERRORS:
+                    networking.closeConnection(s, peerCore.peerID)
+                    # try to re-establish connection
+                    s = networking.createConnection(peerAddr)
+                    if s is None:
+                        # connection broken or peer disconnected
+                        for j in range(i, len(chunksList)):
+                            chunk = chunksList[j]
+                            errorOnGetChunk(chunk)
+                        return
+
 
                 # check eventual stop forced from main thread
                 if file.stopSync:
@@ -580,6 +594,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                 except (socket.timeout, RuntimeError, ValueError):
                     print("Error receiving message about chunk {}".format(chunkID))
                     errorOnGetChunk(dl, chunkID)
+                    errors += 1
                     continue
 
                 if answer.split()[0] == "ERROR":
@@ -601,6 +616,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                 except (socket.timeout, RuntimeError):
                     print("Error receiving chunk {}".format(chunkID))
                     errorOnGetChunk(dl, chunkID)
+                    errors += 1
                     continue
 
                 try:
