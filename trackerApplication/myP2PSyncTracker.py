@@ -1,8 +1,9 @@
 """
 Project: myP2PSync
 This code runs a tracking server instance.
-Can be run using: (sudo) python3 pathTo/myP2PSyncServer.py
-@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC"""
+Can be run using: (sudo) python3 pathTo/myP2PSyncTracker.py
+@author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
+"""
 
 import json
 import os
