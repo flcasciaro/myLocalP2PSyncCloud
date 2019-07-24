@@ -36,7 +36,7 @@ MAX_PEERS = 10
 
 # parameters used to download the file
 MAX_THREADS = 5
-MAX_CHUNKS = 75
+MAX_CHUNKS = 100
 
 # time between two consecutive checks on the synchronization thread status
 CHECK_PERIOD = 1.0
@@ -44,7 +44,7 @@ CHECK_PERIOD = 1.0
 # parameters for chunks random discard
 INITIAL_TRESHOLD = 0.5
 TRESHOLD_INC_STEP = 0
-COMPLETION_RATE = 0.95
+COMPLETION_RATE = 0.8
 
 # maximum number of getChunk request leading to an error allowed before to quit a connection
 MAX_ERRORS = 3
