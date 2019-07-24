@@ -36,7 +36,7 @@ MAX_PEERS = 10
 
 # parameters used to download the file
 MAX_THREADS = 5
-#MAX_CHUNKS = 1000000000
+MAX_CHUNKS = 80
 
 # time between two consecutive checks on the synchronization thread status
 CHECK_PERIOD = 1.0
@@ -513,8 +513,6 @@ def getChunks(dl, file, peer, tmpDirPath):
 
     peerAddr = peer["address"]
 
-    MAX_CHUNKS = file.chunksNumber / len(dl.activePeers)
-
     if len(file.availableChunks) + len(dl.scheduledChunks) >= COMPLETION_RATE * file.chunksNumber\
             or len(file.missingChunks) <= MAX_CHUNKS:
         # don't use random discard
@@ -535,9 +533,8 @@ def getChunks(dl, file, peer, tmpDirPath):
             break
 
         chunksList = list()
-        dl.lock.acquire()
 
-        MAX_CHUNKS = file.chunksNumber / len(dl.activePeers)
+        dl.lock.acquire()
 
         for chunk in dl.rarestFirstChunksList:
             if len(chunksList) >= MAX_CHUNKS:
