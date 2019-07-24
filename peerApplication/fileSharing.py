@@ -625,7 +625,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                 try:
                     peerCore.pathCreationLock.acquire()
                     if not os.path.exists(tmpDirPath):
-                        print("Creating the path: " + tmpDirPath)
+                        # print("Creating the path: " + tmpDirPath)
                         os.makedirs(tmpDirPath)
                     peerCore.pathCreationLock.release()
 
@@ -673,7 +673,7 @@ def mergeChunks(file, tmpDirPath):
         dirPath, __ = os.path.split(newFilePath)
         peerCore.pathCreationLock.acquire()
         if not os.path.exists(dirPath):
-            print("Creating the path: " + dirPath)
+            # print("Creating the path: " + dirPath)
             os.makedirs(dirPath)
         peerCore.pathCreationLock.release()
 
