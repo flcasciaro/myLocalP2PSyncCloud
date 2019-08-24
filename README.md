@@ -14,3 +14,9 @@ The role of a device is determined by the access token used during the group joi
 
 File-sharing is performed using a Peer-to-Peer protocol inspired by the BitTorrent protocol. This allows the users network to decentralize traffic, avoiding the bottleneck effect on one or more central servers. In addition, a P2P protocol is much more stable and efficient as the number of users sharing the same file increases respect to a standard Client-Server approach. All traffic, both between devices and between server and single device, is transmitted in an encrypted and secure way.
 The system is cross-platform, so it can be used on Windows, macOS and Linux, but it is not available on mobile devices at the moment.
+
+# License
+
+This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
