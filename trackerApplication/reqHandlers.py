@@ -11,9 +11,9 @@ def imHere(request, peers, peerID, publicAddr):
     """
     Store IP address and port number of a peer.
     These two values represents where the peer is running
-    its server function, waiting for other peers messages.
+    its tracker function, waiting for other peers messages.
     :param request: "HERE <zeroTierIP>, <PortNumber>"
-    :param peers: server data structure
+    :param peers: tracker data structure
     :param peerID: id of the peer
     :param publicAddr: public IP address of the client
     :return: string message containing the public IP of the peer
@@ -28,7 +28,7 @@ def imHere(request, peers, peerID, publicAddr):
 def sendGroups(groups, peerID):
     """
     This function returns the list of active, restorable and other groups for a certain peer.
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param peerID: id of the peer
     :return: list of groups, each group is described with a dictionary
     """
@@ -55,7 +55,7 @@ def restoreGroup(request, groups, peerID):
     """
     Makes the user active in the group specified in the message.
     :param request: "RESTORE <groupName>"
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param peerID: id of the peer
     :return: string message
     """
@@ -82,7 +82,7 @@ def joinGroup(request, groups, peerID):
     Makes the user active in a new group,
     choosing also the role as function of the token provided.
     :param request: "JOIN <groupName> <token>"
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param peerID: id of the peer
     :return: string message
     """
@@ -113,7 +113,7 @@ def createGroup(request, groups, groupsLock, peerID):
     specifying the groupName and the tokens. The creator peer become also the master
     of the new group.
     :param request: "CREATE <groupName> <tokenRW> <tokenRO>"
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param groupsLock: lock on groups
     :param peerID: id of the peer
     :return: string message
@@ -145,7 +145,7 @@ def manageRole(request, groups, groupsLock, peerID):
     """
     This function allows a master peer to change the role of another peer in the group.
     :param request: "ROLE <action> <destinatonPeerID> GROUP <groupName>"
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param groupsLock: lock on groups
     :param peerID: id of the peer
     :return: string message
@@ -193,8 +193,8 @@ def retrievePeers(request, groups, peers, peerID):
     """
     Retrieves the list of peers (only active or all) for a specific group.
     :param request: ""PEERS <groupName> <ACTIVE/ALL>"
-    :param groups: server data structure
-    :param peers: server data structure containing info about peers
+    :param groups: tracker data structure
+    :param peers: tracker data structure containing info about peers
     :param peerID: id of the peer
     :return: string message
     """
@@ -235,7 +235,7 @@ def addedFiles(request, groups, groupsLock, peerID):
     Request contains a <filelist> parameter, it's a list of dictionary.
     Each dictionary contains info treePath, filesize, timestamp of a file.
     :param request: "ADDED_FILES <groupName> <filelist>"
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param groupsLock: lock on the groups data structure
     :param peerID: id of the peer
     :return: string message
@@ -274,7 +274,7 @@ def removedFiles(request, groups, groupsLock, peerID):
     Remove files passed in the request from the specified group.
     Request contains a <filelist> parameter, it's a list tree paths (aka filenames).
     :param request: "REMOVED_FILES <groupName> <filelist>"
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param groupsLock: lock on the groups data structure
     :param peerID: id of the peer
     :return: string message
@@ -313,7 +313,7 @@ def updatedFiles(request, groups, groupsLock, peerID):
     Request contains a <filesInfo> parameter that is a list of dictionaries.
     Each dict contains updated info filesize and timestamp of a file.
     :param request: "UPDATED_FILES <groupName> <filesInfo>"
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param groupsLock: lock on the groups data structure
     :param peerID: id of the peer
     :return: string message
@@ -352,7 +352,7 @@ def getFiles(request, groups, peerID):
     Each element of the list is a dictionary.
     Each dictionary contains info treePath, filesize, timestamp of a file.
     :param request: "GET_FILES <groupName>"
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param peerID: id of the peer
     :return: string message (can contains the list of list of file in string format)
     """
@@ -389,7 +389,7 @@ def leaveGroup(request, groups, groupsLock, peerID):
     """
     Remove peer from the peers list of a specified group.
     :param request: "ADDED_FILES <groupName> <filelist>"
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param groupsLock: lock on the groups data structure
     :param peerID: id of the peer
     :return: string message
@@ -409,7 +409,7 @@ def disconnectGroup(request, groups, groupsLock, peerID):
     """
     Disconnect a peer from the specified group.
     :param request: "ADDED_FILES <groupName> <f1ilelist>"
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param groupsLock: lock on the groups data structure
     :param peerID: id of the peer
     :return: string message
@@ -428,7 +428,7 @@ def disconnectGroup(request, groups, groupsLock, peerID):
 def peerExit(groups, groupsLock, peerID):
     """
     Disconnect the peer from all the synchronization groups in which is active.
-    :param groups: server data structure
+    :param groups: tracker data structure
     :param groupsLock: lock on the groups data structure
     :param peerID: id of the peer
     :return: string message

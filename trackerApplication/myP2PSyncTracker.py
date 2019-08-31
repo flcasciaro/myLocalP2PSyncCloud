@@ -1,6 +1,6 @@
 """
 Project: myP2PSync
-This code runs a tracking server instance.
+This code runs a tracker server instance.
 Can be run using: (sudo) python3 pathTo/myP2PSyncTracker.py
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
 """
@@ -40,8 +40,8 @@ zeroTierIP = None
 PORT_NUMBER = 45154
 
 
-def initServer():
-    """Initialize server data structures
+def initTracker():
+    """Initialize tracker server data structures
     Data structures are filled with data read from local text files if they exist"""
 
     global groups, peers
@@ -281,7 +281,7 @@ class SocketServerThread(Thread):
         # e.g. <action> <parameters>
         action = request.split()[0]
 
-        # don't show common requests in the output of the server
+        # don't show common requests in the output of the tracker
         if action != "PEERS" and action != "BYE" and action != "GROUPS":
             print('[Thr {}] [Peer: {}] Received {}'.format(self.number, peerID, request))
 
@@ -356,13 +356,13 @@ class SocketServerThread(Thread):
 
 
 if __name__ == '__main__':
-    # server application main function
+    # tracker application main function
 
-    # read previous session files and initialize server data structure
-    initServer()
+    # read previous session files and initialize tracker data structure
+    initTracker()
 
     # joins ZeroTier network
     zeroTierIP = networking.joinNetwork()
 
-    # run the server until CTRL+C interrupt
+    # run the tracker server until CTRL+C interrupt
     server = Server(PORT_NUMBER)

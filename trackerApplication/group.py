@@ -1,6 +1,6 @@
 """
 Project: myP2PSync
-Code for server-side groups management.
+Code for tracker-side groups management.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
 """
 
