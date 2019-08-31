@@ -55,7 +55,7 @@ class myP2PSync(QMainWindow):
 
         # Declaration of UI objects in the groupManager frame
         self.peerLabel = QLabel()
-        self.serverLabel = QLabel()
+        self.trackerLabel = QLabel()
 
         self.groupsLabel = QLabel("LIST OF GROUPS")
         self.groupsList = QTreeWidget()
@@ -130,7 +130,7 @@ class myP2PSync(QMainWindow):
 
         # initialize groupManager
         self.groupManagerLayout.addWidget(self.peerLabel, alignment=Qt.AlignCenter)
-        self.groupManagerLayout.addWidget(self.serverLabel, alignment=Qt.AlignCenter)
+        self.groupManagerLayout.addWidget(self.trackerLabel, alignment=Qt.AlignCenter)
         self.groupManagerLayout.addSpacing(25)
         self.groupManagerLayout.addWidget(self.groupsLabel, alignment=Qt.AlignCenter)
         self.groupsList.setHeaderLabels(["GroupName", "Active/Total Peers", "Role", "Status"])
@@ -219,44 +219,44 @@ class myP2PSync(QMainWindow):
         peerCore.setPeerID()
         self.peerLabel.setText("Personal peerID is {}".format(peerCore.peerID))
 
-        # try to obtain server coordinates
-        if peerCore.findServer():
-            serverReachable = peerCore.serverIsReachable()
+        # try to obtain tracker coordinates
+        if peerCore.findTracker():
+            trackerReachable = peerCore.trackerIsReachable()
         else:
-            serverReachable = False
+            trackerReachable = False
 
         self.loadInititalFileManager()
         self.show()
 
         nrTry = 0
-        while not serverReachable:
-            # Show a dialog box where user can set server coordinates
+        while not trackerReachable:
+            # Show a dialog box where user can set tracker coordinates
             ok = False
             while not ok:
-                coordinates, ok = QInputDialog.getText(self, "Server coordinates",
-                                                       "Enter Server IP Address and Server Port\nUse the format: serverIP:ServerPort")
+                coordinates, ok = QInputDialog.getText(self, "Tracker coordinates",
+                                                       "Enter Tracker IP Address and Tracker Port\nUse the format: trackerIP:trackerPort")
                 if not ok:
                     nrTry += 1
                     if nrTry == MAX_TRY:
                         exit()
-            if peerCore.setServerCoordinates(coordinates):
-                serverReachable = peerCore.serverIsReachable()
+            if peerCore.setTrackerCoordinates(coordinates):
+                trackerReachable = peerCore.trackerIsReachable()
             else:
                 nrTry += 1
                 if nrTry == MAX_TRY:
                     exit()
                 continue
-            if not serverReachable:
-                QMessageBox.about(self, "Alert", "Server not reachable or coordinates not valid")
+            if not trackerReachable:
+                QMessageBox.about(self, "Alert", "Tracker not reachable or coordinates not valid")
 
-        self.serverLabel.setText("Connected to server at {}:{}".format(peerCore.serverAddr[0], peerCore.serverAddr[1]))
+        self.trackerLabel.setText("Connected to tracker at {}:{}".format(peerCore.trackerAddr[0], peerCore.trackerAddr[1]))
 
         # start the peerServer and register peer coordinates on the tracker
         self.server = peerCore.startPeer()
         if self.server is None:
             exit(-1)
 
-        # retrieve groups info from the server and update windows
+        # retrieve groups info from the Tracker and update windows
         peerCore.retrieveGroups()
         self.fillGroupManager()
 

@@ -32,8 +32,8 @@ previousSessionFile = scriptPath + "sessionFiles/fileList.json"
 
 # Initialize some global variables
 peerID = None
-serverAddr = None
-serverZTAddr = None
+trackerAddr = None
+trackerZTAddr = None
 myPortNumber = None
 
 networkID = "e5cd7a9e1cf88a16"
@@ -67,14 +67,14 @@ def setPeerID():
     peerID = macAddress
 
 
-def serverIsReachable():
+def trackerIsReachable():
     """
-    Try to reach the server: in case of success return True.
+    Try to reach the tracker: in case of success return True.
     Otherwise return False
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(trackerAddr)
     if s is not None:
         networking.closeConnection(s, peerID)
         return True
@@ -82,16 +82,16 @@ def serverIsReachable():
         return False
 
 
-def findServer():
+def findTracker():
     """
-    Read server coordinates (IP, Port) from the configuration file.
+    Read tracker coordinates (IP, Port) from the configuration file.
     If any problem happens reading the file (e.g. file not exists)
     return false. If the file exist and the reading operation is successfull
     return True.
     :return: boolean (True for success, False for any error)
     """
 
-    global serverAddr
+    global trackerAddr
     try:
         file = open(configurationFile, "r")
         try:
@@ -99,8 +99,8 @@ def findServer():
             # json.load return a dictionary
             configuration = json.load(file)
 
-            # Extract server coordinates
-            serverAddr = (configuration["serverIP"], configuration["serverPort"])
+            # Extract tracker coordinates
+            trackerAddr = (configuration["trackerIP"], configuration["trackerPort"])
         except ValueError:
             return False
     except FileNotFoundError:
@@ -109,31 +109,31 @@ def findServer():
     return True
 
 
-def setServerCoordinates(coordinates):
+def setTrackerCoordinates(coordinates):
     """
-    Set server coordinates reading them from a string
+    Set tracker coordinates reading them from a string
     :param coordinates: is a string like <IPaddress>:<PortNumber>
     :return: boolean (True for success, False for failure due to a
                         bad format of the cocrdinate string)
     """
 
-    global serverAddr
+    global trackerAddr
     try:
-        serverAddr = (coordinates.split(":")[0], coordinates.split(":")[1])
+        trackerAddr = (coordinates.split(":")[0], coordinates.split(":")[1])
         return True
     except IndexError:
         return False
 
-def getServerZTAddr():
+def getTrackerZTAddr():
     """
-    Retrives the ZeroTier IP address from the server
-    and set the associated global variable serverZTAddr
+    Retrives the ZeroTier IP address from the tracker
+    and set the associated global variable trackerZTAddr
     :return: void
     """
 
-    global serverZTAddr
+    global trackerZTAddr
 
-    s = networking.createConnection(serverAddr)
+    s = networking.createConnection(trackerAddr)
     if s is None:
         return
 
@@ -147,18 +147,18 @@ def getServerZTAddr():
         networking.closeConnection(s, peerID)
         return False
 
-    serverZTAddr = eval(answer)
+    trackerZTAddr = eval(answer)
 
 
 def retrieveGroups():
     """
-    Retrieves groups from the server and update local groups list.
+    Retrieves groups from the tracker and update local groups list.
     In case of error return immediately without updating local groups.
     :return: boolean (True for success, False for any error)
     """
     global groupsList
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return
 
@@ -173,8 +173,8 @@ def retrieveGroups():
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: group not restored
-        print('Received from the server :', answer)
+        # tracker replied with an error message: group not restored
+        print('Received from the tracker :', answer)
         return False
     else:
         # set the local groups list equals to the retrieved one
@@ -186,13 +186,13 @@ def retrieveGroups():
 
 def restoreGroup(groupName):
     """
-    Restore a group by sending a request to the server.
+    Restore a group by sending a request to the tracker.
     In case of success update my local groups list setting the group status to ACTIVE.
     :param groupName: is the name of the group that I want to restore
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return False
 
@@ -207,8 +207,8 @@ def restoreGroup(groupName):
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: group not restored
-        print('Received from the server :', answer)
+        # tracker replied with an error message: group not restored
+        print('Received from the tracker :', answer)
         return False
     else:
         # group successfully restored: set group status to ACTIVE
@@ -245,13 +245,13 @@ def restoreAll():
 
 def joinGroup(groupName, token):
     """
-    Join a group by sending a request to the server.
+    Join a group by sending a request to the tracker.
     :param groupName: is the name of the group that peer want to join
     :param token: it's the access token (password)
     :return: boolean (True for success, False for any error) (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return False
 
@@ -269,8 +269,8 @@ def joinGroup(groupName, token):
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: group not joined
-        print('Received from the server :', answer)
+        # tracker replied with an error message: group not joined
+        print('Received from the tracker :', answer)
         return False
     else:
         # group successfully joined: set group status to ACTIVE
@@ -287,14 +287,14 @@ def joinGroup(groupName, token):
 
 def createGroup(groupName, groupTokenRW, groupTokenRO):
     """
-    Create a new group by sending a request to the server with all the necessary information
+    Create a new group by sending a request to the tracker with all the necessary information
     :param groupName: name of the group
     :param groupTokenRW: token for Read&Write access
     :param groupTokenRO: token for ReadOnly access
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return False
 
@@ -315,8 +315,8 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: group not created
-        print('Received from the server :', answer)
+        # tracker replied with an error message: group not created
+        print('Received from the tracker :', answer)
         return False
     else:
         # group successfully created: add it to my local groups list
@@ -341,7 +341,7 @@ def changeRole(groupName, targetPeerID, action):
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return False
 
@@ -356,11 +356,11 @@ def changeRole(groupName, targetPeerID, action):
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: role not changed
-        print('Received from the server :', answer)
+        # tracker replied with an error message: role not changed
+        print('Received from the tracker :', answer)
         return False
     else:
-        # server successfully changed role
+        # tracker successfully changed role
         if action.upper() == "CHANGE_MASTER":
             # set the peer itself (former master) to RW
             groupsList[groupName]["role"] = "RW"
@@ -376,7 +376,7 @@ def retrievePeers(groupName, selectAll):
     :return: list of peers
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return None
 
@@ -396,8 +396,8 @@ def retrievePeers(groupName, selectAll):
         return None
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: return None
-        print('Received from the server :', answer)
+        # tracker replied with an error message: return None
+        print('Received from the tracker :', answer)
         peersList = None
     else:
         # split operation in order to skip the initial 'OK -'
@@ -408,10 +408,10 @@ def retrievePeers(groupName, selectAll):
 def startPeer():
     """
     Load previous session information about files.
-    Start a server thread on a free port.
-    Finally send coordinates to central server in order to be
+    Start a tracker thread on a free port.
+    Finally send coordinates to central tracker in order to be
     reachable from other peers.
-    :return: Server object
+    :return: tracker object
     """
 
     # load local file tree with previous session information (if any)
@@ -428,8 +428,8 @@ def startPeer():
     # join the ZeroTier virtual network
     zeroTierIP = networking.joinNetwork()
 
-    # retrieve ZT IP address of the server
-    getServerZTAddr()
+    # retrieve ZT IP address of the tracker
+    getTrackerZTAddr()
 
     # create a server thread which will ask on all the IP addresses
     # including the ZeroTier IP address
@@ -446,11 +446,11 @@ def startPeer():
     global myPortNumber
     myPortNumber = server.port
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return None
 
-    # send my IP address and port number to central server
+    # send my IP address and port number to tracker
     # in order to be reachable from other peers
     try:
         message = str(peerID) + " " + "HERE {} {}".format(zeroTierIP, myPortNumber)
@@ -467,7 +467,7 @@ def startPeer():
 def startGroupSync(groupName):
     """
     Starts eventual required synchronization in a specific group.
-    First of all, it retrieves files information from the server.
+    First of all, it retrieves files information from the tracker.
     Information retrieved are compared to local information
     belonging to a previous session of the group (if any)
     in order to detect added/removed/updated files, reacting
@@ -476,7 +476,7 @@ def startGroupSync(groupName):
     :return: void
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return
 
@@ -491,38 +491,38 @@ def startGroupSync(groupName):
         return
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: return immediately
-        print("Received from the server: ", answer)
+        # tracker replied with an error message: return immediately
+        print("Received from the tracker: ", answer)
         return
     else:
         # split operation in order to skip the initial 'OK -'
         updatedFileList = eval(answer.split(" ", 2)[2])
 
-    # call the function that evaluates the information retrieved from the server
+    # call the function that evaluates the information retrieved from the tracker
     # comparing them with local information about a previous session (if it exists)
     updateLocalGroupTree(groupName, localFileTree.getGroup(groupName), updatedFileList)
 
 
 def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
     """
-    Compare updatedFileList (retrieved from the server) with
+    Compare updatedFileList (retrieved from the tracker) with
     localGroupTree (previous session info) in order to find differences.
-    e.g. a file in the server has a bigger timestamp, peer need to synchronize it
-    e.g. a file in the server is not present locally, peer need to add it and synchronize
-    e.g. a file present locally is not present anymore in the server, peer need to remove it
+    e.g. a file in the tracker has a bigger timestamp, peer need to synchronize it
+    e.g. a file in the tracker is not present locally, peer need to add it and synchronize
+    e.g. a file present locally is not present anymore in the tracker, peer need to remove it
     :param groupName: name of the group that is foing to be initialized
     :param localGroupTree: fileTree of a certain group - peer side
-    :param updatedFileList: fileTree (in form of list) retrieved from the server
+    :param updatedFileList: fileTree (in form of list) retrieved from the tracker
     :return: void
     """
 
     # list used for check removed file presence
-    serverTreePaths = list()
+    trackerTreePaths = list()
 
     for fileInfo in updatedFileList:
 
         treePath = fileInfo["treePath"]
-        serverTreePaths.append(treePath)
+        trackerTreePaths.append(treePath)
 
         # retrieve file node in the local tree
         localNode = localGroupTree.findNode(treePath)
@@ -592,9 +592,9 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
 
     # check if there are removed files:
     # file has been removed if it present in the local list
-    # but it's not present in server updated list
+    # but it's not present in tracker updated list
     for treePath in localTreePaths:
-        if treePath not in serverTreePaths:
+        if treePath not in trackerTreePaths:
             localGroupTree.removeNode(treePath, True)
 
 
@@ -608,11 +608,11 @@ def addFiles(groupName, filepaths, directory):
     """
 
     # list of dictionary, where each dict contains all the info required
-    # from the server to add a file in the group
+    # from the tracker to add a file in the group
     filesInfo = list()
 
     # WP stands for Without FilePath: it's a copy of filesInfo but without filepaths
-    # because I don't need to send them to the server
+    # because I don't need to send them to the tracker
     filesInfoWFP = list()
 
     if directory == "":
@@ -647,7 +647,7 @@ def addFiles(groupName, filepaths, directory):
             del fileInfoWFP["filepath"]
             filesInfoWFP.append(fileInfoWFP)
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return False
 
@@ -662,8 +662,8 @@ def addFiles(groupName, filepaths, directory):
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: return False
-        print("Received from the server: ", answer)
+        # tracker replied with an error message: return False
+        print("Received from the tracker: ", answer)
         return False
     else:
 
@@ -714,7 +714,7 @@ def removeFiles(groupName, treePaths):
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return False
 
@@ -729,8 +729,8 @@ def removeFiles(groupName, treePaths):
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: return False
-        print('Received from the server :', answer)
+        # tracker replied with an error message: return False
+        print('Received from the tracker :', answer)
         return False
     else:
         # remove files from the local file list
@@ -778,7 +778,7 @@ def updateFiles(groupName, files):
     :return: void
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return False
 
@@ -804,8 +804,8 @@ def updateFiles(groupName, files):
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: return False
-        print('Received from the server :', answer)
+        # tracker replied with an error message: return False
+        print('Received from the tracker :', answer)
         return False
     else:
 
@@ -876,13 +876,13 @@ def waitSyncAndUpdate(file, timestamp):
 
 def leaveGroup(groupName):
     """
-    Leave a group by sending a request to the server.
+    Leave a group by sending a request to the tracker.
     Stop eventual running sync threads.
     :param groupName: name of the group that will be left
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return False
 
@@ -897,8 +897,8 @@ def leaveGroup(groupName):
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: return False
-        print('Received from the server :', answer)
+        # tracker replied with an error message: return False
+        print('Received from the tracker :', answer)
         return False
     else:
         # stop every synchronization thread working on file of the group
@@ -919,7 +919,7 @@ def disconnectGroup(groupName):
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
     if s is None:
         return False
 
@@ -934,8 +934,8 @@ def disconnectGroup(groupName):
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: return False
-        print('Received from the server :', answer)
+        # tracker replied with an error message: return False
+        print('Received from the tracker :', answer)
         return False
     else:
         # stop every synchronization thread working on file of the group
@@ -950,12 +950,12 @@ def disconnectGroup(groupName):
 
 def peerExit():
     """
-    Disconnect peer from all the active groups by sending a request to the server.
+    Disconnect peer from all the active groups by sending a request to the tracker.
     Furthermore, stop all the working synchronization thread.
     :return: boolean (True for success, False for any error)
     """
 
-    s = networking.createConnection(serverZTAddr)
+    s = networking.createConnection(trackerZTAddr)
 
     if s is None:
         return False
@@ -971,8 +971,8 @@ def peerExit():
         return False
 
     if answer.split(" ", 1)[0] == "ERROR":
-        # server replied with an error message: return False
-        print('Received from the server :', answer)
+        # tracker replied with an error message: return False
+        print('Received from the tracker :', answer)
         return False
     else:
 

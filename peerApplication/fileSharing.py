@@ -389,7 +389,7 @@ def chunksManager(dl, file):
         activePeers = peerCore.retrievePeers(file.groupName, selectAll=False)
 
         if activePeers is None:
-            # error occurred while asking the peers list to the server
+            # error occurred while asking the peers list to the tracker
             unavailable += 1
             time.sleep(1)
             continue
