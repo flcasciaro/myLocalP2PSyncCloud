@@ -33,7 +33,8 @@ queueLock = Lock()
 stop = False
 
 # Data structure that keep tracks of synchronization threads
-# key : groupName_filename
+# associated to file that are being synchronized
+# key : groupName_filename, makes possible to identify files
 # values: dict()    ->      groupName
 #                           stop
 syncThreads = dict()
@@ -60,15 +61,28 @@ UNDEFINED_STATE = 6
 
 
 class syncTask:
+    """
+    Class that describe a synchronization task.
+    A synchronization task exists when a certain file needs to be synchronized
+    retrieving a new version (or the first version).
+    """
 
     def __init__(self, groupName, fileTreePath, timestamp):
-
+        """
+        Initialize a sync task properties.
+        :param groupName: name of the group
+        :param fileTreePath: treePath of the file
+        :param timestamp: timestamp of file version
+        """
         self.groupName = groupName
         self.fileTreePath = fileTreePath
         self.timestamp = timestamp
 
     def toString(self):
-
+        """
+        Convert task info in a single string format.
+        :return: syncTask information string
+        """
         return "SYNC {} {} {}".format(self.groupName, self.fileTreePath, self.timestamp)
 
     def isOutdated(self, newTask):
@@ -88,6 +102,12 @@ class syncTask:
 
 
 def scheduler():
+    """
+    Scheduler function.
+    It periodically looks for waiting sync task and if it's possible it actives them.
+    :return: void
+    """
+
     global queue, stop
 
     while True:
@@ -145,6 +165,10 @@ def scheduler():
 
 
 def stopScheduler():
+    """
+    Function used to stop the scheduler.
+    :return: void
+    """
     global stop
     stop = True
 
@@ -217,6 +241,11 @@ def removeGroupTasks(groupName):
 
 
 def removeAllTasks():
+    """
+    Remove all the tasks from the queue.
+    Useful before the client termination
+    :return: void
+    """
     global queue
     queueLock.acquire()
     queue = deque()
@@ -224,6 +253,12 @@ def removeAllTasks():
 
 
 def removeSyncThread(key):
+    """
+    Remove an active synchronization thread associated to a certain file
+    from the syncThreads data structure that collects information about all t.
+    :param key: key of the file (groupName_filename)
+    :return: void
+    """
     syncThreadsLock.acquire()
     try:
         del syncThreads[key]
@@ -233,6 +268,12 @@ def removeSyncThread(key):
 
 
 def getThreadState(key):
+    """
+    Return state information for a certain active sync thread.
+    :param key: key of the file (groupName_filename)
+    :return: state information
+    """
+
     syncThreadsLock.acquire()
     try:
         state = syncThreads[key]["state"]
@@ -242,6 +283,13 @@ def getThreadState(key):
     return state
 
 def stopSyncThread(key, value):
+    """
+    Force a new state for a certain synchronization thread,
+    for example SYNC_STOPPED in order to block the execution of the sync operation
+    :param key: key of the file (groupName_filename)
+    :param value: new state value
+    :return: void
+    """
     if value == SYNC_RUNNING:
         # value is not a stopping state
         return
@@ -253,6 +301,14 @@ def stopSyncThread(key, value):
     syncThreadsLock.release()
 
 def stopSyncThreadIfRunning(key, value):
+    """
+    Force a new state for a certain synchronization thread,
+    for example SYNC_STOPPED in order to block the execution of the sync operation,
+    ONLY IF the thread IS in the SYNC_RUNNING state.
+    :param key: key of the file (groupName_filename)
+    :param value: new state value
+    :return: void
+    """
     if value == SYNC_RUNNING:
         # value is not a stopping state
         return
@@ -267,6 +323,16 @@ def stopSyncThreadIfRunning(key, value):
 
 
 def stopSyncThreadsByGroup(groupName, value):
+    """
+    Force a stopping state on all the sync threads associated to files
+    of a certain group
+    :param groupName: name of the group
+    :param value: new state of the threads
+    :return: void
+    """
+    if value == SYNC_RUNNING:
+        # value is not a stopping state
+        return
     syncThreadsLock.acquire()
     for thread in syncThreads.values():
         if thread["groupName"] == groupName:
@@ -275,6 +341,14 @@ def stopSyncThreadsByGroup(groupName, value):
 
 
 def stopAllSyncThreads(value):
+    """
+    Force a stopping state on all the active sync threads.
+    :param value: new state of the threads
+    :return: void
+    """
+    if value == SYNC_RUNNING:
+        # value is not a stopping state
+        return
     syncThreadsLock.acquire()
     for thread in syncThreads.values():
         thread["state"] = value
@@ -282,6 +356,13 @@ def stopAllSyncThreads(value):
 
 
 def addedFiles(message):
+    """
+    Function used when the peer receive an "ADDED_FILES" message from another peer.
+    The File object associated to the new files are created and placed in the local file tree.
+    Then, the sync tasks are created and inserted in the queue, ready to be scheduled ASAP.
+    :param message: string containing all the files information
+    :return: answer string
+    """
     global queue
 
     try:
@@ -307,7 +388,7 @@ def addedFiles(message):
                         os.makedirs(path)
                     peerCore.pathCreationLock.release()
 
-                    # create file Object
+                    # create File object
                     file = fileManagement.File(groupName=groupName, treePath=treePath,
                                                filename=filename, filepath=filepath,
                                                filesize=fileInfo["filesize"],
@@ -333,6 +414,14 @@ def addedFiles(message):
 
 
 def removedFiles(message):
+    """
+    Function used when the peer receive a "REMOVED_FILES" message from another peer.
+    The files are removed from the local file tree and the sync threads associated to them
+    are stopped if they are active.
+    :param message: string containing all the files information
+    :return: answer string
+    """
+
     try:
         messageFields = message.split(" ", 2)
         groupName = messageFields[1]
@@ -363,6 +452,14 @@ def removedFiles(message):
 
 
 def updatedFiles(message):
+    """
+    Function used when the peer receive an "UPDATED_FILES" message from another peer.
+    Possible sync threads acting on files are stopped because obsolete and the new sync tasks
+    are created and inserted in the scheduler queue.
+    :param message: string containing all the files information
+    :return: answer string
+    """
+
     global queue
 
     try:
@@ -419,11 +516,21 @@ def updatedFiles(message):
 
 
 def waitSyncAndUpdate(fileNode, fileInfo):
+    """
+    Wait until the file lock is released and then update the File object
+    and insert the new sync task in the scheduler queue.
+    :param fileNode: Node in the file tree associated to the file
+    :param fileInfo: dictionary of information about the new version of the file
+    :return: void
+    """
 
+    # wait for the unlock of file resources
     while not fileNode.file.syncLock.acquire(blocking=False):
         time.sleep(0.5)
 
+    # check timestamp validity
     if fileNode.file.timestamp < fileInfo["timestamp"]:
+        # update file information
         fileNode.file.filesize = fileInfo["filesize"]
         fileNode.file.timestamp = fileInfo["timestamp"]
         fileNode.file.status = "D"

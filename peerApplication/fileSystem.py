@@ -22,44 +22,74 @@ import fileManagement
 
 
 class FileTree:
+    """
+    Customized data structure used to store the organization of files in directories.
+    It's similar to a tree with a set of roots.
+    Each root is related to a group of the peer.
+    """
 
     def __init__(self):
-
+        """
+        Initialize FileTree dictionary for group roots.
+        """
         self.groups = dict()
 
     def addGroup(self, groupTree):
-
+        """
+        Add a group root to the user tree.
+        :param groupTree: root of the group tree
+        :return: void
+        """
         groupName = groupTree.nodeName
         self.groups[groupName] = groupTree
 
     def getGroup(self, groupName):
-
+        """
+        Return the root of the group tree associated to the name groupName.
+        :param groupName: name of the group
+        :return: Node object representing the root of the group tree
+        """
         if groupName in self.groups:
             return self.groups[groupName]
         else:
             return None
 
     def print(self):
-
+        """
+        Function used to print the tree.
+        :return: void
+        """
         for group in self.groups:
             group.print(0)
 
 
 class Node:
+    """
+    Class used to describe the structure of a node of the FileTree.
+    """
 
     def __init__(self, nodeName, isDir, file = None):
 
+        # name of the node, e.g. filename or directory name
         self.nodeName = nodeName
+        # boolean value: True -> node represents a directory, otherwise a file
         self.isDir = isDir
 
         if self.isDir:
             self.file = None
+            # dict used to store all the nodes associated to file in the directory
             self.childs = dict()
         else:
+            # File object
             self.file = file
             self.childs = None
 
     def addChild(self, child):
+        """
+        Add a child node to the self node dictionary.
+        :param child: Node object
+        :return: void
+        """
 
         if self.isDir:
             if child.nodeName not in self.childs:
@@ -70,6 +100,11 @@ class Node:
             print("ERROR: TRYING TO ADD A CHILD TO A FILE NODE")
 
     def print(self, level):
+        """
+        Function used to print the files tree.
+        :param level: level of the node in the tree in terms of depth
+        :return: void
+        """
 
         levelStr = "-" * level * 5
         levelStr += ">"
@@ -82,7 +117,11 @@ class Node:
             print("{} Filename: {}".format(levelStr, self.file.filename))
 
     def findNode(self, treePath):
-
+        """
+        Find and return a node following a path in the tree.
+        :param treePath: it's the path to follow
+        :return: Node object if found or None
+        """
         current = self
 
         for name in treePath.split("/"):
@@ -183,7 +222,10 @@ class Node:
 
 
     def getFileTreePaths(self):
-
+        """
+        Return a list of all the treePath in the tree with root in self Node.
+        :return: a list of treePaths
+        """
         treePaths = list()
 
         if self.isDir:
@@ -196,6 +238,12 @@ class Node:
 
 
     def getFileTreePathsR(self, treePath):
+        """
+        Recursive function used by getFileTreePaths in order to
+        extract the list of all the treePath inside a tree.
+        :param treePath: treePath string
+        :return: treePaths list
+        """
 
         treePaths = list()
 
@@ -215,6 +263,11 @@ class Node:
 
 
 def getFileStatus(previousSessionFile):
+    """
+    Load a FileTree with information stored in a JSON file.
+    :param previousSessionFile: name of the file
+    :return: FileTree onject
+    """
 
     fileTree = FileTree()
 
@@ -229,9 +282,13 @@ def getFileStatus(previousSessionFile):
         print("No previous session session information found")
         return fileTree
 
+    # convert the nested JSON dictionaries into a tree
     for group in fileTreeJson:
+        # create root node for the group
         groupTree = Node(group["nodeName"], True, None)
+        # fill the group tree
         fillNode(groupTree, group["childs"])
+        # add the group tree to the main tree
         fileTree.addGroup(groupTree)
 
     del fileTreeJson
@@ -241,12 +298,20 @@ def getFileStatus(previousSessionFile):
 
 
 def fillNode(node, childs):
+    """
+    Recursively build a tree node.
+    :param node: Node object
+    :param childs: list of child dictionaries
+    :return: void
+    """
 
     for child in childs:
         if child["isDir"]:
+            # directory node
             newNode = Node(child["nodeName"], True, None)
             fillNode(newNode, child["childs"])
         else:
+            # file node
             fileInfo = child["info"]
             file = fileManagement.File(fileInfo["groupName"], fileInfo["treePath"],
                                        fileInfo["filename"], fileInfo["filepath"],
@@ -257,17 +322,26 @@ def fillNode(node, childs):
 
 
 def saveFileStatus(fileTree, sessionFile):
+    """
+    Save the structure of a File Tree object into a JSON  file.
+    :param fileTree: FileTree object
+    :param sessionFile: name of the file
+    :return: boolean (True for success)
+    """
 
     fileTreeJson = list()
 
+    # convert the tree into a nested dictionaries format (JSON-like)
     for group in fileTree.groups.values():
 
+        # build a dict from a node
         groupInfo = dict()
         groupInfo["nodeName"] = group.nodeName
         groupInfo["isDir"] = True
         groupInfo["childs"] = list()
         groupInfo["info"] = dict()
 
+        # handle possible childs node
         fillChildsInfo(groupInfo, group.childs)
         fileTreeJson.append(groupInfo)
 
@@ -286,6 +360,12 @@ def saveFileStatus(fileTree, sessionFile):
 
 
 def fillChildsInfo(groupInfo, childs):
+    """
+    Fill recursively a dictionary with info about childs node.
+    :param groupInfo: dictionary for a certain node
+    :param childs: list of childs of the node
+    :return: void
+    """
 
     for child in childs.values():
         if child.isDir:
