@@ -15,7 +15,6 @@ or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
 for more details.
 """
 
-import hashlib
 import math
 import os
 import shutil
@@ -34,7 +33,7 @@ if "networking" not in sys.modules:
     import shared.networking as networking
 
 
-# define the period of time between 2 consecutive refreshes of the chunksList
+# define the period of time between 2 consecutive refreshes of the rarestFirstChunksList
 REFRESH_LIST_PERIOD = 10
 
 # maximum number of attempts before quitting a synchronization
@@ -46,16 +45,20 @@ MAX_UNAVAILABLE = 5
 MAX_PEERS = 10
 
 # parameters used to download the file
+# maximum number of parallel threads getting chunks
 MAX_THREADS = 5
+# maximum number of chunks that can be asked by a getChunk thread in a single iteration
+# of its internal cycle: it's not unbounded in order to don't block other threads, it's not
+# a small value in order to avoid too much cycle
 MAX_CHUNKS = 100
 
 # time between two consecutive checks on the synchronization thread status
 CHECK_PERIOD = 1.0
 
 # parameters for chunks random discard
-INITIAL_TRESHOLD = 0.5
-TRESHOLD_INC_STEP = 0
-COMPLETION_RATE = 0.95
+INITIAL_TRESHOLD = 0.5          # discard (INITIAL_TRESHOLD*100)% of the chunks
+TRESHOLD_INC_STEP = 0           # increment of the treshold after each iteration
+COMPLETION_RATE = 0.95          # realize random discard until (COMPLETION_RATE*100)% of the file is downloaded
 
 # maximum number of getChunk request leading to an error allowed before to quit a connection
 MAX_ERRORS = 3
@@ -79,6 +82,7 @@ def sendChunksList(message, thread):
     fileNode = peerCore.localFileTree.getGroup(groupName).findNode(fileTreePath)
 
     if fileNode is not None:
+        # check timestamp in order to ensure local file validity
         if fileNode.file.timestamp == timestamp:
             if fileNode.file.availableChunks is not None:
                 if len(fileNode.file.availableChunks) != 0:
@@ -103,7 +107,7 @@ def sendChunksList(message, thread):
 
 def sendChunk(message, thread):
     """
-    Send request chunk to another peer.
+    Send requested chunk to another peer.
     :param message: message received
     :param thread: thread handler of the connection
     :return: void
@@ -114,6 +118,8 @@ def sendChunk(message, thread):
     groupName = messageFields[1]
     fileTreePath = messageFields[2]
     timestamp = int(messageFields[3])
+
+    # id of the requested chunk
     chunkID = int(messageFields[4])
 
     error = True
@@ -125,16 +131,18 @@ def sendChunk(message, thread):
 
         file = fileNode.file
 
+        # check timestamp in order to ensure local file validity
         if file.timestamp == timestamp:
             if chunkID in file.availableChunks:
 
+                # get chunk's size
                 if chunkID == file.chunksNumber - 1:
                     chunkSize = file.lastChunkSize
                 else:
                     chunkSize = CHUNK_SIZE
 
                 if file.status == "S":
-                    # peer has the whole file -> open and send it
+                    # peer has the whole file: open and send it
 
                     try:
                         f = open(file.filepath, 'rb')
@@ -145,7 +153,7 @@ def sendChunk(message, thread):
 
                         try:
                             error = False
-                            answer = "OK - {}".format(hashlib.md5(dataChunk).hexdigest())
+                            answer = "OK - I'M SENDING THE CHUNK"
                             networking.mySend(thread.clientSock, answer)
                             networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
                         except (socket.timeout, RuntimeError):
@@ -156,7 +164,7 @@ def sendChunk(message, thread):
                         answer = "ERROR - IT WAS NOT POSSIBLE TO OPEN THE FILE"
 
                 if file.status == "D":
-                    # peer is still downloading the file -> send chunk from tmp file
+                    # peer is still downloading the file -> send chunk from tmp directory
 
                     try:
                         chunkPath = file.filepath + "_tmp/" + "chunk" + str(chunkID)
@@ -167,7 +175,7 @@ def sendChunk(message, thread):
 
                         try:
                             error = False
-                            answer = "OK - I'M SENDING IT"
+                            answer = "OK - I'M SENDING THE CHUNK"
                             networking.mySend(thread.clientSock, answer)
                             networking.sendChunk(thread.clientSock, dataChunk, chunkSize)
                         except (socket.timeout, RuntimeError):
@@ -271,18 +279,29 @@ def startFileSync(file, taskTimestamp):
 
 
 class Download:
+    """
+    Data structure useful to collect download information.
+    """
 
     def __init__(self):
-        self.rarestFirstChunksList = None
-        self.scheduledChunks = None
-        self.chunksToPeers = None
-        self.activePeers = None
-        self.complete = False
-        self.unavailable = False
-        self.lock = Lock()
+        self.rarestFirstChunksList = None               # list of missing chunks ordered by their rarity
+        self.scheduledChunks = None                     # list of chunks already scheduled by a getChunks
+                                                        # thread in order to get them
+        self.chunksToPeers = None                       # mapping chunkID -> list of active peers that have that chunk
+        self.activePeers = None                         # list of active peers
+        self.complete = False                           # download complete
+        self.unavailable = False                        # file unavailable
+        self.lock = Lock()                              # lock on the data structure
 
 
 def downloadFile(file, key):
+    """
+    This function manages the creation of all the threads related to a file download.
+    It creates the chunksManager thread and the getChunks threads.
+    :param file: File object
+    :param key: File key (groupName_filename)
+    :return: void
+    """
 
     # initialize download parameters e.g. chunksNumber and chunks list
     file.initSync()
@@ -303,10 +322,13 @@ def downloadFile(file, key):
 
         dl = Download()
 
+        # create and start chunksManager thread, it collect chunks list from other active peers
+        # and calculate the missing chunks rarestFirstChunksList
         chunksManagerThread = Thread(target = chunksManager, args=(dl,file))
         chunksManagerThread.daemon = True
         chunksManagerThread.start()
 
+        # wait for the completion of the first iteration of chunksManager
         while dl.activePeers is None:
             time.sleep(0.1)
             if dl.unavailable or file.stopSync:
@@ -318,6 +340,9 @@ def downloadFile(file, key):
             activePeers = dl.activePeers
 
             for peer in activePeers:
+                # create a getChunks thread for each active peers
+                if activeThreads == MAX_THREADS:
+                    break
                 getChunksThread = Thread(target = getChunks, args = (dl, file, peer, tmpDirPath))
                 getChunksThread.daemon = True
                 getChunksThread.start()
@@ -326,16 +351,21 @@ def downloadFile(file, key):
             # get download start time
             startTime = time.time()
 
+            # while the download is not complete
             while not dl.complete:
+                # create new getChunks thread if new peers are active
                 for peer in dl.activePeers:
                     if peer not in activePeers and activeThreads < MAX_THREADS:
                         getChunksThread = Thread(target=getChunks, args=(dl, file, peer, tmpDirPath))
                         getChunksThread.daemon = True
                         getChunksThread.start()
                         activeThreads += 1
+                # detect new unactive peers
                 for peerID in activePeers:
                     if peerID not in dl.activePeers:
                         activeThreads -= 1
+
+                # check download stop conditions
                 if dl.unavailable or file.stopSync:
                     unavailable = True
                     break
@@ -365,12 +395,24 @@ def downloadFile(file, key):
 
 
 def syncSuccess(file, syncTime):
+    """
+    Synchronization ended successfully. Print success messages.
+    :param file: File object
+    :param syncTime: indicate the time between syncStart and syncEnd
+    :return: syncScheduler status
+    """
     print("Synchronization of {} successfully terminated".format(file.filename))
     print("Synchronization completed in {} seconds".format(syncTime))
     return syncScheduler.SYNC_SUCCESS
 
 
 def syncFail(file, key):
+    """
+    Synchronization fails. Print error messages and reload sync task.
+    :param file: File object
+    :param key: File key (groupName_filename)
+    :return: syncScheduler status
+    """
     # save download current state in order to restart it at next sync
     print("Synchronization of {} failed or stopped".format(file.filename))
     # re-append task: if the group is no longer active or the file has been removed
@@ -383,6 +425,13 @@ def syncFail(file, key):
 
 
 def chunksManager(dl, file):
+    """
+    Periodically asks other active peers for their chunksList of file.
+    Then, it calculates the rarestFirstChunksList of missing chunks.
+    :param dl: Download object, contains download information
+    :param file: File object
+    :return: void
+    """
 
     unavailable = 0
     dl.rarestFirstChunksList = set()
@@ -429,10 +478,11 @@ def chunksManager(dl, file):
         # in order to apply the rarest-first approach
         for peer in activePeers:
 
-            # limits the number of peers considered
+            # limits to a maximum MAX_PEERS the number of peers considered
             if j == MAX_PEERS:
                 break
 
+            # ask the peer for its chunksList for the file
             chunksList = getChunksList(file, peer["address"])
 
             if chunksList is not None:
@@ -442,7 +492,7 @@ def chunksManager(dl, file):
                 # clean the list from already retrieved chunks
                 chunksList = [chunk for chunk in chunksList if chunk in file.missingChunks]
 
-                # fill chunk_peers and chunksCounter
+                # fill chunkToPeers and chunksCounter
                 for chunk in chunksList:
                     if chunk in chunksCounter:
                         chunksCounter[chunk] += 1
@@ -460,6 +510,7 @@ def chunksManager(dl, file):
 
         dl.lock.acquire()
 
+        # update download information
         for chunk in sorted(chunksCounter, key=chunksCounter.get):
             if chunk not in dl.scheduledChunks:
                 dl.rarestFirstChunksList.add(chunk)
@@ -468,6 +519,8 @@ def chunksManager(dl, file):
 
         dl.lock.release()
 
+        # wait REFRESH_LIST_PERIOD seconds, checking every second
+        # for a possible termination of the download or external stop
         for i in range(0, REFRESH_LIST_PERIOD):
             if file.stopSync:
                 unavailable = MAX_UNAVAILABLE
@@ -521,12 +574,23 @@ def getChunksList(file, peerAddr):
 
 
 def getChunks(dl, file, peer, tmpDirPath):
+    """
+    This function allows to retrieve chunks from another active peer.
+    Chunks are selected from the dl.rarestFirstChunksList and requested.
+    The function iterate its behavior until the download is complete.
+    :param dl: download information and data
+    :param file: File object
+    :param peer: peer information, it's a dictionary
+    :param tmpDirPath: path of the directory where chunk will be stored
+    :return: void
+    """
 
+    # get peer address
     peerAddr = peer["address"]
 
     if len(file.availableChunks) + len(dl.scheduledChunks) >= COMPLETION_RATE * file.chunksNumber\
             or len(file.missingChunks) <= MAX_CHUNKS:
-        # don't use random discard
+        # don't use random discard if the number of missing chunks is smaller than a certain amount
         threshold = 1
 
     else:
@@ -543,22 +607,27 @@ def getChunks(dl, file, peer, tmpDirPath):
         if file.stopSync:
             break
 
+        # list of chunks that the function will retrieve in a single iteration
         chunksList = list()
 
         dl.lock.acquire()
 
         for chunk in dl.rarestFirstChunksList:
             if len(chunksList) >= MAX_CHUNKS:
+                # chunksList full
                 break
             if len(file.missingChunks) > MAX_CHUNKS \
                     and len(file.availableChunks) + len(dl.scheduledChunks) <= COMPLETION_RATE * file.chunksNumber\
                     and random() > threshold:
-                # discard this chunk
+                # randomly discard this chunk from the request list
                 continue
             if peer in dl.chunksToPeers[chunk]:
+                # add chunk to request list and scheduled list
                 chunksList.append(chunk)
                 dl.scheduledChunks.add(chunk)
 
+        # remove scheduled chunks from main list
+        # this avoid that other threads request scheduled chunks
         for chunk in chunksList:
             dl.rarestFirstChunksList.remove(chunk)
 
@@ -568,6 +637,8 @@ def getChunks(dl, file, peer, tmpDirPath):
         threshold += TRESHOLD_INC_STEP
 
         if len(chunksList) == 0:
+            # if no chunks can be request to the peer
+            # sleep 5 seconds and then try again to compute chunksList
 
             for i in range(0, 5):
                 if file.stopSync or dl.complete:
@@ -590,10 +661,10 @@ def getChunks(dl, file, peer, tmpDirPath):
                     if s is None:
                         # connection broken or peer disconnected
                         for j in range(i, len(chunksList)):
+                            # reload in the main list all the scheduled chunks
                             chunk = chunksList[j]
                             errorOnGetChunk(dl, chunk)
                         return
-
 
                 # check eventual stop forced from main thread
                 if file.stopSync:
@@ -642,6 +713,7 @@ def getChunks(dl, file, peer, tmpDirPath):
 
                     chunkPath = tmpDirPath + "chunk" + str(chunkID)
 
+                    # write chunk in a new file
                     f = open(chunkPath, 'wb')
                     f.write(data)
                     f.close()
@@ -661,18 +733,30 @@ def getChunks(dl, file, peer, tmpDirPath):
 
 
 def errorOnGetChunk(dl, chunkID):
+    """
+    Function that handles an error occurred while asking for a certain chunk.
+    It makes a specific chunk available to be ask for other getChunks threads.
+    :param dl: download information
+    :param chunkID: number of the chunk of the file
+    :return: void
+    """
     dl.lock.acquire()
+    # add the chunk to the main list
     dl.rarestFirstChunksList.add(chunkID)
+    # remove the chunk from the list of scheduled chunks
     dl.scheduledChunks.remove(chunkID)
     dl.lock.release()
 
+
 def mergeChunks(file, tmpDirPath):
     """
-    :param file:
-    :param tmpDirPath:
-    :return: boolean
+    This function merges all the chunks of a file in a new file.
+    :param file: File object
+    :param tmpDirPath: path of the directory where all the chunks have been collected
+    :return: boolen value (True for success)
     """
 
+    # path of the new file
     newFilePath = getNewFilePath(file)
 
     # save available chunks in case the merge operations fails or it's stopped
@@ -689,6 +773,7 @@ def mergeChunks(file, tmpDirPath):
         peerCore.pathCreationLock.release()
 
         f1 = open(newFilePath, 'wb')
+        # merge chunks
         if file.filesize > 0:
             for chunkID in range(0, file.chunksNumber):
                 chunkPath = tmpDirPath + "chunk" + str(chunkID)
@@ -703,6 +788,7 @@ def mergeChunks(file, tmpDirPath):
     if os.path.exists(file.filepath):
         os.remove(file.filepath)
 
+    # rename the tmp file to the real name of the file
     os.rename(newFilePath, file.filepath)
 
     # remove chunks directory
