@@ -121,6 +121,7 @@ class myP2PSync(QMainWindow):
     def initUI(self):
         """
         Initialize the GUI
+        :return: void
         """
 
         self.setWindowTitle(self.title)
@@ -280,9 +281,10 @@ class myP2PSync(QMainWindow):
 
     def backgroundRefresh(self):
         """
-        These function is executed for all the time the client is running
+        This function is executed for all the time the client is running
         by a secondary thread. Every second the thread check if the client is
         still running and every REFRESHING_TIME seconds emits a refresh signal.
+        :return: void
         """
 
         while True:
@@ -306,6 +308,7 @@ class myP2PSync(QMainWindow):
         """
         Handler for the closing operation (after a click on the 'X' in the window)
         :param event: the closing event generated
+        :return: void
         """
 
         # confirm message box
@@ -335,7 +338,8 @@ class myP2PSync(QMainWindow):
 
     def loadInititalFileManager(self):
         """
-        Load the empty fileManager
+        Load the empty fileManager.
+        :return: void
         """
 
         self.fileManagerLabel1.setText(firstTip)
@@ -344,7 +348,8 @@ class myP2PSync(QMainWindow):
 
     def hideFileManager(self):
         """
-        Hide all the fileManager components
+        Hide all the fileManager components.
+        :return: void
         """
         self.fileListLabel.hide()
         self.fileList.hide()
@@ -364,7 +369,8 @@ class myP2PSync(QMainWindow):
 
     def fillGroupManager(self):
         """
-        Fill the groupManager with groups information
+        Fill the groupManager with groups information.
+        :return: void
         """
 
         self.groupsList.clear()
@@ -396,7 +402,8 @@ class myP2PSync(QMainWindow):
 
     def restoreAllHandler(self):
         """
-        Allows the user to restore all the restorable groups
+        Allows the user to restore all the restorable groups.
+        :return: void
         """
 
         # show a message box
@@ -424,7 +431,8 @@ class myP2PSync(QMainWindow):
     def createGroupHandler(self):
         """
         Collect and verify all the inputs in the createGroup form and
-        in case everything is ok create the group
+        in case everything is ok create the group.
+        :return: void
         """
 
         # collects inputs
@@ -455,7 +463,8 @@ class myP2PSync(QMainWindow):
 
     def resetCreateHandler(self):
         """
-        Reset the crreateGroup form
+        Reset the crreateGroup form.
+        :return: void
         """
         self.createGroupName.setText("Enter single word GroupName")
         self.createTokenRW.clear()
@@ -465,7 +474,8 @@ class myP2PSync(QMainWindow):
 
     def groupDoubleClicked(self, item):
         """
-        Handle the double-clicking action on a group in the groupManager
+        Handle the double-clicking action on a group in the groupManager.
+        :return: void
         """
 
         self.groupName = item.text(0)
@@ -479,7 +489,8 @@ class myP2PSync(QMainWindow):
 
     def restoreHandler(self):
         """
-        Restore a restorable group and reload the window
+        Restore a restorable group and reload the window.
+        :return: void
         """
 
         # confirm message box
@@ -498,7 +509,8 @@ class myP2PSync(QMainWindow):
 
     def joinHandler(self):
         """
-        Handler for the join group action (triggered by clicking on an active group)
+        Handler for the join group action (triggered by clicking on an active group).
+        :return: void
         """
 
         # show a form where the user can insert a token
@@ -517,6 +529,7 @@ class myP2PSync(QMainWindow):
         Fills the fileManager part of the GUI.
         The set of information and buttons showed is related to the role
         of the peer.
+        :return: void
         """
 
         # hide all the components
@@ -560,11 +573,19 @@ class myP2PSync(QMainWindow):
         self.disconnectButton.show()
 
     def fillPeersList(self):
+        """
+        Fills peers list section in the file manager.
+        Peers list is retrieved from the tracker.
+        :return: void
+        """
 
+        # retrieve peers list from the tracker
         peersList = peerCore.retrievePeers(self.groupName, selectAll=True)
 
         if peersList is not None:
 
+            # this portion of code keep track of a possible selected item
+            # in order to restore the selection after the fill operation
             selectedItem = self.peersList.currentItem()
             if selectedItem is not None:
                 selectedItemName = selectedItem.text(0)
@@ -577,11 +598,18 @@ class myP2PSync(QMainWindow):
                 status = "Active" if peer["active"] else "NotActive"
                 item = QTreeWidgetItem([peer["peerID"], peer["role"], status])
                 self.peersList.addTopLevelItem(item)
+                # restore selection
                 if peer["peerID"] == selectedItemName:
                     self.peersList.setCurrentItem(item)
 
     def fillFileList(self):
+        """
+        Fills file list section of the file manager.
+        :return: void
+        """
 
+        # this portion of code keep track of a possible selected item
+        # in order to restore the selection after the fill operation
         selectedItem = self.fileList.currentItem()
         if selectedItem is not None:
             selectedItemName = selectedItem.text(0)
@@ -591,22 +619,30 @@ class myP2PSync(QMainWindow):
 
         self.fileList.clear()
 
+        # get files tree for the group
         groupTree = peerCore.localFileTree.getGroup(self.groupName)
         if groupTree is None:
             return
 
+        # build recursively the file list
+        # the recursive approach is used to build nested items (for directories)
         for node in groupTree.childs.values():
             self.fileList.addTopLevelItem(generateFileListItem(node))
 
+        # expand directory items and restore a possible selection
         allItems = self.fileList.findItems("*", Qt.MatchWrap | Qt.MatchWildcard | Qt.MatchRecursive)
         for item in allItems:
             item.setExpanded(True)
             if item.text(0) == selectedItemName:
-                # print(item.text(0) + "   " + selectedItemName + "   match found")
                 self.fileList.setCurrentItem(item)
 
     def addFileHandler(self):
+        """
+        Add a selected file to the group.
+        :return: void
+        """
 
+        # select file from the file system
         dlg = QFileDialog()
         files = dlg.getOpenFileNames(self, "Add file to the group", "/")
         if len(files[0]) == 0:
@@ -641,7 +677,12 @@ class myP2PSync(QMainWindow):
             QMessageBox.about(self, "Error", "Cannot add the selected files!")
 
     def addDirHandler(self):
+        """
+        Add a selected directory of file(s) to the group.
+        :return: void
+        """
 
+        # select directory from the file system
         dlg = QFileDialog()
         directory = dlg.getExistingDirectory(self, "Add directory to the group", "/")
         if directory == "":
@@ -673,12 +714,16 @@ class myP2PSync(QMainWindow):
             QMessageBox.about(self, "Error", "Cannot add the selected directory.. name cannot contains spaces!")
 
     def removeFileHandler(self):
+        """
+        Remove a selected file from the sync group.
+        :return: void
+        """
 
         if self.fileList.currentItem() is not None:
             if self.fileList.currentItem().text(1) != "":
                 filename = self.fileList.currentItem().text(0)
 
-                # build treePath
+                # build treePath for the file
                 treePath = filename
                 parent = self.fileList.currentItem().parent()
                 while parent is not None:
@@ -699,10 +744,15 @@ class myP2PSync(QMainWindow):
             QMessageBox.about(self, "Error", "You must select a file from the list")
 
     def removeDirHandler(self):
+        """
+        Remove a selected directory from the sync group.
+        :return:
+        """
 
         if self.fileList.currentItem() is not None:
             if self.fileList.currentItem().text(1) == "":
 
+                # build treePath for the directory
                 dirName = self.fileList.currentItem().text(0)
                 parent = self.fileList.currentItem().parent()
 
@@ -726,6 +776,10 @@ class myP2PSync(QMainWindow):
             QMessageBox.about(self, "Error", "You must select a dir from the list")
 
     def syncFileHandler(self):
+        """
+        Update version of a selected file in the group.
+        :return: void
+        """
 
         if self.fileList.currentItem() is not None:
 
@@ -735,6 +789,7 @@ class myP2PSync(QMainWindow):
                 treePath = filename
                 parent = self.fileList.currentItem().parent()
 
+                # build file treePath
                 while parent is not None:
                     treePath = parent.text(0) + "/" + treePath
                     parent = parent.parent()
@@ -746,6 +801,7 @@ class myP2PSync(QMainWindow):
                 files = list()
 
                 if oldTimestamp < file.timestamp:
+                    # the file can be updated: the local version is newer than the synched one
                     files.append((file, file.timestamp))
                     if peerCore.updateFiles(self.groupName, files):
                         self.addLogMessage("File {} synchronized".format(file.filename))
@@ -761,6 +817,10 @@ class myP2PSync(QMainWindow):
             QMessageBox.about(self, "Error", "You must select a file from the list")
 
     def syncDirHandler(self):
+        """
+        Update version of selected directory files in the group.
+        :return: void
+        """
 
         if self.fileList.currentItem() is not None:
             if self.fileList.currentItem().text(1) == "":
@@ -803,6 +863,10 @@ class myP2PSync(QMainWindow):
             QMessageBox.about(self, "Error", "You must select a directory from the list")
 
     def syncAllHandler(self):
+        """
+        Update version of all the files in the group.
+        :return: void
+        """
 
         if self.fileList.topLevelItemCount() == 0:
             QMessageBox.about(self, "Error", "There aren't files in the group!")
@@ -842,6 +906,10 @@ class myP2PSync(QMainWindow):
                 QMessageBox.about(self, "Info", "All files are already synchronized")
 
     def changeRoleHandler(self):
+        """
+        Allows a master to change the role of other peers in the group.
+        :return: void
+        """
 
         if self.peersList.currentItem() is not None:
             targetPeerID = self.peersList.currentItem().text(0)
@@ -865,12 +933,15 @@ class myP2PSync(QMainWindow):
             QMessageBox.about(self, "Error", "You must select a peer from the list")
 
     def leaveGroupHandler(self):
+        """
+        Leave a group handler.
+        :return: void
+        """
 
         reply = QMessageBox.question(self, 'Message', "Are you sure you want to leave the group {} ?"
                                      .format(self.groupName),
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
-            """call the leaveGroup function passing the self.groupName as parameter"""
             if peerCore.leaveGroup(self.groupName):
                 self.addLogMessage("Group {} left".format(self.groupName))
                 self.fillGroupManager()
@@ -879,12 +950,15 @@ class myP2PSync(QMainWindow):
                 QMessageBox.about(self, "Error", "Something went wrong!")
 
     def disconnectGroupHandler(self):
+        """
+        Disconnect from a group handler.
+        :return: void
+        """
 
         reply = QMessageBox.question(self, 'Message', "Are you sure you want to disconnect from the group {} ?"
                                      .format(self.groupName),
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
         if reply == QMessageBox.Yes:
-            """call the disconnectGroup function passing the self.groupName as parameter"""
             if peerCore.disconnectGroup(self.groupName):
                 self.addLogMessage("Group {} disconnected".format(self.groupName))
                 self.fillGroupManager()
@@ -958,6 +1032,11 @@ class mySig(QObject):
 
 
 def generateFileListItem(node):
+    """
+    Recursive function used to build nested items in the file list.
+    :param node: node of the File tree used to represents file organization.
+    :return: QTreeWidgetItem object
+    """
     if node.isDir:
         item = QTreeWidgetItem([node.nodeName, "", "", "", ""])
         for child in node.childs.values():
@@ -971,6 +1050,12 @@ def generateFileListItem(node):
 
 
 def getFileLabels(file):
+    """
+    Compute filesize and syncStatus labels for a file.
+    :param file: File object
+    :return: filesize, syncStatus
+    """
+
     if file.filesize < 1024:
         filesize = str(file.filesize) + " B"
     elif file.filesize < 1048576:
@@ -982,8 +1067,6 @@ def getFileLabels(file):
 
     if file.status == "S":
         syncStatus = "Synchronized"
-    elif file.status == "U":
-        syncStatus = "Not synchronized"
     elif file.status == "D":
         syncStatus = "Synchronizing: " + str(file.progress) + "%"
 

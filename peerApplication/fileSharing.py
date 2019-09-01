@@ -32,7 +32,6 @@ if "networking" not in sys.modules:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     import shared.networking as networking
 
-
 # define the period of time between 2 consecutive refreshes of the rarestFirstChunksList
 REFRESH_LIST_PERIOD = 10
 
@@ -56,9 +55,9 @@ MAX_CHUNKS = 100
 CHECK_PERIOD = 1.0
 
 # parameters for chunks random discard
-INITIAL_TRESHOLD = 0.5          # discard (INITIAL_TRESHOLD*100)% of the chunks
-TRESHOLD_INC_STEP = 0           # increment of the treshold after each iteration
-COMPLETION_RATE = 0.95          # realize random discard until (COMPLETION_RATE*100)% of the file is downloaded
+INITIAL_TRESHOLD = 0.5  # discard (INITIAL_TRESHOLD*100)% of the chunks
+TRESHOLD_INC_STEP = 0  # increment of the treshold after each iteration
+COMPLETION_RATE = 0.95  # realize random discard until (COMPLETION_RATE*100)% of the file is downloaded
 
 # maximum number of getChunk request leading to an error allowed before to quit a connection
 MAX_ERRORS = 3
@@ -284,14 +283,14 @@ class Download:
     """
 
     def __init__(self):
-        self.rarestFirstChunksList = None               # list of missing chunks ordered by their rarity
-        self.scheduledChunks = None                     # list of chunks already scheduled by a getChunks
-                                                        # thread in order to get them
-        self.chunksToPeers = None                       # mapping chunkID -> list of active peers that have that chunk
-        self.activePeers = None                         # list of active peers
-        self.complete = False                           # download complete
-        self.unavailable = False                        # file unavailable
-        self.lock = Lock()                              # lock on the data structure
+        self.rarestFirstChunksList = None  # list of missing chunks ordered by their rarity
+        self.scheduledChunks = None  # list of chunks already scheduled by a getChunks
+        # thread in order to get them
+        self.chunksToPeers = None  # mapping chunkID -> list of active peers that have that chunk
+        self.activePeers = None  # list of active peers
+        self.complete = False  # download complete
+        self.unavailable = False  # file unavailable
+        self.lock = Lock()  # lock on the data structure
 
 
 def downloadFile(file, key):
@@ -324,7 +323,7 @@ def downloadFile(file, key):
 
         # create and start chunksManager thread, it collect chunks list from other active peers
         # and calculate the missing chunks rarestFirstChunksList
-        chunksManagerThread = Thread(target = chunksManager, args=(dl,file))
+        chunksManagerThread = Thread(target=chunksManager, args=(dl, file))
         chunksManagerThread.daemon = True
         chunksManagerThread.start()
 
@@ -343,7 +342,7 @@ def downloadFile(file, key):
                 # create a getChunks thread for each active peers
                 if activeThreads == MAX_THREADS:
                     break
-                getChunksThread = Thread(target = getChunks, args = (dl, file, peer, tmpDirPath))
+                getChunksThread = Thread(target=getChunks, args=(dl, file, peer, tmpDirPath))
                 getChunksThread.daemon = True
                 getChunksThread.start()
                 activeThreads += 1
@@ -388,7 +387,6 @@ def downloadFile(file, key):
                 exitStatus = syncFail(file, key)
         else:
             exitStatus = syncFail(file, key)
-
 
     # this will terminate checkThread
     syncScheduler.stopSyncThreadIfRunning(key, exitStatus)
@@ -537,7 +535,6 @@ def chunksManager(dl, file):
         dl.complete = True
 
 
-
 def getChunksList(file, peerAddr):
     """
     Retrives the chunks list for a file from another active peer.
@@ -588,7 +585,7 @@ def getChunks(dl, file, peer, tmpDirPath):
     # get peer address
     peerAddr = peer["address"]
 
-    if len(file.availableChunks) + len(dl.scheduledChunks) >= COMPLETION_RATE * file.chunksNumber\
+    if len(file.availableChunks) + len(dl.scheduledChunks) >= COMPLETION_RATE * file.chunksNumber \
             or len(file.missingChunks) <= MAX_CHUNKS:
         # don't use random discard if the number of missing chunks is smaller than a certain amount
         threshold = 1
@@ -617,7 +614,7 @@ def getChunks(dl, file, peer, tmpDirPath):
                 # chunksList full
                 break
             if len(file.missingChunks) > MAX_CHUNKS \
-                    and len(file.availableChunks) + len(dl.scheduledChunks) <= COMPLETION_RATE * file.chunksNumber\
+                    and len(file.availableChunks) + len(dl.scheduledChunks) <= COMPLETION_RATE * file.chunksNumber \
                     and random() > threshold:
                 # randomly discard this chunk from the request list
                 continue

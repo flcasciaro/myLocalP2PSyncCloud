@@ -3,6 +3,7 @@ Project: myP2PSync
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
 
 This code manages all the main functions of myP2PSync peers.
+In detail: initializations and interactions with the tracker.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -47,8 +48,6 @@ trackerAddr = None
 trackerZTAddr = None
 myPortNumber = None
 
-networkID = "e5cd7a9e1cf88a16"
-
 # Lock used to avoid race conditions among threads
 pathCreationLock = Lock()
 
@@ -80,7 +79,7 @@ def setPeerID():
 
 def trackerIsReachable():
     """
-    Try to reach the tracker: in case of success return True.
+    Try to reach the tracker device: in case of success return True.
     Otherwise return False
     :return: boolean (True for success, False for any error)
     """
@@ -134,6 +133,7 @@ def setTrackerCoordinates(coordinates):
         return True
     except IndexError:
         return False
+
 
 def getTrackerZTAddr():
     """
@@ -416,10 +416,11 @@ def retrievePeers(groupName, selectAll):
 
     return peersList
 
+
 def startPeer():
     """
     Load previous session information about files.
-    Start a tracker thread on a free port.
+    Start a server thread on a free port.
     Finally send coordinates to central tracker in order to be
     reachable from other peers.
     :return: tracker object
@@ -435,7 +436,7 @@ def startPeer():
     schedulerThread = Thread(target=syncScheduler.scheduler, args=())
     schedulerThread.daemon = True
     schedulerThread.start()
-    
+
     # join the ZeroTier virtual network
     zeroTierIP = networking.joinNetwork()
 
@@ -491,7 +492,7 @@ def startGroupSync(groupName):
     if s is None:
         return
 
-    # retrieves information
+    # retrieves file information from the tracker
     try:
         message = str(peerID) + " " + "GET_FILES {}".format(groupName)
         networking.mySend(s, message)
@@ -585,7 +586,7 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
                 os.makedirs(path)
             pathCreationLock.release()
 
-            # create file Object
+            # create File object
             file = fileManagement.File(groupName=groupName, treePath=treePath,
                                        filename=filename, filepath=filepath,
                                        filesize=fileInfo["filesize"], timestamp=fileInfo["timestamp"],
@@ -596,7 +597,6 @@ def updateLocalGroupTree(groupName, localGroupTree, updatedFileList):
             # add synchronization task to the scheduler queue
             task = syncScheduler.syncTask(groupName, file.treePath, file.timestamp)
             syncScheduler.appendTask(task)
-
 
     # extract from the group file tree the list of all the file
     localTreePaths = localGroupTree.getFileTreePaths()
@@ -825,7 +825,7 @@ def updateFiles(groupName, files):
             timestamp = f[1]
             key = file.groupName + "_" + file.treePath
             # stop possible synchronization thread
-            syncScheduler.stopSyncThread(key,syncScheduler.FILE_UPDATED)
+            syncScheduler.stopSyncThread(key, syncScheduler.FILE_UPDATED)
 
             # make the peer ready to upload chunks
             if file.syncLock.acquire(blocking=False):
@@ -837,10 +837,9 @@ def updateFiles(groupName, files):
                 # file is currently in synchronization
                 # create a thread which will wait under the end of the synchronization
                 # and then it will update file state
-                t = Thread(target=waitSyncAndUpdate, args=(file,timestamp))
+                t = Thread(target=waitSyncAndUpdate, args=(file, timestamp))
                 t.daemon = True
                 t.start()
-
 
         # retrieve the list of active peers for the file
         activePeers = retrievePeers(groupName, selectAll=False)
