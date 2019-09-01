@@ -1,7 +1,18 @@
 """
 Project: myP2PSync
-This code handles file-related operations in myP2PSync peers.
 @author: Francesco Lorenzo Casciaro - Politecnico di Torino - UPC
+
+This code handles operations and attributes related to synchronized files in myP2PSync peers.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License
+for more details.
 """
 
 import datetime
