@@ -130,9 +130,9 @@ def createGroup(request, groups, groupsLock, peerID):
     :return: string message
     """
 
-    newGroupName = request.split()[2]
-    newGroupTokenRW = request.split()[4]
-    newGroupTokenRO = request.split()[6]
+    newGroupName = request.split()[1]
+    newGroupTokenRW = request.split()[2]
+    newGroupTokenRO = request.split()[3]
 
     groupsLock.acquire()
 
@@ -155,7 +155,7 @@ def createGroup(request, groups, groupsLock, peerID):
 def manageRole(request, groups, groupsLock, peerID):
     """
     This function allows a master peer to change the role of another peer in the group.
-    :param request: "ROLE <action> <destinatonPeerID> GROUP <groupName>"
+    :param request: "ROLE <action> <destinatonPeerID> <groupName>"
     :param groups: tracker data structure
     :param groupsLock: lock on groups
     :param peerID: id of the peer
@@ -164,7 +164,7 @@ def manageRole(request, groups, groupsLock, peerID):
 
     action = request.split()[1]
     modPeerID = request.split()[2]
-    groupName = request.split()[4]
+    groupName = request.split()[3]
 
     if action == "CHANGE_MASTER":
         newRole = "Master"
@@ -399,14 +399,14 @@ def getFiles(request, groups, peerID):
 def leaveGroup(request, groups, groupsLock, peerID):
     """
     Remove peer from the peers list of a specified group.
-    :param request: "ADDED_FILES <groupName> <filelist>"
+    :param request: "LEAVE <groupName>"
     :param groups: tracker data structure
     :param groupsLock: lock on the groups data structure
     :param peerID: id of the peer
     :return: string message
     """
 
-    groupName = request.split()[2]
+    groupName = request.split()[1]
 
     groupsLock.acquire()
     groups[groupName].removePeer(peerID)
@@ -419,14 +419,14 @@ def leaveGroup(request, groups, groupsLock, peerID):
 def disconnectGroup(request, groups, groupsLock, peerID):
     """
     Disconnect a peer from the specified group.
-    :param request: "ADDED_FILES <groupName> <f1ilelist>"
+    :param request: "DISCONNECT <groupName>"
     :param groups: tracker data structure
     :param groupsLock: lock on the groups data structure
     :param peerID: id of the peer
     :return: string message
     """
 
-    groupName = request.split()[2]
+    groupName = request.split()[1]
 
     groupsLock.acquire()
     groups[groupName].disconnectPeer(peerID)

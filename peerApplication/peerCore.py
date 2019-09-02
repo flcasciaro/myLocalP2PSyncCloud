@@ -315,7 +315,7 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "CREATE Group: {} TokenRW: {} TokenRO: {}".format(groupName,
+        message = str(peerID) + " " + "CREATE {} {} {}".format(groupName,
                                                                                         encryptedTokenRW.hexdigest(),
                                                                                         encryptedTokenRO.hexdigest())
         networking.mySend(s, message)
@@ -358,7 +358,7 @@ def changeRole(groupName, targetPeerID, action):
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "ROLE {} {} GROUP {}".format(action.upper(), targetPeerID, groupName)
+        message = str(peerID) + " " + "ROLE {} {} {}".format(action.upper(), targetPeerID, groupName)
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
@@ -898,7 +898,7 @@ def leaveGroup(groupName):
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "LEAVE Group: {}".format(groupName)
+        message = str(peerID) + " " + "LEAVE {}".format(groupName)
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
@@ -935,7 +935,7 @@ def disconnectGroup(groupName):
 
     try:
         # send request message and wait for the answer, then close the socket
-        message = str(peerID) + " " + "DISCONNECT Group: {}".format(groupName)
+        message = str(peerID) + " " + "DISCONNECT {}".format(groupName)
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
