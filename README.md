@@ -6,9 +6,9 @@ The end user benefits from the functionality offered by the system through a cli
 Access to a particular group is a function of a key that must be possessed. An user can belong to different groups, covering different roles, at the same time. 
 The role of an user in a subscribed group can be:
 
-Master: it’s usually the creator of the group and main maintainer. It has access to information like the list of peers of the group and it can modifies the role of other peers, also electing another peer as Master. It can add, remove and update files in the group.
-Reader&Writer: users that can manage files in the group like the master, but they don’t have privileges regarding the other peers.
-ReadOnly: users that cannot manage file in the group. They can only receive files that belongs to a group, without the possibilities of add, remove or update files.
+- Master: it’s usually the creator of the group and main maintainer. It has access to information like the list of peers of the group and it can modifies the role of other peers, also electing another peer as Master. It can add, remove and update files in the group.
+- Reader&Writer: users that can manage files in the group like the master, but they don’t have privileges regarding the other peers.
+- ReadOnly: users that cannot manage file in the group. They can only receive files that belongs to a group, without the possibilities of add, remove or update files.
 
 The role of a device is determined by the access token used during the group joining operation. Indeed, during the creation phase the user can specify two different tokens, one used to access the group as RW user and the other one for RO users.
 
