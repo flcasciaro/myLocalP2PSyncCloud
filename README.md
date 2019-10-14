@@ -28,21 +28,21 @@ The whole system is completely open-source and free, unlike many similar systems
 Software requirements that must be meet in order to run successfully myP2P components:
 
 - CLIENT (myP2PSync/peerApplication/myP2PSyncClient.py)
-SUPER-USER PRIVILEGES:
-    - Windows: **open the prompt as Admin and use python3 path/to/myP2PSyncClient.py**
-    - Linux/macOS: **sudo python3 path/to/myP2PSyncClient.py**
-Python3 Interpreter (3.5.2+)
-Python modules:
-    - PyQt5 (5.12.2+)
-    - qdarkgraystyle (1.0.2)
-zerotier-cli (command line interface for ZeroTier)
+    - SUPER-USER PRIVILEGES:
+        - Windows: **open the prompt as Admin and use python3 path/to/myP2PSyncClient.py**
+        - Linux/macOS: **sudo python3 path/to/myP2PSyncClient.py** 
+    - Python3 Interpreter (3.5.2+)
+    - Python modules: 
+        - PyQt5 (5.12.2+)
+        - qdarkgraystyle (1.0.2)
+    - zerotier-cli (command line interface for ZeroTier)
 
-- SERVER (myP2PSync/trackerApplication/myP2PSyncTracker.py)
-SUPER-USER PRIVILEGES:
-    - Windows: **open the prompt as Admin and use python3 path/to/myP2PSyncTracker.py**
-    - Linux/macOS: **sudo python3 path/to/myP2PSyncTracker.py**
-Python3 Interpreter (3.5.2+)
-zerotier-cli (command line interface for ZeroTier)
+- SERVER (myP2PSync/trackerApplication/myP2PSyncTracker.py) <br/><br/>
+    - SUPER-USER PRIVILEGES:
+        - Windows: **open the prompt as Admin and use python3 path/to/myP2PSyncTracker.py**
+        - Linux/macOS: **sudo python3 path/to/myP2PSyncTracker.py** <br/><br/>
+    - Python3 Interpreter (3.5.2+)
+    - zerotier-cli (command line interface for ZeroTier)
 
 Super-User privileges are required from zerotier-cli.
 
