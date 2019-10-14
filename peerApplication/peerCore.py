@@ -316,8 +316,8 @@ def createGroup(groupName, groupTokenRW, groupTokenRO):
     try:
         # send request message and wait for the answer, then close the socket
         message = str(peerID) + " " + "CREATE {} {} {}".format(groupName,
-                                                                                        encryptedTokenRW.hexdigest(),
-                                                                                        encryptedTokenRO.hexdigest())
+                                                               encryptedTokenRW.hexdigest(),
+                                                               encryptedTokenRO.hexdigest())
         networking.mySend(s, message)
         answer = networking.myRecv(s)
         networking.closeConnection(s, peerID)
