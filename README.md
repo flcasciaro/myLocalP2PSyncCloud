@@ -37,10 +37,10 @@ Software requirements that must be meet in order to run successfully myP2P compo
         - qdarkgraystyle (1.0.2)
     - zerotier-cli (command line interface for ZeroTier)
 
-- SERVER (myP2PSync/trackerApplication/myP2PSyncTracker.py) <br/><br/>
+- SERVER (myP2PSync/trackerApplication/myP2PSyncTracker.py)
     - SUPER-USER PRIVILEGES:
         - Windows: **open the prompt as Admin and use python3 path/to/myP2PSyncTracker.py**
-        - Linux/macOS: **sudo python3 path/to/myP2PSyncTracker.py** <br/><br/>
+        - Linux/macOS: **sudo python3 path/to/myP2PSyncTracker.py** 
     - Python3 Interpreter (3.5.2+)
     - zerotier-cli (command line interface for ZeroTier)
 
