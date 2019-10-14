@@ -73,7 +73,7 @@ class myP2PSync(QMainWindow):
         self.restoreAllButton = QPushButton("RESTORE ALL GROUPS")
 
         self.createGroupLayout = QFormLayout()
-        self.createGroupLabel = QLabel("CREATE A GROUP: ")
+        self.createGroupLabel = QLabel("CREATE NEW SYNC GROUP: ")
         self.createGroupName = QLineEdit("Enter single word GroupName")
         self.tokenRWLabel = QLabel("Enter token for RW")
         self.createTokenRW = QLineEdit("")
@@ -83,7 +83,7 @@ class myP2PSync(QMainWindow):
         self.createTokenRO = QLineEdit("")
         self.tokenROLabelConfirm = QLabel("Confirm token for RO")
         self.createTokenROConfirm = QLineEdit("")
-        self.createGroupButton = QPushButton("CREATE GROUP")
+        self.createGroupButton = QPushButton("CREATE")
         self.resetCreateButton = QPushButton("RESET")
 
         # Declaration of UI objects in the fileManager frame
@@ -99,7 +99,7 @@ class myP2PSync(QMainWindow):
         self.syncLayout = QHBoxLayout()
         self.syncFileButton = QPushButton("SYNC SELECTED FILE")
         self.syncDirButton = QPushButton("SYNC SELECTED DIRECTORY")
-        self.syncAllButton = QPushButton("SYNC ALL GROUP FILES")
+        self.syncAllButton = QPushButton("SYNC ALL GROUPS FILES")
         self.peersListLabel = QLabel("PEERS LIST")
         self.peersList = QTreeWidget()
         self.changeRoleLayout = QHBoxLayout()
